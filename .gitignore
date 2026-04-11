@@ -38,4 +38,5 @@ yarn-error.log*
 *.pem
 
 
-*.md
+tmp/
+*.log
