@@ -11,7 +11,7 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
-	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
@@ -104,7 +104,7 @@ func RefreshAccessToken(queries repository.AuthRepository, cfg *config.Config) g
 		newHash := sha256.Sum256([]byte(newRefreshTokenString))
 		newTokenHash := fmt.Sprintf("%x", newHash)
 
-		_, err = queries.CreateRefreshToken(ctx, dbgen.CreateRefreshTokenParams{
+		_, err = queries.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
 			UserID:    dbToken.UserID,
 			TokenHash: newTokenHash,
 			ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(30 * 24 * time.Hour), Valid: true},

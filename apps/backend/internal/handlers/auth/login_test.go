@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
-	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	authHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/auth"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
@@ -25,11 +25,11 @@ import (
 
 func TestLoginUser_Success(t *testing.T) {
 	repo := &mockAuthRepo{
-		getUserByEmailFn: func(_ context.Context, _ string) (dbgen.User, error) {
+		getUserByEmailFn: func(_ context.Context, _ string) (db.User, error) {
 			return fakeUser(), nil
 		},
-		createRefreshTokenFn: func(_ context.Context, _ dbgen.CreateRefreshTokenParams) (dbgen.RefreshToken, error) {
-			return dbgen.RefreshToken{}, nil
+		createRefreshTokenFn: func(_ context.Context, _ db.CreateRefreshTokenParams) (db.RefreshToken, error) {
+			return db.RefreshToken{}, nil
 		},
 	}
 
@@ -77,7 +77,7 @@ func TestLoginUser_Success(t *testing.T) {
 
 func TestLoginUser_WrongPassword(t *testing.T) {
 	repo := &mockAuthRepo{
-		getUserByEmailFn: func(_ context.Context, _ string) (dbgen.User, error) {
+		getUserByEmailFn: func(_ context.Context, _ string) (db.User, error) {
 			return fakeUser(), nil
 		},
 	}
@@ -99,8 +99,8 @@ func TestLoginUser_WrongPassword(t *testing.T) {
 
 func TestLoginUser_UserNotFound(t *testing.T) {
 	repo := &mockAuthRepo{
-		getUserByEmailFn: func(_ context.Context, _ string) (dbgen.User, error) {
-			return dbgen.User{}, pgx.ErrNoRows
+		getUserByEmailFn: func(_ context.Context, _ string) (db.User, error) {
+			return db.User{}, pgx.ErrNoRows
 		},
 	}
 

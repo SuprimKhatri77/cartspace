@@ -10,6 +10,7 @@ import (
 	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	authHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/auth"
 	categoryHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/categories"
+	"github.com/suprimkhatri77/cartspace/backend/internal/middleware"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
@@ -31,7 +32,7 @@ func Setup(r *gin.Engine, cfg Config) {
 		}
 		data, err := os.ReadFile(cfg.OpenAPIPath)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "openapi spec not found"})
+			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "openapi spec not found"})
 			return
 		}
 		c.Data(http.StatusOK, "application/json", data)
@@ -61,7 +62,7 @@ func Setup(r *gin.Engine, cfg Config) {
 	authRoutes.POST("/refresh", authHandler.RefreshAccessToken(cfg.Queries, cfg.Config))
 
 	// category routes
-	categoryRoutes := r.Group("/api/category")
+	categoryRoutes := r.Group("/api/category", middleware.RequireAdmin(cfg.Config))
 	categoryRoutes.POST("", categoryHandler.CreateCategory(cfg.Queries, cfg.Config))
 	categoryRoutes.PUT("/:id", categoryHandler.UpdateCategory(cfg.Queries, cfg.Config))
 	categoryRoutes.DELETE("/:id", categoryHandler.DeleteCategory(cfg.Queries, cfg.Config))

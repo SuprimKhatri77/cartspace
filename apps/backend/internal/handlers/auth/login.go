@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
-	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
@@ -101,7 +101,7 @@ func LoginUser(queries repository.AuthRepository, cfg *config.Config) gin.Handle
 			Valid: true,
 		}
 
-		_, err = queries.CreateRefreshToken(ctx, dbgen.CreateRefreshTokenParams{
+		_, err = queries.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
 			UserID:    user.ID,
 			TokenHash: tokenHash,
 			ExpiresAt: expiresAt,

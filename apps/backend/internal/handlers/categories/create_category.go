@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
@@ -39,15 +38,6 @@ func CreateCategory(queries repository.CategoryRepository, cfg *config.Config) g
 		slugExists, err := queries.CategorySlugExists(ctx, slug)
 		if err != nil {
 			slog.Error("failed to query the db for slug check", "error", err)
-
-			if errors.Is(err, pgx.ErrNoRows) {
-				c.JSON(http.StatusNotFound, types.APIResponse{
-					Success: false,
-					Message: "Category not found",
-				})
-				return
-			}
-
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",

@@ -49,9 +49,17 @@ func UpdateCategory(queries repository.CategoryRepository, cfg *config.Config) g
 		category, err := queries.GetCategoryByID(ctx, categoryID)
 
 		if err != nil {
-			c.JSON(http.StatusNotFound, types.APIResponse{
+
+			if errors.Is(err, pgx.ErrNoRows) {
+				c.JSON(http.StatusNotFound, types.APIResponse{
+					Success: false,
+					Message: "Category not found",
+				})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
-				Message: "Category not found",
+				Message: "Failed to process request",
 			})
 			return
 		}
@@ -62,12 +70,9 @@ func UpdateCategory(queries repository.CategoryRepository, cfg *config.Config) g
 
 			slugExists, err := queries.CategorySlugExists(ctx, slug)
 			if err != nil {
-				if errors.Is(err, pgx.ErrNoRows) {
-					c.JSON(http.StatusNotFound, types.APIResponse{Success: false, Message: "Category not found"})
-				} else {
-					slog.Error("failed to get category", "error", err)
-					c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Something went wrong"})
-				}
+
+				slog.Error("failed to get category", "error", err)
+				c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Something went wrong"})
 
 				return
 			}
