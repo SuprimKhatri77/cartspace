@@ -9,6 +9,8 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	authHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/auth"
+	categoryHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/categories"
+	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
 // Config holds dependencies for route setup.
@@ -45,7 +47,10 @@ func Setup(r *gin.Engine, cfg Config) {
 	})
 
 	r.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "Welcome to the API"})
+		c.JSON(http.StatusOK, types.APIResponse{
+			Success: true,
+			Message: "Welcome to the Cartspace API",
+		})
 	})
 
 	// auth routes
@@ -54,6 +59,13 @@ func Setup(r *gin.Engine, cfg Config) {
 	authRoutes.POST("/login", authHandler.LoginUser(cfg.Queries, cfg.Config))
 	authRoutes.POST("/logout", authHandler.Logout(cfg.Queries, cfg.Config))
 	authRoutes.POST("/refresh", authHandler.RefreshAccessToken(cfg.Queries, cfg.Config))
+
+	// category routes
+	categoryRoutes := r.Group("/api/category")
+	categoryRoutes.POST("", categoryHandler.CreateCategory(cfg.Queries, cfg.Config))
+	categoryRoutes.PUT("/:id", categoryHandler.UpdateCategory(cfg.Queries, cfg.Config))
+	categoryRoutes.DELETE("/:id", categoryHandler.DeleteCategory(cfg.Queries, cfg.Config))
+	categoryRoutes.GET("", categoryHandler.GetPaginatedCategories(cfg.Queries, cfg.Config))
 
 }
 

@@ -50,7 +50,7 @@ func mapTagToCode(tag string) string {
 		return "TOO_LONG"
 	case "email":
 		return "INVALID_EMAIL"
-	case "aplhaspace":
+	case "alphaspace":
 		return "INVALID_FORMAT"
 	default:
 		return "VALIDATION_ERROR"
@@ -70,6 +70,8 @@ func buildMessage(fe validator.FieldError, jsonField string) string {
 		return "invalid email format"
 	case "alphaspace":
 		return fmt.Sprintf("%s must contain only letters and spaces", jsonField)
+	case "uuid":
+		return "invalid id format"
 	default:
 		return fmt.Sprintf("%s is invalid", jsonField)
 	}
