@@ -13,13 +13,13 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
+	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
-	"github.com/suprimkhatri77/cartspace/backend/internal/util"
+	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 	"golang.org/x/crypto/bcrypt"
-
-	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 )
 
 func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.HandlerFunc {
@@ -43,7 +43,7 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 			return
 		}
 
-		util.TrimStruct(&registerRequest, "Password")
+		utils.TrimStruct(&registerRequest, "Password")
 
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(registerRequest.Password), bcrypt.DefaultCost)
 
@@ -53,7 +53,7 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 			return
 		}
 
-		user, err := queries.CreateUser(ctx, dbgen.CreateUserParams{
+		user, err := queries.CreateUser(ctx, db.CreateUserParams{
 			Name:         registerRequest.Name,
 			Email:        registerRequest.Email,
 			PasswordHash: string(hashedPassword),
@@ -81,6 +81,7 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 
 		accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
 		accessTokenString, err := accessToken.SignedString([]byte(cfg.JWTAccessSecret))
+
 		if err != nil {
 			slog.Error("failed to sign refresh token", "error", err)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Failed to sign access token."})

@@ -8,6 +8,15 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Category struct {
+	ID        pgtype.UUID
+	Name      string
+	Slug      string
+	ParentID  pgtype.UUID
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
 type RefreshToken struct {
 	ID        pgtype.UUID
 	UserID    pgtype.UUID
