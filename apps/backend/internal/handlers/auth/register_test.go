@@ -9,18 +9,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
-	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	authHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/auth"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
 func TestRegisterUser_Success(t *testing.T) {
 	repo := &mockAuthRepo{
-		createUserFn: func(_ context.Context, _ dbgen.CreateUserParams) (dbgen.User, error) {
+		createUserFn: func(_ context.Context, _ db.CreateUserParams) (db.User, error) {
 			return fakeUser(), nil
 		},
-		createRefreshTokenFn: func(_ context.Context, _ dbgen.CreateRefreshTokenParams) (dbgen.RefreshToken, error) {
-			return dbgen.RefreshToken{
+		createRefreshTokenFn: func(_ context.Context, _ db.CreateRefreshTokenParams) (db.RefreshToken, error) {
+			return db.RefreshToken{
 				ExpiresAt: pgtype.Timestamptz{Valid: true},
 			}, nil
 		},
@@ -68,9 +68,9 @@ func TestRegisterUser_Success(t *testing.T) {
 
 func TestRegisterUser_DuplicateEmail(t *testing.T) {
 	repo := &mockAuthRepo{
-		createUserFn: func(_ context.Context, _ dbgen.CreateUserParams) (dbgen.User, error) {
+		createUserFn: func(_ context.Context, _ db.CreateUserParams) (db.User, error) {
 
-			return dbgen.User{}, &pgconn.PgError{Code: "23505"}
+			return db.User{}, &pgconn.PgError{Code: "23505"}
 		},
 	}
 	router := setupRouter(func(r *gin.Engine) {

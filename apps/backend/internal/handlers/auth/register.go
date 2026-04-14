@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
-	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
@@ -117,7 +116,7 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 		hash := sha256.Sum256([]byte(refreshTokenString))
 		tokenHash := fmt.Sprintf("%x", hash)
 
-		_, err = queries.CreateRefreshToken(ctx, dbgen.CreateRefreshTokenParams{UserID: user.ID, TokenHash: tokenHash, ExpiresAt: expiresAt})
+		_, err = queries.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{UserID: user.ID, TokenHash: tokenHash, ExpiresAt: expiresAt})
 		if err != nil {
 			slog.Error("failed to store refresh token in db", "error", err)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Failed to create refresh token."})

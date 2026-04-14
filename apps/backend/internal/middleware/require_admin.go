@@ -45,7 +45,7 @@ func RequireAdmin(cfg *config.Config) gin.HandlerFunc {
 			return []byte(cfg.JWTAccessSecret), nil
 		})
 
-		if err != nil {
+		if err != nil || !token.Valid {
 			c.JSON(http.StatusUnauthorized, types.APIResponse{
 				Success: false,
 				Message: "Invalid or expired token",
