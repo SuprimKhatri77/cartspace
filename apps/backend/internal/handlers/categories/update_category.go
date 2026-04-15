@@ -2,6 +2,7 @@ package categoryHandler
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -17,7 +17,7 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 )
 
-func UpdateCategory(queries repository.CategoryRepository, cfg *config.Config) gin.HandlerFunc {
+func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -49,7 +49,6 @@ func UpdateCategory(queries repository.CategoryRepository, cfg *config.Config) g
 		category, err := queries.GetCategoryByID(ctx, categoryID)
 
 		if err != nil {
-
 			if errors.Is(err, pgx.ErrNoRows) {
 				c.JSON(http.StatusNotFound, types.APIResponse{
 					Success: false,
@@ -92,7 +91,13 @@ func UpdateCategory(queries repository.CategoryRepository, cfg *config.Config) g
 		}
 
 		var parentID pgtype.UUID
-		if updateCategoryRequest.ParentID != "" {
+		var categoryParentIDString string
+		if category.ParentID.Valid {
+			val, _ := category.ParentID.Value()
+			categoryParentIDString = fmt.Sprintf("%v", val)
+		}
+
+		if updateCategoryRequest.ParentID != "" && updateCategoryRequest.ParentID != categoryParentIDString {
 			parentID, err = utils.ConvertToUUID(updateCategoryRequest.ParentID)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, types.APIResponse{
@@ -118,10 +123,19 @@ func UpdateCategory(queries repository.CategoryRepository, cfg *config.Config) g
 				return
 			}
 
+			// self referencing check A -> A
+			if parentID == categoryID {
+				c.JSON(http.StatusConflict, types.APIResponse{
+					Success: false,
+					Message: "A category cannot be its own parent",
+				})
+				return
+			}
+
 			// TODO: recursive cycle detection
 
+			// shallow cyclic reference check A -> B -> A
 			if parentCategory.ParentID == category.ID {
-
 				c.JSON(http.StatusConflict, types.APIResponse{
 					Success: false,
 					Message: "Assigning this parent would create a circular reference",

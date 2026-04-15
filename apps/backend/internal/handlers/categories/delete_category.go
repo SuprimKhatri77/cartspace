@@ -4,13 +4,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 )
 
-func DeleteCategory(queries repository.CategoryRepository, cfg *config.Config) gin.HandlerFunc {
+func DeleteCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 

@@ -2,13 +2,14 @@ package categoryHandler
 
 import (
 	"errors"
+	"log"
 	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -16,7 +17,7 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 )
 
-func CreateCategory(queries repository.CategoryRepository, cfg *config.Config) gin.HandlerFunc {
+func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -65,6 +66,26 @@ func CreateCategory(queries repository.CategoryRepository, cfg *config.Config) g
 			if err := parentID.Scan(createCategoryRequest.ParentID); err != nil {
 				slog.Error("invalid parent id", "error", err)
 				c.JSON(http.StatusBadRequest, types.APIResponse{Success: false, Message: "Invalid parent category ID"})
+				return
+			}
+
+			_, err := queries.GetCategoryByID(ctx, parentID)
+
+			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					log.Println("no rows found err will be triggered")
+					c.JSON(http.StatusNotFound, types.APIResponse{
+						Success: false,
+
+						Message: "Parent not found",
+					})
+					return
+				}
+				log.Println("is this the error that is being triggered")
+				c.JSON(http.StatusInternalServerError, types.APIResponse{
+					Success: false,
+					Message: "Failed to process request",
+				})
 				return
 			}
 
