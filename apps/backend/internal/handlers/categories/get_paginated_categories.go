@@ -1,18 +1,16 @@
 package categoryHandler
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
-func GetPaginatedCategories(queries repository.CategoryRepository, cfg *config.Config) gin.HandlerFunc {
+func GetPaginatedCategories(queries repository.CategoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -30,7 +28,6 @@ func GetPaginatedCategories(queries repository.CategoryRepository, cfg *config.C
 		}
 
 		total, err := queries.GetCategoriesCount(ctx)
-		log.Println("total cat: ", total)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
@@ -73,7 +70,7 @@ func GetPaginatedCategories(queries repository.CategoryRepository, cfg *config.C
 
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
-			Message: "Great",
+			Message: "Categories fetched",
 			Data:    categories,
 		})
 

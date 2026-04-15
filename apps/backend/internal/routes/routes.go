@@ -63,10 +63,10 @@ func Setup(r *gin.Engine, cfg Config) {
 
 	// category routes
 	categoryRoutes := r.Group("/api/category", middleware.RequireAdmin(cfg.Config))
-	categoryRoutes.POST("", categoryHandler.CreateCategory(cfg.Queries, cfg.Config))
-	categoryRoutes.PUT("/:id", categoryHandler.UpdateCategory(cfg.Queries, cfg.Config))
-	categoryRoutes.DELETE("/:id", categoryHandler.DeleteCategory(cfg.Queries, cfg.Config))
-	categoryRoutes.GET("", categoryHandler.GetPaginatedCategories(cfg.Queries, cfg.Config))
+	categoryRoutes.POST("", categoryHandler.CreateCategory(cfg.Queries))
+	categoryRoutes.PUT("/:id", categoryHandler.UpdateCategory(cfg.Queries))
+	categoryRoutes.DELETE("/:id", categoryHandler.DeleteCategory(cfg.Queries))
+	categoryRoutes.GET("", categoryHandler.GetPaginatedCategories(cfg.Queries))
 
 }
 

@@ -40,23 +40,23 @@ packages/
 
 **prerequisites** — go, bun, docker
 
-# install dependencies
+## install dependencies
 
 bun install
 
-# start the database
+## start the database
 
 cd apps/backend && docker compose up -d
 
-# run migrations
+## run migrations
 
 make migrate-up
 
-# start backend + frontend
+## start backend + frontend
 
 turbo dev
 
-# or if turbo is not installed globally
+## or if turbo is not installed globally
 
 bun dev
 
