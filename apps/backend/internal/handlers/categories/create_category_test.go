@@ -33,7 +33,7 @@ func TestCreateCategory_Success(t *testing.T) {
 	})
 
 	if w.Code != http.StatusOK {
-		t.Errorf("exected 200, got %d", w.Code)
+		t.Errorf("expected 200, got %d", w.Code)
 	}
 }
 

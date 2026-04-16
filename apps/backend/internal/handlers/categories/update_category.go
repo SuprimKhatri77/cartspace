@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -90,7 +89,8 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 			slug = category.Slug
 		}
 
-		var parentID pgtype.UUID
+		parentID := category.ParentID
+
 		var categoryParentIDString string
 		if category.ParentID.Valid {
 			val, _ := category.ParentID.Value()
@@ -102,7 +102,7 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 			if err != nil {
 				c.JSON(http.StatusBadRequest, types.APIResponse{
 					Success: false,
-					Message: "Invalid parent category ID",
+					Message: "Invalid parentID format",
 				})
 				return
 			}

@@ -128,10 +128,10 @@ func TestUpdateCategory_CategoryNotFound(t *testing.T) {
 
 func TestUpdateCategory_DBError(t *testing.T) {
 	repo := &mockCategoryRepo{
-		updateCategoryFn: func(ctx context.Context, params db.UpdateCategoryParams) (db.Category, error) {
+		updateCategoryFn: func(_ context.Context, _ db.UpdateCategoryParams) (db.Category, error) {
 			return db.Category{}, fmt.Errorf("Failed to update category")
 		},
-		getCategoryByIdFn: func(ctx context.Context, id pgtype.UUID) (db.Category, error) {
+		getCategoryByIdFn: func(_ context.Context, _ pgtype.UUID) (db.Category, error) {
 			return FakeCategory(), nil
 		},
 
@@ -158,7 +158,7 @@ func TestUpdateCategory_SelfReferencingParentID(t *testing.T) {
 	catUUID, categoryID := getRandomUUID()
 	repo := &mockCategoryRepo{
 
-		getCategoryByIdFn: func(ctx context.Context, id pgtype.UUID) (db.Category, error) {
+		getCategoryByIdFn: func(_ context.Context, _ pgtype.UUID) (db.Category, error) {
 			return db.Category{ID: catUUID}, nil
 		},
 
