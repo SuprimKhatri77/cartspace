@@ -1,20 +1,18 @@
 import z from "zod";
 
-export const baseResponseSchema = z.object({
-  success: z.boolean(),
+const errorSchema = z.object({
+  code: z.string(),
+  field: z.string(),
   message: z.string(),
 });
 
-const errorsSchema = z
-  .array(
-    z.object({
-      code: z.string(),
-      field: z.string(),
-      message: z.string(),
-    }),
-  )
-  .optional();
+export const baseResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  errors: z.array(errorSchema).optional(),
+  data: z.unknown().optional(),
+});
 
 export const validationErrorResponseSchema = baseResponseSchema.extend({
-  errors: errorsSchema,
+  errors: z.array(errorSchema),
 });

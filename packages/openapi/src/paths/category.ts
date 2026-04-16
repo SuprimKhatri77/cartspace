@@ -1,7 +1,10 @@
 import {
   baseResponseSchema,
   createCategorySchema,
+  createCategorySuccessResponseSchema,
+  paginatedCategoriesSuccessResponseSchema,
   updateCategorySchema,
+  updateCategorySuccessResponseSchema,
   validationErrorResponseSchema,
 } from "@repo/types";
 import type { ZodOpenApiPathsObject } from "zod-openapi";
@@ -14,11 +17,14 @@ export const categoryPaths: ZodOpenApiPathsObject = {
       security: [{ bearerAuth: [] }],
       requestBody: {
         content: { "application/json": { schema: createCategorySchema } },
+        required: true,
       },
       responses: {
         200: {
           description: "Category created successfully",
-          content: { "application/json": { schema: baseResponseSchema } },
+          content: {
+            "application/json": { schema: createCategorySuccessResponseSchema },
+          },
         },
         400: {
           description: "Validation error",
@@ -52,7 +58,11 @@ export const categoryPaths: ZodOpenApiPathsObject = {
       responses: {
         200: {
           description: "Categories fetched successfully",
-          content: { "application/json": { schema: baseResponseSchema } },
+          content: {
+            "application/json": {
+              schema: paginatedCategoriesSuccessResponseSchema,
+            },
+          },
         },
         400: {
           description: "Invalid page parameter",
@@ -81,11 +91,14 @@ export const categoryPaths: ZodOpenApiPathsObject = {
       ],
       requestBody: {
         content: { "application/json": { schema: updateCategorySchema } },
+        required: true,
       },
       responses: {
         200: {
           description: "Category updated successfully",
-          content: { "application/json": { schema: baseResponseSchema } },
+          content: {
+            "application/json": { schema: updateCategorySuccessResponseSchema },
+          },
         },
         400: {
           description: "Validation error or invalid UUID",

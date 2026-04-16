@@ -13,6 +13,7 @@ export const authPaths: ZodOpenApiPathsObject = {
       tags: ["Auth"],
       requestBody: {
         content: { "application/json": { schema: signupSchema } },
+        required: true,
       },
       responses: {
         200: {
@@ -43,7 +44,9 @@ export const authPaths: ZodOpenApiPathsObject = {
       tags: ["Auth"],
       requestBody: {
         content: { "application/json": { schema: loginSchema } },
+        required: true,
       },
+
       responses: {
         200: {
           description: "Login successful",

@@ -102,7 +102,7 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 			if err != nil {
 				c.JSON(http.StatusBadRequest, types.APIResponse{
 					Success: false,
-					Message: "Invalid parentID format",
+					Message: "Invalid parent category ID format",
 				})
 				return
 			}
