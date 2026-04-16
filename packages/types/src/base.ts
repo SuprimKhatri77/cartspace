@@ -9,8 +9,6 @@ const errorSchema = z.object({
 export const baseResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
-  errors: z.array(errorSchema).optional(),
-  data: z.unknown().optional(),
 });
 
 export const validationErrorResponseSchema = baseResponseSchema.extend({
