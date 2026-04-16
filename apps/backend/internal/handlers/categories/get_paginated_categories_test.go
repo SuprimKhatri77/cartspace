@@ -13,11 +13,11 @@ import (
 
 func TestGetPaginatedCategories_Success(t *testing.T) {
 	repo := &mockCategoryRepo{
-		getPaginatedCategoriesFn: func(ctx context.Context, params db.GetPaginatedCategoriesParams) ([]db.Category, error) {
+		getPaginatedCategoriesFn: func(_ context.Context, _ db.GetPaginatedCategoriesParams) ([]db.Category, error) {
 			return getFakeCategories(), nil
 		},
 
-		getCategoriesCountFn: func(ctx context.Context) (int64, error) {
+		getCategoriesCountFn: func(_ context.Context) (int64, error) {
 			return 20, nil
 		},
 	}
@@ -50,7 +50,7 @@ func TestGetPaginatedCategories_InvalidQueryParameterType(t *testing.T) {
 
 func TestGetPaginatedCategories_TotalCountZero(t *testing.T) {
 	repo := &mockCategoryRepo{
-		getCategoriesCountFn: func(ctx context.Context) (int64, error) {
+		getCategoriesCountFn: func(_ context.Context) (int64, error) {
 			return 0, nil
 		},
 	}
@@ -69,7 +69,7 @@ func TestGetPaginatedCategories_TotalCountZero(t *testing.T) {
 
 func TestGetPaginatedCategories_DBErrorForTotalCount(t *testing.T) {
 	repo := &mockCategoryRepo{
-		getCategoriesCountFn: func(ctx context.Context) (int64, error) {
+		getCategoriesCountFn: func(_ context.Context) (int64, error) {
 			return 0, fmt.Errorf("failed to process request")
 		},
 	}
@@ -88,10 +88,10 @@ func TestGetPaginatedCategories_DBErrorForTotalCount(t *testing.T) {
 }
 func TestGetPaginatedCategories_DBError(t *testing.T) {
 	repo := &mockCategoryRepo{
-		getCategoriesCountFn: func(ctx context.Context) (int64, error) {
+		getCategoriesCountFn: func(_ context.Context) (int64, error) {
 			return 20, nil
 		},
-		getPaginatedCategoriesFn: func(ctx context.Context, params db.GetPaginatedCategoriesParams) ([]db.Category, error) {
+		getPaginatedCategoriesFn: func(_ context.Context, _ db.GetPaginatedCategoriesParams) ([]db.Category, error) {
 			return []db.Category{}, fmt.Errorf("failed to process request")
 		},
 	}

@@ -1,5 +1,6 @@
+export { baseResponseSchema, validationErrorResponseSchema } from "./base";
+
 export {
-  baseResponseSchema,
   signupSchema,
   loginSchema,
   signupResponseSchema,
@@ -9,3 +10,14 @@ export {
   type Login,
   type LoginResponse,
 } from "./auth";
+
+export {
+  createCategorySchema,
+  updateCategorySchema,
+  createCategoryResponseSchema,
+  updateCategoryResponseSchema,
+  type CreateCategory,
+  type UpdateCategory,
+  type CreateCategoryResponse,
+  type UpdateCategoryResponse,
+} from "./category";

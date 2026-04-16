@@ -62,7 +62,7 @@ func Setup(r *gin.Engine, cfg Config) {
 	authRoutes.POST("/refresh", authHandler.RefreshAccessToken(cfg.Queries, cfg.Config))
 
 	// category routes
-	categoryRoutes := r.Group("/api/category", middleware.RequireAdmin(cfg.Config))
+	categoryRoutes := r.Group("/api/admin/category", middleware.RequireAdmin(cfg.Config))
 	categoryRoutes.POST("", categoryHandler.CreateCategory(cfg.Queries))
 	categoryRoutes.PUT("/:id", categoryHandler.UpdateCategory(cfg.Queries))
 	categoryRoutes.DELETE("/:id", categoryHandler.DeleteCategory(cfg.Queries))
