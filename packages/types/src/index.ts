@@ -14,10 +14,12 @@ export {
 export {
   createCategorySchema,
   updateCategorySchema,
-  createCategoryResponseSchema,
-  updateCategoryResponseSchema,
+  createCategorySuccessResponseSchema,
+  updateCategorySuccessResponseSchema,
+  paginatedCategoriesSuccessResponseSchema,
   type CreateCategory,
   type UpdateCategory,
-  type CreateCategoryResponse,
-  type UpdateCategoryResponse,
+  type CreateCategorySuccessResponse,
+  type UpdateCategorySuccessResponse,
+  type PaginatedCategoriesSuccessResponse,
 } from "./category";
