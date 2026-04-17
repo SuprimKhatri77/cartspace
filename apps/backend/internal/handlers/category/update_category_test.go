@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
-	categoryHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/categories"
+	categoryHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category"
 )
 
 func TestUpdateCategory_Success(t *testing.T) {

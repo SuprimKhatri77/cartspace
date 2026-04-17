@@ -9,11 +9,14 @@ import (
 
 // Config holds application configuration from environment.
 type Config struct {
-	Port             int
-	GinMode          string
-	DatabaseURL      string
-	JWTRefreshSecret string
-	JWTAccessSecret  string
+	Port                int
+	GinMode             string
+	DatabaseURL         string
+	JWTRefreshSecret    string
+	JWTAccessSecret     string
+	CloudinaryCloudName string
+	CloudinaryAPIKey    string
+	CloudinaryAPISecret string
 }
 
 // Load loads .env from the current directory (if present) then reads configuration from environment variables.
@@ -36,12 +39,18 @@ func Load() (*Config, error) {
 	dbURL := os.Getenv("DATABASE_URL")
 	jwtRefreshSecret := os.Getenv("JWT_REFRESH_SECRET")
 	jwtAccessSecret := os.Getenv("JWT_ACCESS_SECRET")
+	cloudinaryCloudName := os.Getenv("CLOUDINARY_CLOUD_NAME")
+	cloudinaryAPIKey := os.Getenv("CLOUDINARY_API_KEY")
+	cloudinaryAPISecret := os.Getenv("CLOUDINARY_API_SECRET")
 
 	return &Config{
-		Port:             port,
-		GinMode:          ginMode,
-		DatabaseURL:      dbURL,
-		JWTRefreshSecret: jwtRefreshSecret,
-		JWTAccessSecret:  jwtAccessSecret,
+		Port:                port,
+		GinMode:             ginMode,
+		DatabaseURL:         dbURL,
+		JWTRefreshSecret:    jwtRefreshSecret,
+		JWTAccessSecret:     jwtAccessSecret,
+		CloudinaryCloudName: cloudinaryCloudName,
+		CloudinaryAPIKey:    cloudinaryAPIKey,
+		CloudinaryAPISecret: cloudinaryAPISecret,
 	}, nil
 }

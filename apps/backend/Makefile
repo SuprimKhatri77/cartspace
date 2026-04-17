@@ -4,7 +4,7 @@ export
 migrate-up:
 	migrate -path migrations -database "$${DATABASE_URL}" up
 migrate-down:
-	migrate -path migrations -database "$${DATABASE_URL}" down
+	migrate -path migrations -database "$${DATABASE_URL}" down ${N}
 
 .PHONY: run build
 run:

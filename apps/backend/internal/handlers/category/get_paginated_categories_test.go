@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
-	categoryHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/categories"
+	categoryHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category"
 )
 
 func TestGetPaginatedCategories_Success(t *testing.T) {

@@ -68,7 +68,7 @@ api docs available at `http://localhost:5000/docs` once the backend is running.
 
 - [x] auth — register, login, logout, refresh token
 - [x] handler tests
-- [ ] categories + subcategories crud
+- [x] categories + subcategories crud
 - [ ] products + variants crud
 - [ ] orders
 - [ ] checkout with stripe
