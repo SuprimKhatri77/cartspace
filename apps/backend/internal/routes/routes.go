@@ -9,8 +9,11 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	authHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/auth"
-	categoryHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/categories"
+	categoryHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category"
+	productHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/product/admin"
+	userProduct "github.com/suprimkhatri77/cartspace/backend/internal/handlers/product/user"
 	"github.com/suprimkhatri77/cartspace/backend/internal/middleware"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/cloudinary"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
@@ -19,6 +22,7 @@ type Config struct {
 	OpenAPIPath string // path to openapi.json file
 	Queries     *dbgen.Queries
 	Config      *config.Config
+	CldClient   *cloudinary.Client
 }
 
 // Setup attaches all routes to the given engine.
@@ -53,20 +57,38 @@ func Setup(r *gin.Engine, cfg Config) {
 			Message: "Welcome to the Cartspace API",
 		})
 	})
+	api := r.Group("/api/v1")
 
-	// auth routes
-	authRoutes := r.Group("/api/auth")
-	authRoutes.POST("/register", authHandler.RegisterUser(cfg.Queries, cfg.Config))
-	authRoutes.POST("/login", authHandler.LoginUser(cfg.Queries, cfg.Config))
-	authRoutes.POST("/logout", authHandler.Logout(cfg.Queries, cfg.Config))
-	authRoutes.POST("/refresh", authHandler.RefreshAccessToken(cfg.Queries, cfg.Config))
+	// auth - public
+	auth := api.Group("/auth")
+	auth.POST("/register", authHandler.RegisterUser(cfg.Queries, cfg.Config))
+	auth.POST("/login", authHandler.LoginUser(cfg.Queries, cfg.Config))
+	auth.POST("/logout", authHandler.Logout(cfg.Queries, cfg.Config))
+	auth.POST("/refresh", authHandler.RefreshAccessToken(cfg.Queries, cfg.Config))
 
-	// category routes
-	categoryRoutes := r.Group("/api/admin/category", middleware.RequireAdmin(cfg.Config))
-	categoryRoutes.POST("", categoryHandler.CreateCategory(cfg.Queries))
-	categoryRoutes.PUT("/:id", categoryHandler.UpdateCategory(cfg.Queries))
-	categoryRoutes.DELETE("/:id", categoryHandler.DeleteCategory(cfg.Queries))
-	categoryRoutes.GET("", categoryHandler.GetPaginatedCategories(cfg.Queries))
+	// admin routes
+	/*
+		actual shape for later:
+		       admin := api.Group("/admin", middleware.RequireAuth(cfg.Config), middleware.RequireAdmin)
+	*/
+	admin := api.Group("/admin", middleware.RequireAdmin(cfg.Config))
+
+	adminCategory := admin.Group("/categories")
+	adminCategory.POST("", categoryHandler.CreateCategory(cfg.Queries))
+	adminCategory.PUT("/:id", categoryHandler.UpdateCategory(cfg.Queries))
+	adminCategory.DELETE("/:id", categoryHandler.DeleteCategory(cfg.Queries))
+	adminCategory.GET("", categoryHandler.GetPaginatedCategories(cfg.Queries))
+
+	adminProduct := admin.Group("/products")
+	adminProduct.POST("", productHandler.CreateProduct(cfg.Queries))
+	adminProduct.PUT("/:productID", productHandler.UpdateProduct(cfg.Queries))
+	adminProduct.DELETE("/:productID", productHandler.DeleteProduct(cfg.Queries))
+	// adminProduct.GET("", productHandler.AdminListProducts(cfg.Queries))
+
+	// user facing - public
+	products := api.Group("/products")
+	products.GET("", userProduct.ListProducts(cfg.Queries))
+	products.GET("/:productID", productHandler.GetProductByID(cfg.Queries))
 
 }
 

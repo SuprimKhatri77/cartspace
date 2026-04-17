@@ -8,7 +8,8 @@ type AppError struct {
 
 type APIResponse struct {
 	Success bool       `json:"success"`
-	Message string     `json:"message"`
+	Message string     `json:"message,omitempty"`
+	Code    string     `json:"code,omitempty"`
 	Errors  []AppError `json:"errors,omitempty"`
 	Data    any        `json:"data,omitempty"`
 }

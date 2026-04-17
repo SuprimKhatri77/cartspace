@@ -17,6 +17,49 @@ type Category struct {
 	UpdatedAt pgtype.Timestamptz
 }
 
+type Product struct {
+	ID             pgtype.UUID
+	Name           string
+	Slug           string
+	CategoryID     pgtype.UUID
+	Description    pgtype.Text
+	Features       []string
+	Images         []string
+	ImagePublicIds []string
+	IsActive       bool
+	IsFeatured     bool
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+}
+
+type ProductOption struct {
+	ID        pgtype.UUID
+	ProductID pgtype.UUID
+	Name      string
+	Type      string
+}
+
+type ProductOptionValue struct {
+	ID       pgtype.UUID
+	OptionID pgtype.UUID
+	Value    string
+}
+
+type ProductVariant struct {
+	ID             pgtype.UUID
+	ProductID      pgtype.UUID
+	Sku            pgtype.Text
+	Stock          int32
+	Images         []string
+	ImagePublicIds []string
+	SellingPrice   pgtype.Numeric
+	OfferPrice     pgtype.Numeric
+	IsDefault      bool
+	IsActive       bool
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+}
+
 type RefreshToken struct {
 	ID        pgtype.UUID
 	UserID    pgtype.UUID
@@ -34,4 +77,9 @@ type User struct {
 	ImageUrl     pgtype.Text
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
+}
+
+type VariantOptionValue struct {
+	VariantID     pgtype.UUID
+	OptionValueID pgtype.UUID
 }
