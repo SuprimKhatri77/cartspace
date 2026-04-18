@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
@@ -21,6 +22,7 @@ func GetProductByID(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Missing product ID",
+				Code:    constants.MissingProductID,
 			})
 			return
 		}
@@ -30,6 +32,7 @@ func GetProductByID(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Invalid product ID format",
+				Code:    constants.InvalidProductID,
 			})
 			return
 		}
@@ -41,6 +44,7 @@ func GetProductByID(queries repository.ProductRepository) gin.HandlerFunc {
 				c.JSON(http.StatusNotFound, types.APIResponse{
 					Success: false,
 					Message: "Product not found",
+					Code:    constants.ProductNotFound,
 				})
 				return
 			}
@@ -48,13 +52,13 @@ func GetProductByID(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to fetch the product",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}
 
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
-			Message: "Product fetched",
 			Data:    product,
 		})
 	}

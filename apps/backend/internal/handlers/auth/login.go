@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -28,7 +29,12 @@ func LoginUser(queries repository.AuthRepository, cfg *config.Config) gin.Handle
 
 		if err := c.ShouldBindJSON(&requestBody); err != nil {
 			log.Println("error from binding json: ", err)
-			c.JSON(http.StatusBadRequest, types.APIResponse{Success: false, Message: "Invalid data.", Errors: validator.Parse(err, requestBody)})
+			c.JSON(http.StatusBadRequest, types.APIResponse{
+				Success: false,
+				Message: "Invalid request data",
+				Errors:  validator.Parse(err, requestBody),
+				Code:    constants.ValidationFailed,
+			})
 			return
 		}
 
@@ -41,20 +47,30 @@ func LoginUser(queries repository.AuthRepository, cfg *config.Config) gin.Handle
 				c.JSON(http.StatusUnauthorized, types.APIResponse{
 					Success: false,
 					Message: "Invalid credentials",
+					Code:    constants.InvalidCredentials,
 				})
+				return
 			}
-			// intentionally vague — don't want to reveal whether the email exists or not
-			c.JSON(http.StatusUnauthorized, types.APIResponse{Success: false, Message: "Invalid credentials."})
+			// intentionally vague don't want to reveal whether the email exists or not
+			c.JSON(http.StatusUnauthorized, types.APIResponse{
+				Success: false,
+				Message: "Invalid credentials",
+				Code:    constants.InvalidCredentials,
+			})
 			return
 		}
 
 		// bcrypt re-hashes the plain password using the salt embedded in user.PasswordHash,
-		// then compares — we never store or compare plain-text passwords directly
+		// then compares we never store or compare plain text passwords directly
 		err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(requestBody.Password))
 		if err != nil {
 			log.Println("error from comparing password: ", err)
-			// same vague message as above — don't hint which field was wrong
-			c.JSON(http.StatusUnauthorized, types.APIResponse{Success: false, Message: "Invalid credentials."})
+			// same vague message as above don't hint which field was wrong
+			c.JSON(http.StatusUnauthorized, types.APIResponse{
+				Success: false,
+				Message: "Invalid credentials",
+				Code:    constants.InvalidCredentials,
+			})
 			return
 		}
 
@@ -69,7 +85,11 @@ func LoginUser(queries repository.AuthRepository, cfg *config.Config) gin.Handle
 		accessTokenString, err := accessToken.SignedString([]byte(cfg.JWTAccessSecret))
 		if err != nil {
 			log.Println("error from signing access token: ", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Failed to sign access token."})
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
+				Success: false,
+				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
+			})
 			return
 		}
 
@@ -89,7 +109,11 @@ func LoginUser(queries repository.AuthRepository, cfg *config.Config) gin.Handle
 
 		if err != nil {
 			log.Println("error from signing token: ", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Failed to sign token."})
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
+				Success: false,
+				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
+			})
 			return
 		}
 
@@ -109,13 +133,20 @@ func LoginUser(queries repository.AuthRepository, cfg *config.Config) gin.Handle
 
 		if err != nil {
 			log.Println("error while storing the refresh token: ", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Something went wrong."})
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
+				Success: false,
+				Message: "Something went wrong.",
+				Code:    constants.InternalServerError,
+			})
 			return
 		}
 
 		c.SetCookie("access_token", accessTokenString, 15*60, "/", "", true, true)
 		c.SetCookie("refresh_token", refreshTokenString, 30*24*60*60, "/auth", "", true, true)
 
-		c.JSON(http.StatusOK, types.APIResponse{Success: true, Message: "User logged in successfully."})
+		c.JSON(http.StatusOK, types.APIResponse{
+			Success: true,
+			Message: "User logged in successfully.",
+		})
 	}
 }

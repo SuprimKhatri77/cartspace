@@ -17,10 +17,6 @@ CREATE UNIQUE INDEX unique_default_product_variant ON product_variants(product_i
 WHERE
   is_default = TRUE;
 
-CREATE UNIQUE INDEX unique_product_variant ON product_variants(product_id, color, size)
-WHERE
-  color IS NOT NULL
-  AND size IS NOT NULL;
 
 CREATE INDEX product_variant_created_idx ON product_variants(product_id, created_at);
 

@@ -11,7 +11,7 @@ SELECT * FROM products WHERE id = $1;
 
 -- name: ProductSlugExists :one
 SELECT EXISTS (
-  SELECT 1 FROM categories WHERE slug = $1
+  SELECT 1 FROM products WHERE slug = $1
 ) AS exists;
 
 -- name: GetProductWithDefaultVariantBySlug :one
@@ -70,7 +70,7 @@ RETURNING *;
 DELETE FROM products WHERE id = $1;
 
 -- name: GetProductsCount :one
-SELECT COUNT(*) FROM categories;
+SELECT COUNT(*) FROM products;
 
 
 -- name: AdminProductsList :many

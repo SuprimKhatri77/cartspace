@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
@@ -19,7 +20,11 @@ func Logout(queries repository.AuthRepository, cfg *config.Config) gin.HandlerFu
 
 		refreshToken, err := c.Cookie("refresh_token")
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, types.APIResponse{Success: false, Message: "Refresh token not found."})
+			c.JSON(http.StatusUnauthorized, types.APIResponse{
+				Success: false,
+				Message: "Refresh token not found.",
+				Code:    constants.MissingRefreshToken,
+			})
 			return
 		}
 
@@ -32,7 +37,11 @@ func Logout(queries repository.AuthRepository, cfg *config.Config) gin.HandlerFu
 		})
 		if err != nil || !token.Valid {
 			slog.Error("invalid refresh token", "error", err)
-			c.JSON(http.StatusUnauthorized, types.APIResponse{Success: false, Message: "Invalid refresh token."})
+			c.JSON(http.StatusUnauthorized, types.APIResponse{
+				Success: false,
+				Message: "Invalid refresh token.",
+				Code:    constants.InvalidRefreshToken,
+			})
 			return
 		}
 
@@ -43,7 +52,11 @@ func Logout(queries repository.AuthRepository, cfg *config.Config) gin.HandlerFu
 		err = queries.DeleteRefreshToken(ctx, tokenHash)
 		if err != nil {
 			slog.Error("failed to logout", "error", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Failed to logout."})
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
+				Success: false,
+				Message: "Failed to logout.",
+				Code:    constants.InternalServerError,
+			})
 			return
 		}
 

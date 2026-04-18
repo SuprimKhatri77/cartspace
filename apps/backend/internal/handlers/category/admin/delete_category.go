@@ -1,9 +1,10 @@
-package categoryHandler
+package admin
 
 import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
@@ -18,6 +19,7 @@ func DeleteCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Invalid category ID",
+				Code:    constants.InvalidCategoryID,
 			})
 			return
 		}
@@ -27,6 +29,7 @@ func DeleteCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to delete category",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}
@@ -35,6 +38,7 @@ func DeleteCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 			c.JSON(http.StatusNotFound, types.APIResponse{
 				Success: false,
 				Message: "Category not found",
+				Code:    constants.CategoryNotFound,
 			})
 			return
 		}

@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -27,6 +28,7 @@ func UpdateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Missing product ID",
+				Code:    constants.MissingProductID,
 			})
 			return
 		}
@@ -36,6 +38,7 @@ func UpdateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Invalid product ID format",
+				Code:    constants.InvalidProductID,
 			})
 			return
 		}
@@ -48,6 +51,7 @@ func UpdateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 				Success: false,
 				Message: "Invalid data",
 				Errors:  validator.Parse(err, updateProductRequest),
+				Code:    constants.ValidationFailed,
 			})
 			return
 		}
@@ -60,25 +64,26 @@ func UpdateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 				c.JSON(http.StatusNotFound, types.APIResponse{
 					Success: false,
 					Message: "Product not found",
+					Code:    constants.ProductNotFound,
 				})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}
 
 		newSlug := utils.Slugify(updateProductRequest.Name)
 		if newSlug != product.Slug {
-			newSlug = utils.Slugify(updateProductRequest.Name)
-
 			slugExists, err := queries.ProductSlugExists(ctx, newSlug)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, types.APIResponse{
 					Success: false,
 					Message: "Failed to process request",
+					Code:    constants.InternalServerError,
 				})
 				return
 			}
@@ -89,6 +94,7 @@ func UpdateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 					c.JSON(http.StatusInternalServerError, types.APIResponse{
 						Success: false,
 						Message: "Failed to generate slug",
+						Code:    constants.InternalServerError,
 					})
 					return
 				}
@@ -102,11 +108,22 @@ func UpdateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}
 
 		description := pgtype.Text{String: updateProductRequest.Description, Valid: true}
+
+		isActive := product.IsActive
+		if updateProductRequest.IsActive != nil {
+			isActive = *updateProductRequest.IsActive
+		}
+
+		isFeatured := product.IsFeatured
+		if updateProductRequest.IsFeatured != nil {
+			isFeatured = *updateProductRequest.IsFeatured
+		}
 
 		updatedProduct, err := queries.UpdateProduct(ctx, db.UpdateProductParams{
 			ID:             productID,
@@ -114,8 +131,8 @@ func UpdateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			Features:       updateProductRequest.Features,
 			Images:         updateProductRequest.Images,
 			ImagePublicIds: updateProductRequest.ImagePublicIDs,
-			IsActive:       *updateProductRequest.IsActive,
-			IsFeatured:     *updateProductRequest.IsFeatured,
+			IsActive:       isActive,
+			IsFeatured:     isFeatured,
 			Description:    description,
 			CategoryID:     categoryID,
 			Slug:           newSlug,
@@ -125,6 +142,7 @@ func UpdateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to update the product",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}

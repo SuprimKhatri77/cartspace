@@ -1,4 +1,4 @@
-package categoryHandler_test
+package admin_test
 
 import (
 	"bytes"

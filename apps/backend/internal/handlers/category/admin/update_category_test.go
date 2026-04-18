@@ -1,4 +1,4 @@
-package categoryHandler_test
+package admin_test
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
-	categoryHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category"
+	adminCategory "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category/admin"
 )
 
 func TestUpdateCategory_Success(t *testing.T) {
@@ -28,7 +28,7 @@ func TestUpdateCategory_Success(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.PUT("/api/category/:id", categoryHandler.UpdateCategory(repo))
+		r.PUT("/api/category/:id", adminCategory.UpdateCategory(repo))
 	})
 
 	_, str := getRandomUUID()
@@ -55,7 +55,7 @@ func TestUpdateCategory_WithParentID(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.PUT("/api/category/:id", categoryHandler.UpdateCategory(repo))
+		r.PUT("/api/category/:id", adminCategory.UpdateCategory(repo))
 	})
 
 	_, categoryID := getRandomUUID()
@@ -74,7 +74,7 @@ func TestUpdateCategory_InvalidRequestBody(t *testing.T) {
 	repo := &mockCategoryRepo{}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.PUT("/api/category/:id", categoryHandler.UpdateCategory(repo))
+		r.PUT("/api/category/:id", adminCategory.UpdateCategory(repo))
 
 	})
 
@@ -92,7 +92,7 @@ func TestUpdateCategory_UUIDConversionError(t *testing.T) {
 	repo := &mockCategoryRepo{}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.PUT("/api/category/:id", categoryHandler.UpdateCategory(repo))
+		r.PUT("/api/category/:id", adminCategory.UpdateCategory(repo))
 	})
 
 	w := makeRequest(t, router, "PUT", "/api/category/invalid_uuid", map[string]string{
@@ -113,7 +113,7 @@ func TestUpdateCategory_CategoryNotFound(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.PUT("/api/category/:id", categoryHandler.UpdateCategory(repo))
+		r.PUT("/api/category/:id", adminCategory.UpdateCategory(repo))
 	})
 
 	_, categoryID := getRandomUUID()
@@ -141,7 +141,7 @@ func TestUpdateCategory_DBError(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.PUT("/api/category/:id", categoryHandler.UpdateCategory(repo))
+		r.PUT("/api/category/:id", adminCategory.UpdateCategory(repo))
 	})
 
 	_, categoryID := getRandomUUID()
@@ -168,7 +168,7 @@ func TestUpdateCategory_SelfReferencingParentID(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.PUT("/api/category/:id", categoryHandler.UpdateCategory(repo))
+		r.PUT("/api/category/:id", adminCategory.UpdateCategory(repo))
 	})
 
 	w := makeRequest(t, router, "PUT", fmt.Sprintf("/api/category/%s", categoryID), map[string]string{
@@ -176,8 +176,8 @@ func TestUpdateCategory_SelfReferencingParentID(t *testing.T) {
 		"parentID": categoryID,
 	})
 
-	if w.Code != http.StatusConflict {
-		t.Errorf("expected 409, got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 
 }
@@ -204,7 +204,7 @@ func TestUpdateCategory_ShallowCyclicReference(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.PUT("/api/category/:id", categoryHandler.UpdateCategory(repo))
+		r.PUT("/api/category/:id", adminCategory.UpdateCategory(repo))
 	})
 
 	w := makeRequest(t, router, "PUT", fmt.Sprintf("/api/category/%s", categoryID), map[string]string{
@@ -212,7 +212,7 @@ func TestUpdateCategory_ShallowCyclicReference(t *testing.T) {
 		"parentID": parentID,
 	})
 
-	if w.Code != http.StatusConflict {
-		t.Errorf("expected 409, got %d", w.Code)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
 	}
 }

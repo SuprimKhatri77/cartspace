@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
@@ -19,6 +20,7 @@ func RequireAdmin(cfg *config.Config) gin.HandlerFunc {
 			c.JSON(http.StatusUnauthorized, types.APIResponse{
 				Success: false,
 				Message: "Unauthorized",
+				Code:    constants.MissingAuthToken,
 			})
 			c.Abort()
 
@@ -31,6 +33,7 @@ func RequireAdmin(cfg *config.Config) gin.HandlerFunc {
 			c.JSON(http.StatusUnauthorized, types.APIResponse{
 				Success: false,
 				Message: "Invalid authorization header",
+				Code:    constants.InvalidAuthHeader,
 			})
 			c.Abort()
 			return
@@ -49,6 +52,7 @@ func RequireAdmin(cfg *config.Config) gin.HandlerFunc {
 			c.JSON(http.StatusUnauthorized, types.APIResponse{
 				Success: false,
 				Message: "Invalid or expired token",
+				Code:    constants.InvalidToken,
 			})
 			c.Abort()
 			return
@@ -58,7 +62,8 @@ func RequireAdmin(cfg *config.Config) gin.HandlerFunc {
 		if !ok {
 			c.JSON(http.StatusUnauthorized, types.APIResponse{
 				Success: false,
-				Message: "Invalid token claims",
+				Message: "Invalid token",
+				Code:    constants.InvalidToken,
 			})
 			c.Abort()
 			return
@@ -68,7 +73,8 @@ func RequireAdmin(cfg *config.Config) gin.HandlerFunc {
 		if !ok {
 			c.JSON(http.StatusUnauthorized, types.APIResponse{
 				Success: false,
-				Message: "Invalid token claims",
+				Message: "Invalid token",
+				Code:    constants.InvalidToken,
 			})
 			c.Abort()
 			return
@@ -79,7 +85,8 @@ func RequireAdmin(cfg *config.Config) gin.HandlerFunc {
 		if !ok {
 			c.JSON(http.StatusUnauthorized, types.APIResponse{
 				Success: false,
-				Message: "Invalid token claims",
+				Message: "Invalid token",
+				Code:    constants.InvalidToken,
 			})
 			c.Abort()
 			return
@@ -89,6 +96,7 @@ func RequireAdmin(cfg *config.Config) gin.HandlerFunc {
 			c.JSON(http.StatusForbidden, types.APIResponse{
 				Success: false,
 				Message: "Forbidden",
+				Code:    constants.Forbidden,
 			})
 			c.Abort()
 			return

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -23,6 +24,7 @@ func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Invalid page parameter",
+				Code:    constants.InvalidPageParam,
 			})
 			return
 		}
@@ -31,6 +33,7 @@ func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Invalid page number",
+				Code:    constants.InvalidPageParam,
 			})
 			return
 		}
@@ -41,6 +44,7 @@ func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to fetch products",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}
@@ -53,13 +57,13 @@ func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 			})
 			return
 		}
-
-		offset := PAGE_LIMIT * int64(page-1)
 		pageCount := (total + PAGE_LIMIT - 1) / PAGE_LIMIT
 
 		if int64(page) > pageCount {
 			page = int(pageCount)
 		}
+
+		offset := PAGE_LIMIT * int64(page-1)
 
 		products, err := queries.ListActiveProducts(ctx, db.ListActiveProductsParams{
 			Limit:  int32(PAGE_LIMIT),
@@ -70,6 +74,7 @@ func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to fetch products",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}

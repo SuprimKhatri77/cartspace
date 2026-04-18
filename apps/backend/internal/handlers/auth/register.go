@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -38,7 +39,12 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 		if err := c.ShouldBindJSON(&registerRequest); err != nil {
 			slog.Error("Couldn't bind the request body", "error", err)
 
-			c.JSON(http.StatusBadRequest, types.APIResponse{Success: false, Message: "Invalid request body.", Errors: validator.Parse(err, registerRequest)})
+			c.JSON(http.StatusBadRequest, types.APIResponse{
+				Success: false,
+				Message: "Invalid request body.",
+				Errors:  validator.Parse(err, registerRequest),
+				Code:    constants.ValidationFailed,
+			})
 			return
 		}
 
@@ -48,7 +54,11 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 
 		if err != nil {
 			slog.Error("Failed to hash the password", "error", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Failed to hash the password."})
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
+				Success: false,
+				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
+			})
 			return
 		}
 
@@ -63,11 +73,19 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 			slog.Error("Failed to create user", "error", err)
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-				c.JSON(http.StatusConflict, types.APIResponse{Success: false, Message: "User already exists."})
+				c.JSON(http.StatusConflict, types.APIResponse{
+					Success: false,
+					Message: "User already exists.",
+					Code:    constants.UserAlreadyExists,
+				})
 				return
 
 			}
-			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Failed to create user."})
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
+				Success: false,
+				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
+			})
 			return
 		}
 
@@ -83,7 +101,11 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 
 		if err != nil {
 			slog.Error("failed to sign refresh token", "error", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Failed to sign access token."})
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
+				Success: false,
+				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
+			})
 			return
 		}
 
@@ -103,7 +125,11 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 
 		if err != nil {
 			slog.Error("failed to sign refresh token", "error", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Failed to sign token."})
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
+				Success: false,
+				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
+			})
 			return
 		}
 		// converting the expiry time to proper pgtype.Timestamptz
@@ -119,7 +145,11 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 		_, err = queries.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{UserID: user.ID, TokenHash: tokenHash, ExpiresAt: expiresAt})
 		if err != nil {
 			slog.Error("failed to store refresh token in db", "error", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Failed to create refresh token."})
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
+				Success: false,
+				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
+			})
 			return
 		}
 

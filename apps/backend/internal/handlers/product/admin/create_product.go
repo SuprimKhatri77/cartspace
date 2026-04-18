@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -22,8 +23,18 @@ func CreateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			slog.Error("Invalid request body", "error", err)
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
-				Message: "Invalid data",
+				Message: "Invalid request data",
+				Code:    constants.ValidationFailed,
 				Errors:  validator.Parse(err, createProductRequest),
+			})
+			return
+		}
+
+		if createProductRequest.IsActive == nil || createProductRequest.IsFeatured == nil {
+			c.JSON(http.StatusBadRequest, types.APIResponse{
+				Success: false,
+				Message: "Invalid request data",
+				Code:    constants.ValidationFailed,
 			})
 			return
 		}
@@ -39,6 +50,7 @@ func CreateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}
@@ -50,6 +62,7 @@ func CreateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 				c.JSON(http.StatusInternalServerError, types.APIResponse{
 					Success: false,
 					Message: "Failed to generate slug",
+					Code:    constants.InternalServerError,
 				})
 				return
 			}
@@ -61,6 +74,7 @@ func CreateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to parse the category ID",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}
@@ -81,9 +95,11 @@ func CreateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 
 		if err != nil {
 			slog.Error("failed to insert product in db", "error", err)
+
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to create product",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}

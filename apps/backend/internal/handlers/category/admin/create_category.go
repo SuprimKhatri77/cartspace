@@ -1,4 +1,4 @@
-package categoryHandler
+package admin
 
 import (
 	"errors"
@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -29,6 +30,7 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 				Success: false,
 				Message: "Invalid request data",
 				Errors:  validator.Parse(err, createCategoryRequest),
+				Code:    constants.ValidationFailed,
 			})
 			return
 		}
@@ -42,6 +44,7 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
 			})
 
 			return
@@ -54,6 +57,7 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 				c.JSON(http.StatusInternalServerError, types.APIResponse{
 					Success: false,
 					Message: "Failed to generate unique slug",
+					Code:    constants.InternalServerError,
 				})
 				return
 			}
@@ -65,7 +69,11 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 
 			if err := parentID.Scan(createCategoryRequest.ParentID); err != nil {
 				slog.Error("invalid parent id", "error", err)
-				c.JSON(http.StatusBadRequest, types.APIResponse{Success: false, Message: "Invalid parent category ID"})
+				c.JSON(http.StatusBadRequest, types.APIResponse{
+					Success: false,
+					Message: "Invalid parent category ID",
+					Code:    constants.ValidationFailed,
+				})
 				return
 			}
 
@@ -76,8 +84,8 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 					log.Println("no rows found err will be triggered")
 					c.JSON(http.StatusNotFound, types.APIResponse{
 						Success: false,
-
 						Message: "Parent not found",
+						Code:    constants.CategoryNotFound,
 					})
 					return
 				}
@@ -85,6 +93,7 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 				c.JSON(http.StatusInternalServerError, types.APIResponse{
 					Success: false,
 					Message: "Failed to process request",
+					Code:    constants.InternalServerError,
 				})
 				return
 			}
@@ -100,12 +109,14 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 					c.JSON(http.StatusConflict, types.APIResponse{
 						Success: false,
 						Message: "Category already exists",
+						Code:    constants.CategoryAlreadyExists,
 					})
 					return
 				}
 				c.JSON(http.StatusInternalServerError, types.APIResponse{
 					Success: false,
 					Message: "Something went wrong",
+					Code:    constants.InternalServerError,
 				})
 				return
 			}
@@ -130,16 +141,22 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 				c.JSON(http.StatusConflict, types.APIResponse{
 					Success: false,
 					Message: "Category already exists",
+					Code:    constants.CategoryAlreadyExists,
 				})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
-				Message: "Something went wrong",
+				Message: "Failed to create category",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}
 
-		c.JSON(http.StatusOK, types.APIResponse{Success: true, Message: "Category created", Data: category})
+		c.JSON(http.StatusCreated, types.APIResponse{
+			Success: true,
+			Message: "Category created",
+			Data:    category,
+		})
 	}
 }

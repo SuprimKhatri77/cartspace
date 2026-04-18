@@ -246,7 +246,7 @@ func (q *Queries) GetProductWithDefaultVariantBySlug(ctx context.Context, slug s
 }
 
 const getProductsCount = `-- name: GetProductsCount :one
-SELECT COUNT(*) FROM categories
+SELECT COUNT(*) FROM products
 `
 
 func (q *Queries) GetProductsCount(ctx context.Context) (int64, error) {
@@ -452,7 +452,7 @@ func (q *Queries) ListProductsByCategory(ctx context.Context, arg ListProductsBy
 
 const productSlugExists = `-- name: ProductSlugExists :one
 SELECT EXISTS (
-  SELECT 1 FROM categories WHERE slug = $1
+  SELECT 1 FROM products WHERE slug = $1
 ) AS exists
 `
 
