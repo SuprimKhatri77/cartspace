@@ -1,4 +1,4 @@
-package categoryHandler_test
+package admin_test
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
-	categoryHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category"
+	adminCategory "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category/admin"
 )
 
 func TestDeleteCategory_Success(t *testing.T) {
@@ -20,7 +20,7 @@ func TestDeleteCategory_Success(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.DELETE("/api/category/:id", categoryHandler.DeleteCategory(repo))
+		r.DELETE("/api/category/:id", adminCategory.DeleteCategory(repo))
 	})
 
 	_, categoryID := getRandomUUID()
@@ -35,7 +35,7 @@ func TestDeleteCategory_InvalidUUID(t *testing.T) {
 	repo := &mockCategoryRepo{}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.DELETE("/api/category/:id", categoryHandler.DeleteCategory(repo))
+		r.DELETE("/api/category/:id", adminCategory.DeleteCategory(repo))
 	})
 
 	w := makeRequest(t, router, "DELETE", "/api/category/invalid_uuid", nil)
@@ -53,7 +53,7 @@ func TestDeleteCategory_DBError(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.DELETE("/api/category/:id", categoryHandler.DeleteCategory(repo))
+		r.DELETE("/api/category/:id", adminCategory.DeleteCategory(repo))
 	})
 
 	_, categoryID := getRandomUUID()
@@ -72,7 +72,7 @@ func TestDeleteCategory_NoRowsAffected(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.DELETE("/api/category/:id", categoryHandler.DeleteCategory(repo))
+		r.DELETE("/api/category/:id", adminCategory.DeleteCategory(repo))
 	})
 
 	_, categoryID := getRandomUUID()

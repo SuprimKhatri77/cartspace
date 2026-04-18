@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
@@ -19,6 +20,7 @@ func DeleteProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Missing product ID",
+				Code:    constants.MissingProductID,
 			})
 			return
 		}
@@ -28,6 +30,7 @@ func DeleteProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Invalid product ID format",
+				Code:    constants.InvalidProductID,
 			})
 			return
 		}
@@ -37,6 +40,7 @@ func DeleteProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to delete product",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}
@@ -45,11 +49,12 @@ func DeleteProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			c.JSON(http.StatusNotFound, types.APIResponse{
 				Success: false,
 				Message: "Product not found",
+				Code:    constants.ProductNotFound,
 			})
 			return
 		}
 
-		c.JSON(http.StatusNoContent, types.APIResponse{
+		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
 			Message: "Product deleted",
 		})

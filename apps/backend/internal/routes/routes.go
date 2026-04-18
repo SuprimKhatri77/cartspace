@@ -9,10 +9,9 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	authHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/auth"
-	categoryHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category"
-	productHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/product/admin"
+	adminCategory "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category/admin"
+	adminProduct "github.com/suprimkhatri77/cartspace/backend/internal/handlers/product/admin"
 	userProduct "github.com/suprimkhatri77/cartspace/backend/internal/handlers/product/user"
-	"github.com/suprimkhatri77/cartspace/backend/internal/middleware"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/cloudinary"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
@@ -71,24 +70,23 @@ func Setup(r *gin.Engine, cfg Config) {
 		actual shape for later:
 		       admin := api.Group("/admin", middleware.RequireAuth(cfg.Config), middleware.RequireAdmin)
 	*/
-	admin := api.Group("/admin", middleware.RequireAdmin(cfg.Config))
+	admin := api.Group("/admin")
 
-	adminCategory := admin.Group("/categories")
-	adminCategory.POST("", categoryHandler.CreateCategory(cfg.Queries))
-	adminCategory.PUT("/:id", categoryHandler.UpdateCategory(cfg.Queries))
-	adminCategory.DELETE("/:id", categoryHandler.DeleteCategory(cfg.Queries))
-	adminCategory.GET("", categoryHandler.GetPaginatedCategories(cfg.Queries))
+	// routes
+	adminCategoryRoutes := admin.Group("/categories")
+	adminCategoryRoutes.POST("", adminCategory.CreateCategory(cfg.Queries))
+	adminCategoryRoutes.PUT("/:id", adminCategory.UpdateCategory(cfg.Queries))
+	adminCategoryRoutes.DELETE("/:id", adminCategory.DeleteCategory(cfg.Queries))
+	adminCategoryRoutes.GET("", adminCategory.GetPaginatedCategories(cfg.Queries))
 
-	adminProduct := admin.Group("/products")
-	adminProduct.POST("", productHandler.CreateProduct(cfg.Queries))
-	adminProduct.PUT("/:productID", productHandler.UpdateProduct(cfg.Queries))
-	adminProduct.DELETE("/:productID", productHandler.DeleteProduct(cfg.Queries))
-	// adminProduct.GET("", productHandler.AdminListProducts(cfg.Queries))
+	adminProductRoutes := admin.Group("/products")
+	adminProductRoutes.POST("", adminProduct.CreateProduct(cfg.Queries))
+	adminProductRoutes.PUT("/:productID", adminProduct.UpdateProduct(cfg.Queries))
+	adminProductRoutes.DELETE("/:productID", adminProduct.DeleteProduct(cfg.Queries))
+	adminProductRoutes.GET("", adminProduct.GetPaginatedProducts(cfg.Queries))
 
-	// user facing - public
-	products := api.Group("/products")
-	products.GET("", userProduct.ListProducts(cfg.Queries))
-	products.GET("/:productID", productHandler.GetProductByID(cfg.Queries))
+	userProductRoutes := api.Group("/products")
+	userProductRoutes.GET("", userProduct.ListProducts(cfg.Queries))
 
 }
 

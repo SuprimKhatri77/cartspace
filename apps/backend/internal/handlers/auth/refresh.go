@@ -11,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -22,7 +23,11 @@ func RefreshAccessToken(queries repository.AuthRepository, cfg *config.Config) g
 
 		refreshTokenString, err := c.Cookie("refresh_token")
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, types.APIResponse{Success: false, Message: "Refresh token not found."})
+			c.JSON(http.StatusUnauthorized, types.APIResponse{
+				Success: false,
+				Message: "Refresh token not found",
+				Code:    constants.MissingRefreshToken,
+			})
 			return
 		}
 
@@ -35,14 +40,22 @@ func RefreshAccessToken(queries repository.AuthRepository, cfg *config.Config) g
 		})
 
 		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, types.APIResponse{Success: false, Message: "Invalid refresh token."})
+			c.JSON(http.StatusUnauthorized, types.APIResponse{
+				Success: false,
+				Message: "Invalid refresh token",
+				Code:    constants.InvalidRefreshToken,
+			})
 			return
 		}
 
 		// extract claims
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			c.JSON(http.StatusUnauthorized, types.APIResponse{Success: false, Message: "Invalid token claims."})
+			c.JSON(http.StatusUnauthorized, types.APIResponse{
+				Success: false,
+				Message: "Invalid token",
+				Code:    constants.InvalidToken,
+			})
 			return
 		}
 
@@ -54,14 +67,22 @@ func RefreshAccessToken(queries repository.AuthRepository, cfg *config.Config) g
 		if err != nil {
 			slog.Error("error getting refresh token", "error", err)
 			// token not in DB = already used (rotation violation) or never existed
-			c.JSON(http.StatusUnauthorized, types.APIResponse{Success: false, Message: "Invalid refresh token."})
+			c.JSON(http.StatusUnauthorized, types.APIResponse{
+				Success: false,
+				Message: "Invalid refresh token",
+				Code:    constants.InvalidRefreshToken,
+			})
 			return
 		}
 
 		// check if expired in DB (double check alongside JWT exp)
 		if dbToken.ExpiresAt.Time.Before(time.Now()) {
 
-			c.JSON(http.StatusUnauthorized, types.APIResponse{Success: false, Message: "Refresh token expired."})
+			c.JSON(http.StatusUnauthorized, types.APIResponse{
+				Success: false,
+				Message: "Refresh token expired",
+				Code:    constants.RefreshTokenExpired,
+			})
 			return
 		}
 
@@ -69,7 +90,11 @@ func RefreshAccessToken(queries repository.AuthRepository, cfg *config.Config) g
 		err = queries.DeleteRefreshToken(ctx, tokenHash)
 		if err != nil {
 			slog.Error("error deleting refresh token", "error", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Failed to rotate token."})
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
+				Success: false,
+				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
+			})
 			return
 		}
 
@@ -83,7 +108,12 @@ func RefreshAccessToken(queries repository.AuthRepository, cfg *config.Config) g
 		newAccessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
 		newAccessTokenString, err := newAccessToken.SignedString([]byte(cfg.JWTAccessSecret))
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Failed to generate access token."})
+			slog.Error("failed to generate access token", "error", err)
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
+				Success: false,
+				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
+			})
 			return
 		}
 
@@ -96,7 +126,11 @@ func RefreshAccessToken(queries repository.AuthRepository, cfg *config.Config) g
 		newRefreshTokenString, err := newRefreshToken.SignedString([]byte(cfg.JWTRefreshSecret))
 
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Failed to generate refresh token."})
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
+				Success: false,
+				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
+			})
 			return
 		}
 
@@ -110,7 +144,11 @@ func RefreshAccessToken(queries repository.AuthRepository, cfg *config.Config) g
 			ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(30 * 24 * time.Hour), Valid: true},
 		})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Failed to save refresh token."})
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
+				Success: false,
+				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
+			})
 			return
 		}
 
@@ -118,6 +156,9 @@ func RefreshAccessToken(queries repository.AuthRepository, cfg *config.Config) g
 		c.SetCookie("access_token", newAccessTokenString, 15*60, "/", "", true, true)
 		c.SetCookie("refresh_token", newRefreshTokenString, 30*24*60*60, "/auth", "", true, true)
 
-		c.JSON(http.StatusOK, types.APIResponse{Success: true, Message: "Tokens refreshed."})
+		c.JSON(http.StatusOK, types.APIResponse{
+			Success: true,
+			Message: "Tokens refreshed.",
+		})
 	}
 }

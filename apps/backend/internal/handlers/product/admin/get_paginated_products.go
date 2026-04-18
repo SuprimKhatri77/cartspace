@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -23,7 +24,7 @@ func GetPaginatedProducts(queries repository.ProductRepository) gin.HandlerFunc 
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Invalid page parameter",
-				Code:    "INVALID_PAGE_PARAMETER",
+				Code:    constants.InvalidPageParam,
 			})
 			return
 		}
@@ -32,7 +33,7 @@ func GetPaginatedProducts(queries repository.ProductRepository) gin.HandlerFunc 
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Page number must be greater than 0",
-				Code:    "INVALID_PAGE_PARAMETER",
+				Code:    constants.InvalidPageParam,
 			})
 			return
 
@@ -43,7 +44,7 @@ func GetPaginatedProducts(queries repository.ProductRepository) gin.HandlerFunc 
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to fetch products",
-				Code:    "INTERNAL_SERVER_ERROR",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}
@@ -62,7 +63,7 @@ func GetPaginatedProducts(queries repository.ProductRepository) gin.HandlerFunc 
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Page out of range",
-				Code:    "INVALID_PAGE_PARAMETER",
+				Code:    constants.InvalidPageParam,
 			})
 			return
 		}
@@ -78,7 +79,7 @@ func GetPaginatedProducts(queries repository.ProductRepository) gin.HandlerFunc 
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",
-				Code:    "INTERNAL_SERVER_ERROR",
+				Code:    constants.InternalServerError,
 			})
 
 			return

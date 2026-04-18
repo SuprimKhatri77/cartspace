@@ -1,4 +1,4 @@
-package categoryHandler
+package admin
 
 import (
 	"errors"
@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -28,6 +29,7 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 				Success: false,
 				Message: "Invalid request data",
 				Errors:  validator.Parse(err, updateCategoryRequest),
+				Code:    constants.ValidationFailed,
 			})
 
 			return
@@ -41,6 +43,7 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Invalid category ID format",
+				Code:    constants.ValidationFailed,
 			})
 			return
 		}
@@ -52,12 +55,14 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 				c.JSON(http.StatusNotFound, types.APIResponse{
 					Success: false,
 					Message: "Category not found",
+					Code:    constants.CategoryNotFound,
 				})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}
@@ -70,7 +75,11 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 			if err != nil {
 
 				slog.Error("failed to get category", "error", err)
-				c.JSON(http.StatusInternalServerError, types.APIResponse{Success: false, Message: "Something went wrong"})
+				c.JSON(http.StatusInternalServerError, types.APIResponse{
+					Success: false,
+					Message: "Something went wrong",
+					Code:    constants.InternalServerError,
+				})
 
 				return
 			}
@@ -81,6 +90,7 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 					c.JSON(http.StatusInternalServerError, types.APIResponse{
 						Success: false,
 						Message: "Failed to generate slug",
+						Code:    constants.InternalServerError,
 					})
 					return
 				}
@@ -103,6 +113,7 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, types.APIResponse{
 					Success: false,
 					Message: "Invalid parent category ID format",
+					Code:    constants.ValidationFailed,
 				})
 				return
 			}
@@ -113,11 +124,13 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 					c.JSON(http.StatusNotFound, types.APIResponse{
 						Success: false,
 						Message: "Parent category not found",
+						Code:    constants.CategoryNotFound,
 					})
 				} else {
 					c.JSON(http.StatusInternalServerError, types.APIResponse{
 						Success: false,
 						Message: "Something went wrong",
+						Code:    constants.InternalServerError,
 					})
 				}
 				return
@@ -125,9 +138,10 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 
 			// self referencing check A -> A
 			if parentID == categoryID {
-				c.JSON(http.StatusConflict, types.APIResponse{
+				c.JSON(http.StatusBadRequest, types.APIResponse{
 					Success: false,
 					Message: "A category cannot be its own parent",
+					Code:    constants.SelfReferencingCategory,
 				})
 				return
 			}
@@ -136,9 +150,10 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 
 			// shallow cyclic reference check A -> B -> A
 			if parentCategory.ParentID == category.ID {
-				c.JSON(http.StatusConflict, types.APIResponse{
+				c.JSON(http.StatusBadRequest, types.APIResponse{
 					Success: false,
 					Message: "Assigning this parent would create a circular reference",
+					Code:    constants.CyclicCategoryReference,
 				})
 				return
 			}
@@ -154,15 +169,17 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == "23514" {
-				c.JSON(http.StatusConflict, types.APIResponse{
+				c.JSON(http.StatusBadRequest, types.APIResponse{
 					Success: false,
 					Message: "A category cannot be its own parent",
+					Code:    constants.SelfReferencingCategory,
 				})
 				return
 			}
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to update category",
+				Code:    constants.InternalServerError,
 			})
 			return
 		}

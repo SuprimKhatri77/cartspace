@@ -1,4 +1,4 @@
-package categoryHandler_test
+package admin_test
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
-	categoryHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category"
+	adminCategory "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category/admin"
 )
 
 func TestCreateCategory_Success(t *testing.T) {
@@ -25,7 +25,7 @@ func TestCreateCategory_Success(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.POST("/api/category", categoryHandler.CreateCategory(repo))
+		r.POST("/api/category", adminCategory.CreateCategory(repo))
 	})
 
 	w := makeRequest(t, router, "POST", "/api/category", map[string]string{
@@ -41,7 +41,7 @@ func TestCreateCategory_ValidationFails(t *testing.T) {
 	repo := &mockCategoryRepo{}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.POST("/api/category", categoryHandler.CreateCategory(repo))
+		r.POST("/api/category", adminCategory.CreateCategory(repo))
 	})
 
 	w := makeRequest(t, router, "POST", "/api/category", map[string]string{
@@ -65,7 +65,7 @@ func TestCreateCategory_SlugExists(t *testing.T) {
 		},
 	}
 	router := setupRouter(func(r *gin.Engine) {
-		r.POST("/api/category", categoryHandler.CreateCategory(repo))
+		r.POST("/api/category", adminCategory.CreateCategory(repo))
 	})
 
 	w := makeRequest(t, router, "POST", "/api/category", map[string]string{
@@ -88,7 +88,7 @@ func TestCreateCategory_DBError(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.POST("/api/category", categoryHandler.CreateCategory(repo))
+		r.POST("/api/category", adminCategory.CreateCategory(repo))
 	})
 
 	w := makeRequest(t, router, "POST", "/api/category", map[string]string{
@@ -111,7 +111,7 @@ func TestCreateCategory_ParentNotFound(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.POST("/api/category", categoryHandler.CreateCategory(repo))
+		r.POST("/api/category", adminCategory.CreateCategory(repo))
 	})
 
 	_, str := getRandomUUID()
@@ -130,7 +130,7 @@ func TestCreateCategory_InvalidParentID(t *testing.T) {
 	repo := &mockCategoryRepo{}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.POST("/api/category", categoryHandler.CreateCategory(repo))
+		r.POST("/api/category", adminCategory.CreateCategory(repo))
 	})
 
 	w := makeRequest(t, router, "POST", "/api/category", map[string]string{
@@ -157,7 +157,7 @@ func TestCreateCategory_WithParentID(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.POST("/api/category", categoryHandler.CreateCategory(repo))
+		r.POST("/api/category", adminCategory.CreateCategory(repo))
 	})
 
 	_, str := getRandomUUID()

@@ -1,4 +1,4 @@
-package categoryHandler_test
+package admin_test
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
-	categoryHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category"
+	adminCategory "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category/admin"
 )
 
 func TestGetPaginatedCategories_Success(t *testing.T) {
@@ -23,7 +23,7 @@ func TestGetPaginatedCategories_Success(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.GET("/api/category", categoryHandler.GetPaginatedCategories(repo))
+		r.GET("/api/category", adminCategory.GetPaginatedCategories(repo))
 	})
 
 	w := makeRequest(t, router, "GET", "/api/category?page=1", nil)
@@ -38,7 +38,7 @@ func TestGetPaginatedCategories_InvalidQueryParameterType(t *testing.T) {
 	repo := &mockCategoryRepo{}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.GET("/api/category", categoryHandler.GetPaginatedCategories(repo))
+		r.GET("/api/category", adminCategory.GetPaginatedCategories(repo))
 	})
 
 	w := makeRequest(t, router, "GET", "/api/category?page=invalid_query_parameter_type", nil)
@@ -56,7 +56,7 @@ func TestGetPaginatedCategories_TotalCountZero(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.GET("/api/category", categoryHandler.GetPaginatedCategories(repo))
+		r.GET("/api/category", adminCategory.GetPaginatedCategories(repo))
 	})
 
 	w := makeRequest(t, router, "GET", "/api/category?page=1", nil)
@@ -75,7 +75,7 @@ func TestGetPaginatedCategories_DBErrorForTotalCount(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.GET("/api/category", categoryHandler.GetPaginatedCategories(repo))
+		r.GET("/api/category", adminCategory.GetPaginatedCategories(repo))
 	})
 
 	w := makeRequest(t, router, "GET", "/api/category?page=1", nil)
@@ -97,7 +97,7 @@ func TestGetPaginatedCategories_DBError(t *testing.T) {
 	}
 
 	router := setupRouter(func(r *gin.Engine) {
-		r.GET("/api/category", categoryHandler.GetPaginatedCategories(repo))
+		r.GET("/api/category", adminCategory.GetPaginatedCategories(repo))
 	})
 
 	w := makeRequest(t, router, "GET", "/api/category?page=1", nil)
