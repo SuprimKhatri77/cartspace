@@ -23,24 +23,24 @@ LIMIT $1 OFFSET $2
 `
 
 type AdminProductsListParams struct {
-	Limit  int32
-	Offset int32
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
 }
 
 type AdminProductsListRow struct {
-	ID             pgtype.UUID
-	Name           string
-	Slug           string
-	CategoryID     pgtype.UUID
-	Description    pgtype.Text
-	Features       []string
-	Images         []string
-	ImagePublicIds []string
-	IsActive       bool
-	IsFeatured     bool
-	CreatedAt      pgtype.Timestamptz
-	UpdatedAt      pgtype.Timestamptz
-	CategoryName   pgtype.Text
+	ID             pgtype.UUID        `json:"id"`
+	Name           string             `json:"name"`
+	Slug           string             `json:"slug"`
+	CategoryID     pgtype.UUID        `json:"categoryId"`
+	Description    pgtype.Text        `json:"description"`
+	Features       []string           `json:"features"`
+	Images         []string           `json:"images"`
+	ImagePublicIds []string           `json:"imagePublicIds"`
+	IsActive       bool               `json:"isActive"`
+	IsFeatured     bool               `json:"isFeatured"`
+	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
+	CategoryName   pgtype.Text        `json:"categoryName"`
 }
 
 func (q *Queries) AdminProductsList(ctx context.Context, arg AdminProductsListParams) ([]AdminProductsListRow, error) {
@@ -84,15 +84,15 @@ RETURNING id, name, slug, category_id, description, features, images, image_publ
 `
 
 type CreateProductParams struct {
-	Name           string
-	Slug           string
-	CategoryID     pgtype.UUID
-	Description    pgtype.Text
-	Features       []string
-	Images         []string
-	ImagePublicIds []string
-	IsActive       bool
-	IsFeatured     bool
+	Name           string      `json:"name"`
+	Slug           string      `json:"slug"`
+	CategoryID     pgtype.UUID `json:"categoryId"`
+	Description    pgtype.Text `json:"description"`
+	Features       []string    `json:"features"`
+	Images         []string    `json:"images"`
+	ImagePublicIds []string    `json:"imagePublicIds"`
+	IsActive       bool        `json:"isActive"`
+	IsFeatured     bool        `json:"isFeatured"`
 }
 
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
@@ -197,25 +197,25 @@ WHERE p.slug = $1 AND p.is_active = TRUE
 `
 
 type GetProductWithDefaultVariantBySlugRow struct {
-	ID                    pgtype.UUID
-	Name                  string
-	Slug                  string
-	CategoryID            pgtype.UUID
-	Description           pgtype.Text
-	Features              []string
-	Images                []string
-	ImagePublicIds        []string
-	IsActive              bool
-	IsFeatured            bool
-	CreatedAt             pgtype.Timestamptz
-	UpdatedAt             pgtype.Timestamptz
-	VariantID             pgtype.UUID
-	Sku                   pgtype.Text
-	Stock                 int32
-	VariantImages         []string
-	VariantImagePublicIds []string
-	SellingPrice          pgtype.Numeric
-	OfferPrice            pgtype.Numeric
+	ID                    pgtype.UUID        `json:"id"`
+	Name                  string             `json:"name"`
+	Slug                  string             `json:"slug"`
+	CategoryID            pgtype.UUID        `json:"categoryId"`
+	Description           pgtype.Text        `json:"description"`
+	Features              []string           `json:"features"`
+	Images                []string           `json:"images"`
+	ImagePublicIds        []string           `json:"imagePublicIds"`
+	IsActive              bool               `json:"isActive"`
+	IsFeatured            bool               `json:"isFeatured"`
+	CreatedAt             pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt             pgtype.Timestamptz `json:"updatedAt"`
+	VariantID             pgtype.UUID        `json:"variantId"`
+	Sku                   pgtype.Text        `json:"sku"`
+	Stock                 int32              `json:"stock"`
+	VariantImages         []string           `json:"variantImages"`
+	VariantImagePublicIds []string           `json:"variantImagePublicIds"`
+	SellingPrice          int32              `json:"sellingPrice"`
+	OfferPrice            pgtype.Int4        `json:"offerPrice"`
 }
 
 func (q *Queries) GetProductWithDefaultVariantBySlug(ctx context.Context, slug string) (GetProductWithDefaultVariantBySlugRow, error) {
@@ -266,25 +266,25 @@ LIMIT $1 OFFSET $2
 `
 
 type ListActiveProductsParams struct {
-	Limit  int32
-	Offset int32
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
 }
 
 type ListActiveProductsRow struct {
-	ID             pgtype.UUID
-	Name           string
-	Slug           string
-	CategoryID     pgtype.UUID
-	Description    pgtype.Text
-	Features       []string
-	Images         []string
-	ImagePublicIds []string
-	IsActive       bool
-	IsFeatured     bool
-	CreatedAt      pgtype.Timestamptz
-	UpdatedAt      pgtype.Timestamptz
-	SellingPrice   pgtype.Numeric
-	OfferPrice     pgtype.Numeric
+	ID             pgtype.UUID        `json:"id"`
+	Name           string             `json:"name"`
+	Slug           string             `json:"slug"`
+	CategoryID     pgtype.UUID        `json:"categoryId"`
+	Description    pgtype.Text        `json:"description"`
+	Features       []string           `json:"features"`
+	Images         []string           `json:"images"`
+	ImagePublicIds []string           `json:"imagePublicIds"`
+	IsActive       bool               `json:"isActive"`
+	IsFeatured     bool               `json:"isFeatured"`
+	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
+	SellingPrice   int32              `json:"sellingPrice"`
+	OfferPrice     pgtype.Int4        `json:"offerPrice"`
 }
 
 func (q *Queries) ListActiveProducts(ctx context.Context, arg ListActiveProductsParams) ([]ListActiveProductsRow, error) {
@@ -331,20 +331,20 @@ ORDER BY p.created_at DESC
 `
 
 type ListFeaturedProductsRow struct {
-	ID             pgtype.UUID
-	Name           string
-	Slug           string
-	CategoryID     pgtype.UUID
-	Description    pgtype.Text
-	Features       []string
-	Images         []string
-	ImagePublicIds []string
-	IsActive       bool
-	IsFeatured     bool
-	CreatedAt      pgtype.Timestamptz
-	UpdatedAt      pgtype.Timestamptz
-	SellingPrice   pgtype.Numeric
-	OfferPrice     pgtype.Numeric
+	ID             pgtype.UUID        `json:"id"`
+	Name           string             `json:"name"`
+	Slug           string             `json:"slug"`
+	CategoryID     pgtype.UUID        `json:"categoryId"`
+	Description    pgtype.Text        `json:"description"`
+	Features       []string           `json:"features"`
+	Images         []string           `json:"images"`
+	ImagePublicIds []string           `json:"imagePublicIds"`
+	IsActive       bool               `json:"isActive"`
+	IsFeatured     bool               `json:"isFeatured"`
+	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
+	SellingPrice   int32              `json:"sellingPrice"`
+	OfferPrice     pgtype.Int4        `json:"offerPrice"`
 }
 
 func (q *Queries) ListFeaturedProducts(ctx context.Context) ([]ListFeaturedProductsRow, error) {
@@ -393,26 +393,26 @@ LIMIT $2 OFFSET $3
 `
 
 type ListProductsByCategoryParams struct {
-	Slug   string
-	Limit  int32
-	Offset int32
+	Slug   string `json:"slug"`
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
 }
 
 type ListProductsByCategoryRow struct {
-	ID             pgtype.UUID
-	Name           string
-	Slug           string
-	CategoryID     pgtype.UUID
-	Description    pgtype.Text
-	Features       []string
-	Images         []string
-	ImagePublicIds []string
-	IsActive       bool
-	IsFeatured     bool
-	CreatedAt      pgtype.Timestamptz
-	UpdatedAt      pgtype.Timestamptz
-	SellingPrice   pgtype.Numeric
-	OfferPrice     pgtype.Numeric
+	ID             pgtype.UUID        `json:"id"`
+	Name           string             `json:"name"`
+	Slug           string             `json:"slug"`
+	CategoryID     pgtype.UUID        `json:"categoryId"`
+	Description    pgtype.Text        `json:"description"`
+	Features       []string           `json:"features"`
+	Images         []string           `json:"images"`
+	ImagePublicIds []string           `json:"imagePublicIds"`
+	IsActive       bool               `json:"isActive"`
+	IsFeatured     bool               `json:"isFeatured"`
+	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
+	SellingPrice   int32              `json:"sellingPrice"`
+	OfferPrice     pgtype.Int4        `json:"offerPrice"`
 }
 
 func (q *Queries) ListProductsByCategory(ctx context.Context, arg ListProductsByCategoryParams) ([]ListProductsByCategoryRow, error) {
@@ -479,16 +479,16 @@ RETURNING id, name, slug, category_id, description, features, images, image_publ
 `
 
 type UpdateProductParams struct {
-	ID             pgtype.UUID
-	Name           string
-	Slug           string
-	Description    pgtype.Text
-	Features       []string
-	Images         []string
-	ImagePublicIds []string
-	IsActive       bool
-	IsFeatured     bool
-	CategoryID     pgtype.UUID
+	ID             pgtype.UUID `json:"id"`
+	Name           string      `json:"name"`
+	Slug           string      `json:"slug"`
+	Description    pgtype.Text `json:"description"`
+	Features       []string    `json:"features"`
+	Images         []string    `json:"images"`
+	ImagePublicIds []string    `json:"imagePublicIds"`
+	IsActive       bool        `json:"isActive"`
+	IsFeatured     bool        `json:"isFeatured"`
+	CategoryID     pgtype.UUID `json:"categoryId"`
 }
 
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {

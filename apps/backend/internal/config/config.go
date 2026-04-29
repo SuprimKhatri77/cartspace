@@ -17,6 +17,7 @@ type Config struct {
 	CloudinaryCloudName string
 	CloudinaryAPIKey    string
 	CloudinaryAPISecret string
+	CookieDomain        string
 }
 
 // Load loads .env from the current directory (if present) then reads configuration from environment variables.
@@ -42,6 +43,7 @@ func Load() (*Config, error) {
 	cloudinaryCloudName := os.Getenv("CLOUDINARY_CLOUD_NAME")
 	cloudinaryAPIKey := os.Getenv("CLOUDINARY_API_KEY")
 	cloudinaryAPISecret := os.Getenv("CLOUDINARY_API_SECRET")
+	cookieDomain := os.Getenv("COOKIE_DOMAIN")
 
 	return &Config{
 		Port:                port,
@@ -52,5 +54,6 @@ func Load() (*Config, error) {
 		CloudinaryCloudName: cloudinaryCloudName,
 		CloudinaryAPIKey:    cloudinaryAPIKey,
 		CloudinaryAPISecret: cloudinaryAPISecret,
+		CookieDomain:        cookieDomain,
 	}, nil
 }

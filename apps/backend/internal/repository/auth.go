@@ -3,15 +3,18 @@ package repository
 import (
 	"context"
 
-	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
+	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 )
 
 // AuthRepository defines only the DB methods auth handlers need.
-// Real impl uses *dbgen.Queries; tests use a mock.
+// Real impl uses *db.Queries; tests use a mock.
 type AuthRepository interface {
-	CreateUser(ctx context.Context, params dbgen.CreateUserParams) (dbgen.User, error)
-	CreateRefreshToken(ctx context.Context, params dbgen.CreateRefreshTokenParams) (dbgen.RefreshToken, error)
-	GetUserByEmail(ctx context.Context, email string) (dbgen.User, error)
-	DeleteRefreshToken(ctx context.Context, tokenHash string) error
-	GetRefreshToken(ctx context.Context, tokenHash string) (dbgen.RefreshToken, error)
+	CreateUser(ctx context.Context, params db.CreateUserParams) (db.User, error)
+	CreateRefreshToken(ctx context.Context, params db.CreateRefreshTokenParams) (db.RefreshToken, error)
+	GetUserByEmail(ctx context.Context, email string) (db.User, error)
+	GetRefreshToken(ctx context.Context, params db.GetRefreshTokenParams) (db.RefreshToken, error)
+	GetUserByID(ctx context.Context, id pgtype.UUID) (db.User, error)
+	RevokeRefreshToken(ctx context.Context, param db.RevokeRefreshTokenParams) (pgconn.CommandTag, error)
 }

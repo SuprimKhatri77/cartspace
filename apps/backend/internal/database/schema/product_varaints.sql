@@ -5,10 +5,11 @@ CREATE TABLE product_variants (
   stock INTEGER NOT NULL CHECK (stock >= 0),
   images TEXT [] NOT NULL,
   image_public_ids TEXT[] NOT NULL, 
-  selling_price NUMERIC(10, 2) NOT NULL,
-  offer_price NUMERIC(10, 2) CHECK(offer_price < selling_price),
+  selling_price INTEGER NOT NULL,
+  offer_price INTEGER CHECK(offer_price < selling_price),
   is_default BOOLEAN NOT NULL DEFAULT FALSE,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  option_combination_key TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

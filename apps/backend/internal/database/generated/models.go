@@ -9,77 +9,80 @@ import (
 )
 
 type Category struct {
-	ID        pgtype.UUID
-	Name      string
-	Slug      string
-	ParentID  pgtype.UUID
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	Name      string             `json:"name"`
+	Slug      string             `json:"slug"`
+	ParentID  pgtype.UUID        `json:"parentId"`
+	CreatedAt pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt pgtype.Timestamptz `json:"updatedAt"`
 }
 
 type Product struct {
-	ID             pgtype.UUID
-	Name           string
-	Slug           string
-	CategoryID     pgtype.UUID
-	Description    pgtype.Text
-	Features       []string
-	Images         []string
-	ImagePublicIds []string
-	IsActive       bool
-	IsFeatured     bool
-	CreatedAt      pgtype.Timestamptz
-	UpdatedAt      pgtype.Timestamptz
+	ID             pgtype.UUID        `json:"id"`
+	Name           string             `json:"name"`
+	Slug           string             `json:"slug"`
+	CategoryID     pgtype.UUID        `json:"categoryId"`
+	Description    pgtype.Text        `json:"description"`
+	Features       []string           `json:"features"`
+	Images         []string           `json:"images"`
+	ImagePublicIds []string           `json:"imagePublicIds"`
+	IsActive       bool               `json:"isActive"`
+	IsFeatured     bool               `json:"isFeatured"`
+	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
 }
 
 type ProductOption struct {
-	ID        pgtype.UUID
-	ProductID pgtype.UUID
-	Name      string
-	Type      string
+	ID        pgtype.UUID `json:"id"`
+	ProductID pgtype.UUID `json:"productId"`
+	Name      string      `json:"name"`
+	Type      string      `json:"type"`
 }
 
 type ProductOptionValue struct {
-	ID       pgtype.UUID
-	OptionID pgtype.UUID
-	Value    string
+	ID       pgtype.UUID `json:"id"`
+	OptionID pgtype.UUID `json:"optionId"`
+	Value    string      `json:"value"`
 }
 
 type ProductVariant struct {
-	ID             pgtype.UUID
-	ProductID      pgtype.UUID
-	Sku            pgtype.Text
-	Stock          int32
-	Images         []string
-	ImagePublicIds []string
-	SellingPrice   pgtype.Numeric
-	OfferPrice     pgtype.Numeric
-	IsDefault      bool
-	IsActive       bool
-	CreatedAt      pgtype.Timestamptz
-	UpdatedAt      pgtype.Timestamptz
+	ID                   pgtype.UUID        `json:"id"`
+	ProductID            pgtype.UUID        `json:"productId"`
+	Sku                  pgtype.Text        `json:"sku"`
+	Stock                int32              `json:"stock"`
+	Images               []string           `json:"images"`
+	ImagePublicIds       []string           `json:"imagePublicIds"`
+	SellingPrice         int32              `json:"sellingPrice"`
+	OfferPrice           pgtype.Int4        `json:"offerPrice"`
+	IsDefault            bool               `json:"isDefault"`
+	IsActive             bool               `json:"isActive"`
+	OptionCombinationKey string             `json:"optionCombinationKey"`
+	CreatedAt            pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt            pgtype.Timestamptz `json:"updatedAt"`
 }
 
 type RefreshToken struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	TokenHash string
-	ExpiresAt pgtype.Timestamptz
-	CreatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"userId"`
+	TokenHash string             `json:"tokenHash"`
+	SessionID pgtype.UUID        `json:"sessionId"`
+	RevokedAt pgtype.Timestamptz `json:"revokedAt"`
+	ExpiresAt pgtype.Timestamptz `json:"expiresAt"`
+	CreatedAt pgtype.Timestamptz `json:"createdAt"`
 }
 
 type User struct {
-	ID           pgtype.UUID
-	Name         string
-	Email        string
-	PasswordHash string
-	Role         string
-	ImageUrl     pgtype.Text
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
+	ID           pgtype.UUID        `json:"id"`
+	Name         string             `json:"name"`
+	Email        string             `json:"email"`
+	PasswordHash string             `json:"-"`
+	Role         string             `json:"role"`
+	ImageUrl     pgtype.Text        `json:"imageUrl"`
+	CreatedAt    pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt    pgtype.Timestamptz `json:"updatedAt"`
 }
 
 type VariantOptionValue struct {
-	VariantID     pgtype.UUID
-	OptionValueID pgtype.UUID
+	VariantID     pgtype.UUID `json:"variantId"`
+	OptionValueID pgtype.UUID `json:"optionValueId"`
 }

@@ -14,3 +14,6 @@ WHERE id = $1;
 -- name: DeleteProductOptionValue :exec
 DELETE FROM product_option_values
 WHERE id = $1;
+
+-- name: GetOptionValueByValue :one
+SELECT * FROM product_option_values WHERE option_id = $1 AND value = $2;

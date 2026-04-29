@@ -18,11 +18,11 @@ RETURNING id, name, email, password_hash, role, image_url, created_at, updated_a
 `
 
 type CreateUserParams struct {
-	Name         string
-	Email        string
-	PasswordHash string
-	Role         string
-	ImageUrl     pgtype.Text
+	Name         string      `json:"name"`
+	Email        string      `json:"email"`
+	PasswordHash string      `json:"-"`
+	Role         string      `json:"role"`
+	ImageUrl     pgtype.Text `json:"imageUrl"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -93,8 +93,8 @@ RETURNING id, name, email, password_hash, role, image_url, created_at, updated_a
 `
 
 type UpdateUserImageParams struct {
-	ID       pgtype.UUID
-	ImageUrl pgtype.Text
+	ID       pgtype.UUID `json:"id"`
+	ImageUrl pgtype.Text `json:"imageUrl"`
 }
 
 func (q *Queries) UpdateUserImage(ctx context.Context, arg UpdateUserImageParams) (User, error) {

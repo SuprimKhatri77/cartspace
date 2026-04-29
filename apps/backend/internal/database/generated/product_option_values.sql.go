@@ -18,8 +18,8 @@ RETURNING id, option_id, value
 `
 
 type CreateProductOptionValueParams struct {
-	OptionID pgtype.UUID
-	Value    string
+	OptionID pgtype.UUID `json:"optionId"`
+	Value    string      `json:"value"`
 }
 
 func (q *Queries) CreateProductOptionValue(ctx context.Context, arg CreateProductOptionValueParams) (ProductOptionValue, error) {
@@ -46,6 +46,22 @@ WHERE id = $1
 
 func (q *Queries) GetOptionValueByID(ctx context.Context, id pgtype.UUID) (ProductOptionValue, error) {
 	row := q.db.QueryRow(ctx, getOptionValueByID, id)
+	var i ProductOptionValue
+	err := row.Scan(&i.ID, &i.OptionID, &i.Value)
+	return i, err
+}
+
+const getOptionValueByValue = `-- name: GetOptionValueByValue :one
+SELECT id, option_id, value FROM product_option_values WHERE option_id = $1 AND value = $2
+`
+
+type GetOptionValueByValueParams struct {
+	OptionID pgtype.UUID `json:"optionId"`
+	Value    string      `json:"value"`
+}
+
+func (q *Queries) GetOptionValueByValue(ctx context.Context, arg GetOptionValueByValueParams) (ProductOptionValue, error) {
+	row := q.db.QueryRow(ctx, getOptionValueByValue, arg.OptionID, arg.Value)
 	var i ProductOptionValue
 	err := row.Scan(&i.ID, &i.OptionID, &i.Value)
 	return i, err

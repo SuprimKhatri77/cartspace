@@ -4,6 +4,7 @@ const (
 	// general
 	InternalServerError = "INTERNAL_SERVER_ERROR"
 	ValidationFailed    = "VALIDATION_FAILED"
+	InvalidPageParam    = "INVALID_PAGE_PARAMETER"
 
 	// auth
 	InvalidCredentials  = "INVALID_CREDENTIALS"
@@ -15,12 +16,18 @@ const (
 	Forbidden           = "FORBIDDEN"
 	MissingAuthToken    = "MISSING_AUTH_TOKEN"
 	InvalidAuthHeader   = "INVALID_AUTH_HEADER"
+	InvalidTokenClaims  = "INVALID_TOKEN_CLAIMS"
 
 	// product
 	ProductNotFound  = "PRODUCT_NOT_FOUND"
 	MissingProductID = "MISSING_PRODUCT_ID"
 	InvalidProductID = "INVALID_PRODUCT_ID"
-	InvalidPageParam = "INVALID_PAGE_PARAMETER"
+
+	// variant
+	VariantNotFound      = "VARIANT_NOT_FOUND"
+	MissingVariantID     = "MISSING_VARIANT_ID"
+	InvalidVariantID     = "INVALID_VARIANT_ID"
+	VariantAlreadyExists = "VARIANT_ALREADY_EXISTS"
 
 	// category
 	CategoryNotFound        = "CATEGORY_NOT_FOUND"

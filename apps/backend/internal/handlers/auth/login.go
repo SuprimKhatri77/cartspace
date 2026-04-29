@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
@@ -17,6 +18,7 @@ import (
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
+	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -75,10 +77,9 @@ func LoginUser(queries repository.AuthRepository, cfg *config.Config) gin.Handle
 		}
 
 		accessClaims := jwt.MapClaims{
-			"user_id":    user.ID,
-			"user_email": user.Email,
-			"role":       user.Role,
-			"exp":        time.Now().Add(15 * time.Minute).Unix(),
+			"user_id": user.ID,
+			"role":    user.Role,
+			"exp":     time.Now().Add(15 * time.Minute).Unix(),
 		}
 
 		accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
@@ -93,12 +94,14 @@ func LoginUser(queries repository.AuthRepository, cfg *config.Config) gin.Handle
 			return
 		}
 
+		sessionID := uuid.New()
+
 		// embed user identity + expiry into the token payload (claims = JWT body)
 		refreshTokenClaims := jwt.MapClaims{
 			"user_id":    user.ID,
-			"user_email": user.Email,
+			"session_id": sessionID,
 			// exp must be a Unix timestamp (seconds); JWT spec requires this format
-			"exp": time.Now().Add(24 * time.Hour).Unix(),
+			"exp": time.Now().Add(30 * 24 * time.Hour).Unix(),
 		}
 
 		// build the unsigned token object in memory using HMAC-SHA256
@@ -129,6 +132,7 @@ func LoginUser(queries repository.AuthRepository, cfg *config.Config) gin.Handle
 			UserID:    user.ID,
 			TokenHash: tokenHash,
 			ExpiresAt: expiresAt,
+			SessionID: pgtype.UUID{Bytes: sessionID, Valid: true},
 		})
 
 		if err != nil {
@@ -141,8 +145,8 @@ func LoginUser(queries repository.AuthRepository, cfg *config.Config) gin.Handle
 			return
 		}
 
-		c.SetCookie("access_token", accessTokenString, 15*60, "/", "", true, true)
-		c.SetCookie("refresh_token", refreshTokenString, 30*24*60*60, "/auth", "", true, true)
+		utils.SetAuthCookie(c, "access_token", accessTokenString, 15*60, cfg)
+		utils.SetAuthCookie(c, "refresh_token", refreshTokenString, 30*24*60*60, cfg)
 
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,

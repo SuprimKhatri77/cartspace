@@ -5,7 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/suprimkhatri77/cartspace/backend/internal/errors"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
+	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
 // Recovery returns a middleware that recovers from panics and responds with 500.
@@ -14,7 +15,11 @@ func Recovery() gin.HandlerFunc {
 		defer func() {
 			if err := recover(); err != nil {
 				log.Printf("panic recovered: %v", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": errors.ResponseMessage(errors.ErrInternal)})
+				c.JSON(http.StatusInternalServerError, types.APIResponse{
+					Success: false,
+					Message: "Failed to process request",
+					Code:    constants.InternalServerError,
+				})
 				c.Abort()
 			}
 		}()

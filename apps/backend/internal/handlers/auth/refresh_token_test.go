@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgconn"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	authHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/auth"
 )
 
 func TestRefreshToken_Success(t *testing.T) {
 	repo := &mockAuthRepo{
-		getRefreshTokenFn: func(_ context.Context, _ string) (db.RefreshToken, error) {
+		getRefreshTokenFn: func(_ context.Context, _ db.GetRefreshTokenParams) (db.RefreshToken, error) {
 			return fakeRefreshToken(), nil
 		},
 		createRefreshTokenFn: func(_ context.Context, _ db.CreateRefreshTokenParams) (db.RefreshToken, error) {
@@ -23,8 +24,8 @@ func TestRefreshToken_Success(t *testing.T) {
 			}, nil
 		},
 
-		deleteRefreshTokenFn: func(_ context.Context, _ string) error {
-			return nil
+		revokeRefreshTokenFn: func(_ context.Context, _ db.RevokeRefreshTokenParams) (pgconn.CommandTag, error) {
+			return pgconn.CommandTag{}, nil
 		},
 	}
 
@@ -61,7 +62,7 @@ func TestRefreshToken_InvalidToken(t *testing.T) {
 
 func TestRefreshToken_NotFound(t *testing.T) {
 	repo := &mockAuthRepo{
-		getRefreshTokenFn: func(_ context.Context, _ string) (db.RefreshToken, error) {
+		getRefreshTokenFn: func(_ context.Context, _ db.GetRefreshTokenParams) (db.RefreshToken, error) {
 			return db.RefreshToken{}, fmt.Errorf("Refresh token not found")
 		},
 	}

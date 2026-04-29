@@ -32,8 +32,8 @@ RETURNING id, name, slug, parent_id, created_at, updated_at
 `
 
 type CreateCategoryParams struct {
-	Name string
-	Slug string
+	Name string `json:"name"`
+	Slug string `json:"slug"`
 }
 
 func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
@@ -57,9 +57,9 @@ RETURNING id, name, slug, parent_id, created_at, updated_at
 `
 
 type CreateSubCategoryParams struct {
-	Name     string
-	Slug     string
-	ParentID pgtype.UUID
+	Name     string      `json:"name"`
+	Slug     string      `json:"slug"`
+	ParentID pgtype.UUID `json:"parentId"`
 }
 
 func (q *Queries) CreateSubCategory(ctx context.Context, arg CreateSubCategoryParams) (Category, error) {
@@ -154,12 +154,12 @@ SELECT id, name, slug, parent_id, created_at, updated_at FROM ancestors ORDER BY
 `
 
 type GetCategoryAncestorsRow struct {
-	ID        pgtype.UUID
-	Name      string
-	Slug      string
-	ParentID  pgtype.UUID
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	Name      string             `json:"name"`
+	Slug      string             `json:"slug"`
+	ParentID  pgtype.UUID        `json:"parentId"`
+	CreatedAt pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt pgtype.Timestamptz `json:"updatedAt"`
 }
 
 func (q *Queries) GetCategoryAncestors(ctx context.Context, id pgtype.UUID) ([]GetCategoryAncestorsRow, error) {
@@ -255,13 +255,13 @@ SELECT id, name, slug, parent_id, created_at, updated_at, depth FROM category_tr
 `
 
 type GetCategoryTreeRow struct {
-	ID        pgtype.UUID
-	Name      string
-	Slug      string
-	ParentID  pgtype.UUID
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-	Depth     int32
+	ID        pgtype.UUID        `json:"id"`
+	Name      string             `json:"name"`
+	Slug      string             `json:"slug"`
+	ParentID  pgtype.UUID        `json:"parentId"`
+	CreatedAt pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt pgtype.Timestamptz `json:"updatedAt"`
+	Depth     int32              `json:"depth"`
 }
 
 func (q *Queries) GetCategoryTree(ctx context.Context) ([]GetCategoryTreeRow, error) {
@@ -328,8 +328,8 @@ SELECT id, name, slug, parent_id, created_at, updated_at FROM categories ORDER B
 `
 
 type GetPaginatedCategoriesParams struct {
-	Limit  int32
-	Offset int32
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
 }
 
 func (q *Queries) GetPaginatedCategories(ctx context.Context, arg GetPaginatedCategoriesParams) ([]Category, error) {
@@ -398,10 +398,10 @@ RETURNING id, name, slug, parent_id, created_at, updated_at
 `
 
 type UpdateCategoryParams struct {
-	Name     string
-	Slug     string
-	ParentID pgtype.UUID
-	ID       pgtype.UUID
+	Name     string      `json:"name"`
+	Slug     string      `json:"slug"`
+	ParentID pgtype.UUID `json:"parentId"`
+	ID       pgtype.UUID `json:"id"`
 }
 
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
