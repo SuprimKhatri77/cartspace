@@ -18,6 +18,7 @@ import (
 	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/middleware"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/cloudinary"
+	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/routes"
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 )
@@ -88,6 +89,8 @@ func main() {
 		Queries:     queries,
 		Config:      cfg,
 		CldClient:   cldClient,
+		Pool:        db.Pool,
+		VariantRepo: repository.NewVariantRepository(queries),
 	})
 
 	srv := &http.Server{

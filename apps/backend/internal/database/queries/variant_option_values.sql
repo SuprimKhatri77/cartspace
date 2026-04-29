@@ -22,3 +22,5 @@ AND pv.is_active = TRUE;
 -- name: DeleteVariantOptionValues :exec
 DELETE FROM variant_option_values
 WHERE variant_id = $1;
+
+ 

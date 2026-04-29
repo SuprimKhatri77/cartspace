@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
@@ -12,7 +13,9 @@ import (
 	adminCategory "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category/admin"
 	adminProduct "github.com/suprimkhatri77/cartspace/backend/internal/handlers/product/admin"
 	userProduct "github.com/suprimkhatri77/cartspace/backend/internal/handlers/product/user"
+	adminVariant "github.com/suprimkhatri77/cartspace/backend/internal/handlers/variant/admin"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/cloudinary"
+	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
@@ -22,6 +25,8 @@ type Config struct {
 	Queries     *dbgen.Queries
 	Config      *config.Config
 	CldClient   *cloudinary.Client
+	Pool        *pgxpool.Pool
+	VariantRepo repository.VariantRepository
 }
 
 // Setup attaches all routes to the given engine.
@@ -84,6 +89,12 @@ func Setup(r *gin.Engine, cfg Config) {
 	adminProductRoutes.PUT("/:productID", adminProduct.UpdateProduct(cfg.Queries))
 	adminProductRoutes.DELETE("/:productID", adminProduct.DeleteProduct(cfg.Queries))
 	adminProductRoutes.GET("", adminProduct.GetPaginatedProducts(cfg.Queries))
+	adminProductRoutes.GET("/:productID", adminProduct.GetProductByID(cfg.Queries))
+
+	adminProductRoutes.POST("/:productID/variants", adminVariant.CreateProductVariant(cfg.VariantRepo, cfg.Pool))
+	adminProductRoutes.PUT("/:productID/variants/:variantID", adminVariant.UpdateProductVariant(cfg.VariantRepo, cfg.Pool))
+	adminProductRoutes.DELETE("/:productID/variants/:variantID", adminVariant.DeleteVariant(cfg.VariantRepo))
+	adminProductRoutes.GET("/:productID/variants/:variantID", adminVariant.GetByVariantID(cfg.VariantRepo))
 
 	userProductRoutes := api.Group("/products")
 	userProductRoutes.GET("", userProduct.ListProducts(cfg.Queries))

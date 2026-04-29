@@ -18,8 +18,8 @@ RETURNING id, product_id, name, type
 `
 
 type CreateProductOptionParams struct {
-	ProductID pgtype.UUID
-	Name      string
+	ProductID pgtype.UUID `json:"productId"`
+	Name      string      `json:"name"`
 }
 
 func (q *Queries) CreateProductOption(ctx context.Context, arg CreateProductOptionParams) (ProductOption, error) {
@@ -42,6 +42,27 @@ WHERE id = $1
 func (q *Queries) DeleteProductOption(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deleteProductOption, id)
 	return err
+}
+
+const getProductOptionByName = `-- name: GetProductOptionByName :one
+SELECT id, product_id, name, type FROM product_options WHERE name = $1 AND product_id = $2
+`
+
+type GetProductOptionByNameParams struct {
+	Name      string      `json:"name"`
+	ProductID pgtype.UUID `json:"productId"`
+}
+
+func (q *Queries) GetProductOptionByName(ctx context.Context, arg GetProductOptionByNameParams) (ProductOption, error) {
+	row := q.db.QueryRow(ctx, getProductOptionByName, arg.Name, arg.ProductID)
+	var i ProductOption
+	err := row.Scan(
+		&i.ID,
+		&i.ProductID,
+		&i.Name,
+		&i.Type,
+	)
+	return i, err
 }
 
 const getProductOptionsByProduct = `-- name: GetProductOptionsByProduct :many

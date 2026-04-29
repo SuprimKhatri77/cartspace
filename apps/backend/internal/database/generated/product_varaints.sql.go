@@ -8,24 +8,27 @@ package db
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createProductVariant = `-- name: CreateProductVariant :one
-INSERT INTO product_variants (product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at
+INSERT INTO product_variants (product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, option_combination_key)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, option_combination_key, created_at, updated_at
 `
 
 type CreateProductVariantParams struct {
-	ProductID      pgtype.UUID
-	Sku            pgtype.Text
-	Stock          int32
-	Images         []string
-	ImagePublicIds []string
-	SellingPrice   pgtype.Numeric
-	OfferPrice     pgtype.Numeric
-	IsDefault      bool
+	ProductID            pgtype.UUID `json:"productId"`
+	Sku                  pgtype.Text `json:"sku"`
+	Stock                int32       `json:"stock"`
+	Images               []string    `json:"images"`
+	ImagePublicIds       []string    `json:"imagePublicIds"`
+	SellingPrice         int32       `json:"sellingPrice"`
+	OfferPrice           pgtype.Int4 `json:"offerPrice"`
+	IsDefault            bool        `json:"isDefault"`
+	IsActive             bool        `json:"isActive"`
+	OptionCombinationKey string      `json:"optionCombinationKey"`
 }
 
 func (q *Queries) CreateProductVariant(ctx context.Context, arg CreateProductVariantParams) (ProductVariant, error) {
@@ -38,6 +41,8 @@ func (q *Queries) CreateProductVariant(ctx context.Context, arg CreateProductVar
 		arg.SellingPrice,
 		arg.OfferPrice,
 		arg.IsDefault,
+		arg.IsActive,
+		arg.OptionCombinationKey,
 	)
 	var i ProductVariant
 	err := row.Scan(
@@ -51,23 +56,88 @@ func (q *Queries) CreateProductVariant(ctx context.Context, arg CreateProductVar
 		&i.OfferPrice,
 		&i.IsDefault,
 		&i.IsActive,
+		&i.OptionCombinationKey,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const deleteVariant = `-- name: DeleteVariant :exec
+const deleteVariant = `-- name: DeleteVariant :execresult
 DELETE FROM product_variants WHERE id = $1
 `
 
-func (q *Queries) DeleteVariant(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteVariant, id)
-	return err
+func (q *Queries) DeleteVariant(ctx context.Context, id pgtype.UUID) (pgconn.CommandTag, error) {
+	return q.db.Exec(ctx, deleteVariant, id)
+}
+
+const fetchExistingProductOptionValues = `-- name: FetchExistingProductOptionValues :many
+SELECT id, option_id, value FROM product_option_values
+WHERE option_id = ANY($1::uuid[]) AND value = ANY($2::text[])
+`
+
+type FetchExistingProductOptionValuesParams struct {
+	Column1 []pgtype.UUID `json:"column1"`
+	Column2 []string      `json:"column2"`
+}
+
+func (q *Queries) FetchExistingProductOptionValues(ctx context.Context, arg FetchExistingProductOptionValuesParams) ([]ProductOptionValue, error) {
+	rows, err := q.db.Query(ctx, fetchExistingProductOptionValues, arg.Column1, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ProductOptionValue
+	for rows.Next() {
+		var i ProductOptionValue
+		if err := rows.Scan(&i.ID, &i.OptionID, &i.Value); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const fetchExistingProductOptions = `-- name: FetchExistingProductOptions :many
+SELECT id, product_id, name, type FROM product_options
+WHERE product_id = $1 AND name = ANY($2::text[])
+`
+
+type FetchExistingProductOptionsParams struct {
+	ProductID pgtype.UUID `json:"productId"`
+	Column2   []string    `json:"column2"`
+}
+
+func (q *Queries) FetchExistingProductOptions(ctx context.Context, arg FetchExistingProductOptionsParams) ([]ProductOption, error) {
+	rows, err := q.db.Query(ctx, fetchExistingProductOptions, arg.ProductID, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ProductOption
+	for rows.Next() {
+		var i ProductOption
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductID,
+			&i.Name,
+			&i.Type,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getDefaultVariant = `-- name: GetDefaultVariant :one
-SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at FROM product_variants
+SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, option_combination_key, created_at, updated_at FROM product_variants
 WHERE product_id = $1 AND is_default = TRUE
 `
 
@@ -85,6 +155,7 @@ func (q *Queries) GetDefaultVariant(ctx context.Context, productID pgtype.UUID) 
 		&i.OfferPrice,
 		&i.IsDefault,
 		&i.IsActive,
+		&i.OptionCombinationKey,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -92,7 +163,7 @@ func (q *Queries) GetDefaultVariant(ctx context.Context, productID pgtype.UUID) 
 }
 
 const getVariantByID = `-- name: GetVariantByID :one
-SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at FROM product_variants
+SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, option_combination_key, created_at, updated_at FROM product_variants
 WHERE id = $1
 `
 
@@ -110,6 +181,7 @@ func (q *Queries) GetVariantByID(ctx context.Context, id pgtype.UUID) (ProductVa
 		&i.OfferPrice,
 		&i.IsDefault,
 		&i.IsActive,
+		&i.OptionCombinationKey,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -117,7 +189,7 @@ func (q *Queries) GetVariantByID(ctx context.Context, id pgtype.UUID) (ProductVa
 }
 
 const getVariantsByProduct = `-- name: GetVariantsByProduct :many
-SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at FROM product_variants
+SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, option_combination_key, created_at, updated_at FROM product_variants
 WHERE product_id = $1 AND is_active = TRUE
 ORDER BY is_default DESC, created_at ASC
 `
@@ -142,6 +214,7 @@ func (q *Queries) GetVariantsByProduct(ctx context.Context, productID pgtype.UUI
 			&i.OfferPrice,
 			&i.IsDefault,
 			&i.IsActive,
+			&i.OptionCombinationKey,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -164,21 +237,23 @@ UPDATE product_variants SET
     selling_price = $6,
     offer_price = $7,
     is_default = $8,
-    is_active = $9
+    is_active = $9,
+    option_combination_key = $10
 WHERE id = $1
-RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at
+RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, option_combination_key, created_at, updated_at
 `
 
 type UpdateVariantParams struct {
-	ID             pgtype.UUID
-	Sku            pgtype.Text
-	Stock          int32
-	Images         []string
-	ImagePublicIds []string
-	SellingPrice   pgtype.Numeric
-	OfferPrice     pgtype.Numeric
-	IsDefault      bool
-	IsActive       bool
+	ID                   pgtype.UUID `json:"id"`
+	Sku                  pgtype.Text `json:"sku"`
+	Stock                int32       `json:"stock"`
+	Images               []string    `json:"images"`
+	ImagePublicIds       []string    `json:"imagePublicIds"`
+	SellingPrice         int32       `json:"sellingPrice"`
+	OfferPrice           pgtype.Int4 `json:"offerPrice"`
+	IsDefault            bool        `json:"isDefault"`
+	IsActive             bool        `json:"isActive"`
+	OptionCombinationKey string      `json:"optionCombinationKey"`
 }
 
 func (q *Queries) UpdateVariant(ctx context.Context, arg UpdateVariantParams) (ProductVariant, error) {
@@ -192,6 +267,7 @@ func (q *Queries) UpdateVariant(ctx context.Context, arg UpdateVariantParams) (P
 		arg.OfferPrice,
 		arg.IsDefault,
 		arg.IsActive,
+		arg.OptionCombinationKey,
 	)
 	var i ProductVariant
 	err := row.Scan(
@@ -205,6 +281,7 @@ func (q *Queries) UpdateVariant(ctx context.Context, arg UpdateVariantParams) (P
 		&i.OfferPrice,
 		&i.IsDefault,
 		&i.IsActive,
+		&i.OptionCombinationKey,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -212,18 +289,18 @@ func (q *Queries) UpdateVariant(ctx context.Context, arg UpdateVariantParams) (P
 }
 
 const updateVariantStock = `-- name: UpdateVariantStock :one
-UPDATE product_variants SET stock = $2
-WHERE id = $1
-RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at
+UPDATE product_variants SET stock = stock + $1
+WHERE id = $2
+RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, option_combination_key, created_at, updated_at
 `
 
 type UpdateVariantStockParams struct {
-	ID    pgtype.UUID
-	Stock int32
+	Delta int32       `json:"delta"`
+	ID    pgtype.UUID `json:"id"`
 }
 
 func (q *Queries) UpdateVariantStock(ctx context.Context, arg UpdateVariantStockParams) (ProductVariant, error) {
-	row := q.db.QueryRow(ctx, updateVariantStock, arg.ID, arg.Stock)
+	row := q.db.QueryRow(ctx, updateVariantStock, arg.Delta, arg.ID)
 	var i ProductVariant
 	err := row.Scan(
 		&i.ID,
@@ -236,8 +313,22 @@ func (q *Queries) UpdateVariantStock(ctx context.Context, arg UpdateVariantStock
 		&i.OfferPrice,
 		&i.IsDefault,
 		&i.IsActive,
+		&i.OptionCombinationKey,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const variantSKUExists = `-- name: VariantSKUExists :one
+SELECT EXISTS (
+    SELECT 1 FROM product_variants WHERE sku = $1
+) AS exists
+`
+
+func (q *Queries) VariantSKUExists(ctx context.Context, sku pgtype.Text) (bool, error) {
+	row := q.db.QueryRow(ctx, variantSKUExists, sku)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }

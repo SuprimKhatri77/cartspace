@@ -10,3 +10,7 @@ WHERE product_id = $1;
 -- name: DeleteProductOption :exec
 DELETE FROM product_options
 WHERE id = $1;
+
+
+-- name: GetProductOptionByName :one
+SELECT * FROM product_options WHERE name = $1 AND product_id = $2;

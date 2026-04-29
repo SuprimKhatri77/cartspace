@@ -8,65 +8,87 @@ package db
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createRefreshToken = `-- name: CreateRefreshToken :one
-INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
-VALUES ($1, $2, $3)
-RETURNING id, user_id, token_hash, expires_at, created_at
+INSERT INTO refresh_tokens (user_id, token_hash, expires_at, session_id)
+VALUES ($1, $2, $3, $4)
+RETURNING id, user_id, token_hash, session_id, revoked_at, expires_at, created_at
 `
 
 type CreateRefreshTokenParams struct {
-	UserID    pgtype.UUID
-	TokenHash string
-	ExpiresAt pgtype.Timestamptz
+	UserID    pgtype.UUID        `json:"userId"`
+	TokenHash string             `json:"tokenHash"`
+	ExpiresAt pgtype.Timestamptz `json:"expiresAt"`
+	SessionID pgtype.UUID        `json:"sessionId"`
 }
 
 func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
-	row := q.db.QueryRow(ctx, createRefreshToken, arg.UserID, arg.TokenHash, arg.ExpiresAt)
+	row := q.db.QueryRow(ctx, createRefreshToken,
+		arg.UserID,
+		arg.TokenHash,
+		arg.ExpiresAt,
+		arg.SessionID,
+	)
 	var i RefreshToken
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.TokenHash,
+		&i.SessionID,
+		&i.RevokedAt,
 		&i.ExpiresAt,
 		&i.CreatedAt,
 	)
 	return i, err
-}
-
-const deleteAllUserRefreshTokens = `-- name: DeleteAllUserRefreshTokens :exec
-DELETE FROM refresh_tokens WHERE user_id = $1
-`
-
-func (q *Queries) DeleteAllUserRefreshTokens(ctx context.Context, userID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteAllUserRefreshTokens, userID)
-	return err
-}
-
-const deleteRefreshToken = `-- name: DeleteRefreshToken :exec
-DELETE FROM refresh_tokens WHERE token_hash = $1
-`
-
-func (q *Queries) DeleteRefreshToken(ctx context.Context, tokenHash string) error {
-	_, err := q.db.Exec(ctx, deleteRefreshToken, tokenHash)
-	return err
 }
 
 const getRefreshToken = `-- name: GetRefreshToken :one
-SELECT id, user_id, token_hash, expires_at, created_at FROM refresh_tokens WHERE token_hash = $1
+SELECT id, user_id, token_hash, session_id, revoked_at, expires_at, created_at FROM refresh_tokens WHERE token_hash = $1 AND session_id = $2 AND revoked_at IS NULL AND expires_at > NOW()
 `
 
-func (q *Queries) GetRefreshToken(ctx context.Context, tokenHash string) (RefreshToken, error) {
-	row := q.db.QueryRow(ctx, getRefreshToken, tokenHash)
+type GetRefreshTokenParams struct {
+	TokenHash string      `json:"tokenHash"`
+	SessionID pgtype.UUID `json:"sessionId"`
+}
+
+func (q *Queries) GetRefreshToken(ctx context.Context, arg GetRefreshTokenParams) (RefreshToken, error) {
+	row := q.db.QueryRow(ctx, getRefreshToken, arg.TokenHash, arg.SessionID)
 	var i RefreshToken
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.TokenHash,
+		&i.SessionID,
+		&i.RevokedAt,
 		&i.ExpiresAt,
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const revokeAllUserRefreshTokens = `-- name: RevokeAllUserRefreshTokens :exec
+UPDATE refresh_tokens SET revoked_at = NOW()
+WHERE user_id = $1 AND revoked_at IS NULL
+`
+
+func (q *Queries) RevokeAllUserRefreshTokens(ctx context.Context, userID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, revokeAllUserRefreshTokens, userID)
+	return err
+}
+
+const revokeRefreshToken = `-- name: RevokeRefreshToken :execresult
+UPDATE refresh_tokens SET revoked_at = NOW() 
+WHERE token_hash = $1 AND session_id = $2
+`
+
+type RevokeRefreshTokenParams struct {
+	TokenHash string      `json:"tokenHash"`
+	SessionID pgtype.UUID `json:"sessionId"`
+}
+
+func (q *Queries) RevokeRefreshToken(ctx context.Context, arg RevokeRefreshTokenParams) (pgconn.CommandTag, error) {
+	return q.db.Exec(ctx, revokeRefreshToken, arg.TokenHash, arg.SessionID)
 }

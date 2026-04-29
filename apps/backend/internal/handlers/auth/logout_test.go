@@ -8,13 +8,15 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgconn"
+	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	authHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/auth"
 )
 
 func TestLogout_Success(t *testing.T) {
 	repo := &mockAuthRepo{
-		deleteRefreshTokenFn: func(_ context.Context, _ string) error {
-			return nil
+		revokeRefreshTokenFn: func(_ context.Context, _ db.RevokeRefreshTokenParams) (pgconn.CommandTag, error) {
+			return pgconn.NewCommandTag("token revoked"), nil
 		},
 	}
 	router := setupRouter(func(r *gin.Engine) {
@@ -51,8 +53,8 @@ func TestLogout_InvalidRefreshToken(t *testing.T) {
 
 func TestLogout_DeleteTokenFails(t *testing.T) {
 	repo := &mockAuthRepo{
-		deleteRefreshTokenFn: func(_ context.Context, _ string) error {
-			return fmt.Errorf("db error")
+		revokeRefreshTokenFn: func(_ context.Context, _ db.RevokeRefreshTokenParams) (pgconn.CommandTag, error) {
+			return pgconn.CommandTag{}, fmt.Errorf("db error")
 		},
 	}
 

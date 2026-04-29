@@ -14,8 +14,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
+	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 	"golang.org/x/crypto/bcrypt"
@@ -25,10 +28,12 @@ type mockAuthRepo struct {
 	createUserFn         func(ctx context.Context, params dbgen.CreateUserParams) (dbgen.User, error)
 	createRefreshTokenFn func(ctx context.Context, params dbgen.CreateRefreshTokenParams) (dbgen.RefreshToken, error)
 
-	getUserByEmailFn     func(ctx context.Context, email string) (dbgen.User, error)
-	deleteRefreshTokenFn func(ctx context.Context, tokenHash string) error
+	getUserByEmailFn func(ctx context.Context, email string) (dbgen.User, error)
+	getUserByID      func(ctx context.Context, id pgtype.UUID) (dbgen.User, error)
 
-	getRefreshTokenFn func(ctx context.Context, tokenHash string) (dbgen.RefreshToken, error)
+	revokeRefreshTokenFn func(ctx context.Context, params db.RevokeRefreshTokenParams) (pgconn.CommandTag, error)
+
+	getRefreshTokenFn func(ctx context.Context, params db.GetRefreshTokenParams) (dbgen.RefreshToken, error)
 }
 
 func (m *mockAuthRepo) CreateUser(ctx context.Context, params dbgen.CreateUserParams) (dbgen.User, error) {
@@ -42,13 +47,16 @@ func (m *mockAuthRepo) CreateRefreshToken(ctx context.Context, params dbgen.Crea
 func (m *mockAuthRepo) GetUserByEmail(ctx context.Context, email string) (dbgen.User, error) {
 	return m.getUserByEmailFn(ctx, email)
 }
-
-func (m *mockAuthRepo) DeleteRefreshToken(ctx context.Context, tokenHash string) error {
-	return m.deleteRefreshTokenFn(ctx, tokenHash)
+func (m *mockAuthRepo) GetUserByID(ctx context.Context, id pgtype.UUID) (dbgen.User, error) {
+	return m.getUserByID(ctx, id)
 }
 
-func (m *mockAuthRepo) GetRefreshToken(ctx context.Context, tokenHash string) (dbgen.RefreshToken, error) {
-	return m.getRefreshTokenFn(ctx, tokenHash)
+func (m *mockAuthRepo) RevokeRefreshToken(ctx context.Context, params db.RevokeRefreshTokenParams) (pgconn.CommandTag, error) {
+	return m.revokeRefreshTokenFn(ctx, params)
+}
+
+func (m *mockAuthRepo) GetRefreshToken(ctx context.Context, params db.GetRefreshTokenParams) (dbgen.RefreshToken, error) {
+	return m.getRefreshTokenFn(ctx, params)
 }
 
 func testConfig() *config.Config {
@@ -92,6 +100,7 @@ func fakeUser() dbgen.User {
 func fakeRefreshToken() dbgen.RefreshToken {
 	userIDStr := "550e8400-e29b-41d4-a716-446655440000"
 	idStr := "770e7700-e29b-41d4-a716-446655440000"
+	sessionID := uuid.New()
 
 	token := generateRefreshToken(userIDStr)
 	tokenHash := sha256.Sum256([]byte(token))
@@ -114,6 +123,7 @@ func fakeRefreshToken() dbgen.RefreshToken {
 			Time:  time.Now().Add(30 * 24 * time.Hour),
 			Valid: true,
 		},
+		SessionID: pgtype.UUID{Bytes: sessionID, Valid: true},
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
@@ -91,7 +92,6 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 
 		accessClaims := jwt.MapClaims{
 			"user_id": user.ID,
-			"email":   user.Email,
 			"role":    user.Role,
 			"exp":     time.Now().Add(15 * time.Minute).Unix(),
 		}
@@ -109,9 +109,12 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 			return
 		}
 
+		sessionID := uuid.New()
+
 		// embed user identity + expiry into the token payload (claims = JWT body)
 		refreshTokenClaims := jwt.MapClaims{
-			"user_id": user.ID,
+			"user_id":    user.ID,
+			"session_id": sessionID,
 			// exp must be a Unix timestamp (seconds); JWT spec requires this format
 			"exp": time.Now().Add(7 * time.Hour).Unix(),
 		}
@@ -142,7 +145,12 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 		hash := sha256.Sum256([]byte(refreshTokenString))
 		tokenHash := fmt.Sprintf("%x", hash)
 
-		_, err = queries.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{UserID: user.ID, TokenHash: tokenHash, ExpiresAt: expiresAt})
+		_, err = queries.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
+			UserID:    user.ID,
+			TokenHash: tokenHash,
+			ExpiresAt: expiresAt,
+			SessionID: pgtype.UUID{Bytes: sessionID, Valid: true},
+		})
 		if err != nil {
 			slog.Error("failed to store refresh token in db", "error", err)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
@@ -153,8 +161,13 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 			return
 		}
 
-		c.SetCookie("access_token", accessTokenString, 15*60, "/", "", true, true)
-		c.SetCookie("refresh_token", refreshTokenString, 30*24*60*60, "/auth", "", true, true)
-		c.JSON(http.StatusOK, types.APIResponse{Success: true, Message: "User created successfully."})
+		utils.SetAuthCookie(c, "access_token", accessTokenString, 15*60, cfg)
+		utils.SetAuthCookie(c, "refresh_token", refreshTokenString, 30*24*60*60, cfg)
+
+		c.JSON(http.StatusOK, types.APIResponse{
+			Success: true,
+			Message: "Registration successful",
+		})
+
 	}
 }
