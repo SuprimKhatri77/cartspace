@@ -98,6 +98,10 @@ func Setup(r *gin.Engine, cfg Config) {
 
 	userProductRoutes := api.Group("/products")
 	userProductRoutes.GET("", userProduct.ListProducts(cfg.Queries))
+	userProductRoutes.GET("/:productSlug", userProduct.GetProduct(cfg.Queries))
+
+	userCategoryRoutes := api.Group("/categories")
+	userCategoryRoutes.GET("/:slug", userProduct.ListProductByCategory(cfg.Queries))
 
 }
 
