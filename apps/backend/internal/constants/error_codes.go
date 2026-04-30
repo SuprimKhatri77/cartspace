@@ -19,9 +19,10 @@ const (
 	InvalidTokenClaims  = "INVALID_TOKEN_CLAIMS"
 
 	// product
-	ProductNotFound  = "PRODUCT_NOT_FOUND"
-	MissingProductID = "MISSING_PRODUCT_ID"
-	InvalidProductID = "INVALID_PRODUCT_ID"
+	ProductNotFound    = "PRODUCT_NOT_FOUND"
+	MissingProductID   = "MISSING_PRODUCT_ID"
+	InvalidProductID   = "INVALID_PRODUCT_ID"
+	MissingProductSlug = "MISSING_PRODUCT_SLUG"
 
 	// variant
 	VariantNotFound      = "VARIANT_NOT_FOUND"
@@ -36,4 +37,5 @@ const (
 	CategoryAlreadyExists   = "CATEGORY_ALREADY_EXISTS"
 	SelfReferencingCategory = "SELF_REFERENCING_CATEGORY"
 	CyclicCategoryReference = "CYCLIC_CATEGORY_REFERENCE"
+	MissingCategorySlug     = "MISSING_CATEGORY_SLUG"
 )

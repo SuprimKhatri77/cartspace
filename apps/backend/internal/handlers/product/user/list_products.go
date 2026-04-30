@@ -11,12 +11,11 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
-const PAGE_LIMIT int64 = 20
-
 // this hanlder is to list products on the homepage with default variant's SP and OP
 func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
+		const PAGE_LIMIT int64 = 20
 
 		page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
 
@@ -60,7 +59,12 @@ func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 		pageCount := (total + PAGE_LIMIT - 1) / PAGE_LIMIT
 
 		if int64(page) > pageCount {
-			page = int(pageCount)
+			c.JSON(http.StatusBadRequest, types.APIResponse{
+				Success: false,
+				Message: "Invalid page parameter",
+				Code:    constants.InvalidPageParam,
+			})
+			return
 		}
 
 		offset := PAGE_LIMIT * int64(page-1)
