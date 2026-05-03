@@ -8,6 +8,23 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Cart struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"userId"`
+	CreatedAt pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt pgtype.Timestamptz `json:"updatedAt"`
+}
+
+type CartItem struct {
+	ID        pgtype.UUID        `json:"id"`
+	CartID    pgtype.UUID        `json:"cartId"`
+	VariantID pgtype.UUID        `json:"variantId"`
+	Quantity  int32              `json:"quantity"`
+	UnitPrice int32              `json:"unitPrice"`
+	CreatedAt pgtype.Timestamptz `json:"createdAt"`
+	UpdatedAt pgtype.Timestamptz `json:"updatedAt"`
+}
+
 type Category struct {
 	ID        pgtype.UUID        `json:"id"`
 	Name      string             `json:"name"`
@@ -54,6 +71,7 @@ type ProductVariant struct {
 	ImagePublicIds       []string           `json:"imagePublicIds"`
 	SellingPrice         int32              `json:"sellingPrice"`
 	OfferPrice           pgtype.Int4        `json:"offerPrice"`
+	OfferExpiresAt       pgtype.Timestamptz `json:"offerExpiresAt"`
 	IsDefault            bool               `json:"isDefault"`
 	IsActive             bool               `json:"isActive"`
 	OptionCombinationKey string             `json:"optionCombinationKey"`

@@ -91,6 +91,7 @@ func main() {
 		CldClient:   cldClient,
 		Pool:        db.Pool,
 		VariantRepo: repository.NewVariantRepository(queries),
+		CartRepo:    repository.NewCartRepository(queries),
 	})
 
 	srv := &http.Server{

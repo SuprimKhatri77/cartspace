@@ -10,10 +10,12 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	authHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/auth"
+	"github.com/suprimkhatri77/cartspace/backend/internal/handlers/cart"
 	adminCategory "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category/admin"
 	adminProduct "github.com/suprimkhatri77/cartspace/backend/internal/handlers/product/admin"
 	userProduct "github.com/suprimkhatri77/cartspace/backend/internal/handlers/product/user"
 	adminVariant "github.com/suprimkhatri77/cartspace/backend/internal/handlers/variant/admin"
+	"github.com/suprimkhatri77/cartspace/backend/internal/middleware"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/cloudinary"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -27,6 +29,7 @@ type Config struct {
 	CldClient   *cloudinary.Client
 	Pool        *pgxpool.Pool
 	VariantRepo repository.VariantRepository
+	CartRepo    repository.CartRepository
 }
 
 // Setup attaches all routes to the given engine.
@@ -71,11 +74,8 @@ func Setup(r *gin.Engine, cfg Config) {
 	auth.POST("/refresh", authHandler.RefreshAccessToken(cfg.Queries, cfg.Config))
 
 	// admin routes
-	/*
-		actual shape for later:
-		       admin := api.Group("/admin", middleware.RequireAuth(cfg.Config), middleware.RequireAdmin)
-	*/
-	admin := api.Group("/admin")
+
+	admin := api.Group("/admin", middleware.RequireAuth(cfg.Config), middleware.RequireAdmin)
 
 	// routes
 	adminCategoryRoutes := admin.Group("/categories")
@@ -102,6 +102,12 @@ func Setup(r *gin.Engine, cfg Config) {
 
 	userCategoryRoutes := api.Group("/categories")
 	userCategoryRoutes.GET("/:slug", userProduct.ListProductByCategory(cfg.Queries))
+
+	userCartRoutes := api.Group("/carts", middleware.RequireAuth(cfg.Config))
+	userCartRoutes.GET("", cart.GetUserCart(cfg.CartRepo))
+	userCartRoutes.POST("", cart.CreateCart(cfg.CartRepo, cfg.Pool))
+	userCartRoutes.DELETE("/:cartID", cart.ClearCartItems(cfg.CartRepo))
+	userCartRoutes.PATCH("/:cartID/:variantID", cart.UpdateQuantity(cfg.CartRepo))
 
 }
 

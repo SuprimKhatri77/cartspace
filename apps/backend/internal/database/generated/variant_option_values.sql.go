@@ -74,7 +74,7 @@ func (q *Queries) GetOptionValuesByVariant(ctx context.Context, variantID pgtype
 }
 
 const getVariantsByOptionValue = `-- name: GetVariantsByOptionValue :many
-SELECT pv.id, pv.product_id, pv.sku, pv.stock, pv.images, pv.image_public_ids, pv.selling_price, pv.offer_price, pv.is_default, pv.is_active, pv.option_combination_key, pv.created_at, pv.updated_at FROM product_variants pv
+SELECT pv.id, pv.product_id, pv.sku, pv.stock, pv.images, pv.image_public_ids, pv.selling_price, pv.offer_price, pv.offer_expires_at, pv.is_default, pv.is_active, pv.option_combination_key, pv.created_at, pv.updated_at FROM product_variants pv
 JOIN variant_option_values vov ON vov.variant_id = pv.id
 WHERE vov.option_value_id = $1
 AND pv.is_active = TRUE
@@ -99,6 +99,7 @@ func (q *Queries) GetVariantsByOptionValue(ctx context.Context, optionValueID pg
 			&i.ImagePublicIds,
 			&i.SellingPrice,
 			&i.OfferPrice,
+			&i.OfferExpiresAt,
 			&i.IsDefault,
 			&i.IsActive,
 			&i.OptionCombinationKey,

@@ -1,0 +1,1 @@
+ALTER TABLE product_variants ADD COLUMN offer_expires_at TIMESTAMPTZ;
