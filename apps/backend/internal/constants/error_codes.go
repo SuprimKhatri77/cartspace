@@ -5,6 +5,7 @@ const (
 	InternalServerError = "INTERNAL_SERVER_ERROR"
 	ValidationFailed    = "VALIDATION_FAILED"
 	InvalidPageParam    = "INVALID_PAGE_PARAMETER"
+	InvalidIDFormat     = "INVALID_ID_FORMAT"
 
 	// auth
 	InvalidCredentials  = "INVALID_CREDENTIALS"
@@ -17,6 +18,10 @@ const (
 	MissingAuthToken    = "MISSING_AUTH_TOKEN"
 	InvalidAuthHeader   = "INVALID_AUTH_HEADER"
 	InvalidTokenClaims  = "INVALID_TOKEN_CLAIMS"
+	UserNotFound        = "USER_NOT_FOUND"
+	MissingAccessToken  = "MISSING_ACCESS_TOKEN"
+	InvalidAccessToken  = "INVALID_ACCESS_TOKEN"
+	Unauthorized        = "UNAUTHORIZED"
 
 	// product
 	ProductNotFound    = "PRODUCT_NOT_FOUND"
@@ -38,4 +43,14 @@ const (
 	SelfReferencingCategory = "SELF_REFERENCING_CATEGORY"
 	CyclicCategoryReference = "CYCLIC_CATEGORY_REFERENCE"
 	MissingCategorySlug     = "MISSING_CATEGORY_SLUG"
+
+	// cart
+	CartNotFound           = "CART_NOT_FOUND"
+	CartAlreadyExists      = "CART_ALREADY_EXISTS"
+	InvalidVariantQuantity = "INVALID_VARIANT_QUANTITY"
+	MissingCartID          = "MISSING_CART_ID"
+	InsufficientStock      = "INSUFFICIENT_STOCK"
+
+	// cart item
+	CartItemNotFound = "CART_ITEM_NOT_FOUND"
 )

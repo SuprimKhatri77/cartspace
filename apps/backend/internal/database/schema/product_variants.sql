@@ -7,6 +7,7 @@ CREATE TABLE product_variants (
   image_public_ids TEXT[] NOT NULL, 
   selling_price INTEGER NOT NULL,
   offer_price INTEGER CHECK(offer_price < selling_price),
+  offer_expires_at TIMESTAMPTZ,
   is_default BOOLEAN NOT NULL DEFAULT FALSE,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   option_combination_key TEXT NOT NULL,
