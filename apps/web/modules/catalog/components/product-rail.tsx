@@ -29,7 +29,9 @@ export function ProductRail({
         end: scrollLeft + clientWidth >= scrollWidth - 4,
       });
       setProgress(
-        scrollWidth > 0 ? (scrollLeft + clientWidth) / scrollWidth : 1,
+        scrollWidth > 0
+          ? Math.min(1, (scrollLeft + clientWidth) / scrollWidth)
+          : 1,
       );
     };
     update();
