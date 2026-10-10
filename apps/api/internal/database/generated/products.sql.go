@@ -93,25 +93,29 @@ func (q *Queries) CountActiveProducts(ctx context.Context) (int64, error) {
 }
 
 const countProductsByCategory = `-- name: CountProductsByCategory :one
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = $3
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
 SELECT COUNT(*)
 FROM products p
 JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-JOIN categories c ON c.id = p.category_id
 WHERE p.is_active = TRUE
-AND c.slug = $1
-AND ($2::int = 0 OR pv.selling_price >= $2::int)
-AND ($3::int = 0 OR pv.selling_price <= $3::int)
+AND p.category_id IN (SELECT id FROM subtree)
+AND ($1::int = 0 OR pv.selling_price >= $1::int)
+AND ($2::int = 0 OR pv.selling_price <= $2::int)
 `
 
 type CountProductsByCategoryParams struct {
-	Slug     string `json:"slug"`
 	PriceMin int32  `json:"price_min"`
 	PriceMax int32  `json:"price_max"`
+	Slug     string `json:"slug"`
 }
 
 // must match the joins and filters of ListProductsByCategory
 func (q *Queries) CountProductsByCategory(ctx context.Context, arg CountProductsByCategoryParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countProductsByCategory, arg.Slug, arg.PriceMin, arg.PriceMax)
+	row := q.db.QueryRow(ctx, countProductsByCategory, arg.PriceMin, arg.PriceMax, arg.Slug)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -174,6 +178,11 @@ func (q *Queries) DeleteProduct(ctx context.Context, id pgtype.UUID) (pgconn.Com
 }
 
 const getCategoryFilterOptions = `-- name: GetCategoryFilterOptions :many
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = $1
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
 SELECT
     po.name as option_name,
     pov.value as option_value
@@ -183,8 +192,7 @@ JOIN variant_option_values vov ON vov.option_value_id = pov.id
 JOIN product_variants v ON v.id = vov.variant_id AND v.is_active = TRUE
 JOIN products p ON p.id = po.product_id
 JOIN product_variants dv ON dv.product_id = p.id AND dv.is_default = TRUE AND dv.is_active = TRUE
-JOIN categories c ON p.category_id = c.id
-WHERE c.slug = $1
+WHERE p.category_id IN (SELECT id FROM subtree)
 AND p.is_active = TRUE
 GROUP BY po.name, pov.value
 ORDER BY po.name, pov.value
@@ -217,11 +225,15 @@ func (q *Queries) GetCategoryFilterOptions(ctx context.Context, slug string) ([]
 }
 
 const getMinMaxSellingPrice = `-- name: GetMinMaxSellingPrice :one
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = $1
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
 SELECT COALESCE(MIN(pv.selling_price), 0)::int AS min_price, COALESCE(MAX(pv.selling_price), 0)::int AS max_price
 FROM product_variants pv
 JOIN products p ON p.id = pv.product_id
-JOIN categories c ON p.category_id = c.id
-WHERE c.slug = $1 AND p.is_active = TRUE AND pv.is_default = TRUE AND pv.is_active = TRUE
+WHERE p.category_id IN (SELECT id FROM subtree) AND p.is_active = TRUE AND pv.is_default = TRUE AND pv.is_active = TRUE
 `
 
 type GetMinMaxSellingPriceRow struct {
@@ -429,6 +441,7 @@ SELECT
         SELECT COALESCE(
             json_agg(
                 jsonb_build_object('name', po.name, 'value', pov.value)
+                ORDER BY po.name
             ),
             '[]'::json
         )
@@ -625,29 +638,33 @@ func (q *Queries) ListFeaturedProducts(ctx context.Context) ([]ListFeaturedProdu
 }
 
 const listProductsByCategory = `-- name: ListProductsByCategory :many
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = $6
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
 SELECT p.id, p.name, p.slug, p.category_id, p.description, p.features, p.images, p.image_public_ids, p.is_active, p.is_featured, p.created_at, p.updated_at, pv.selling_price, pv.offer_price
 FROM products p
 JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-JOIN categories c ON c.id = p.category_id
 WHERE p.is_active = TRUE
-AND c.slug = $1
-AND ($2::int = 0 OR pv.selling_price >= $2::int)
-AND ($3::int = 0 OR pv.selling_price <= $3::int)
+AND p.category_id IN (SELECT id FROM subtree)
+AND ($1::int = 0 OR pv.selling_price >= $1::int)
+AND ($2::int = 0 OR pv.selling_price <= $2::int)
 ORDER BY
-    CASE WHEN $4::text = 'price_asc' THEN pv.selling_price END ASC,
-    CASE WHEN $4::text = 'price_desc' THEN pv.selling_price END DESC,
+    CASE WHEN $3::text = 'price_asc' THEN pv.selling_price END ASC,
+    CASE WHEN $3::text = 'price_desc' THEN pv.selling_price END DESC,
     p.created_at DESC,
     p.id DESC
-LIMIT $6 OFFSET $5
+LIMIT $5 OFFSET $4
 `
 
 type ListProductsByCategoryParams struct {
-	Slug       string `json:"slug"`
 	PriceMin   int32  `json:"price_min"`
 	PriceMax   int32  `json:"price_max"`
 	Sort       string `json:"sort"`
 	PageOffset int32  `json:"page_offset"`
 	PageLimit  int32  `json:"page_limit"`
+	Slug       string `json:"slug"`
 }
 
 type ListProductsByCategoryRow struct {
@@ -667,14 +684,15 @@ type ListProductsByCategoryRow struct {
 	OfferPrice     pgtype.Int4        `json:"offer_price"`
 }
 
+// The category and all its subcategories (UNION: terminates even on a cycle).
 func (q *Queries) ListProductsByCategory(ctx context.Context, arg ListProductsByCategoryParams) ([]ListProductsByCategoryRow, error) {
 	rows, err := q.db.Query(ctx, listProductsByCategory,
-		arg.Slug,
 		arg.PriceMin,
 		arg.PriceMax,
 		arg.Sort,
 		arg.PageOffset,
 		arg.PageLimit,
+		arg.Slug,
 	)
 	if err != nil {
 		return nil, err

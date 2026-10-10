@@ -37,6 +37,10 @@ type mockCategoryRepo struct {
 	getCategoryAncestorsFn func(ctx context.Context, id pgtype.UUID) ([]db.GetCategoryAncestorsRow, error)
 }
 
+func (m *mockCategoryRepo) GetCategoryTree(ctx context.Context) ([]db.GetCategoryTreeRow, error) {
+	panic("GetCategoryTree is not used by the admin handlers")
+}
+
 func (m *mockCategoryRepo) GetCategoryAncestors(ctx context.Context, id pgtype.UUID) ([]db.GetCategoryAncestorsRow, error) {
 	return m.getCategoryAncestorsFn(ctx, id)
 }

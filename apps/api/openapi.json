@@ -405,6 +405,78 @@
         ],
         "description": "Create or update a category. Names are unique."
       },
+      "CategoryTreeResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CategoryNode"
+            },
+            "description": "Parents before children"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "CategoryNode": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "null for a root category"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "0 for a root category"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "parent_id",
+          "created_at",
+          "updated_at",
+          "depth"
+        ],
+        "description": "A category with its depth in the category tree."
+      },
       "CategoryListingResponse": {
         "type": "object",
         "properties": {
@@ -642,7 +714,7 @@
             "items": {
               "$ref": "#/components/schemas/StorefrontVariant"
             },
-            "description": "Active variants, default first"
+            "description": "Active variants, default first; options sorted by name"
           },
           "related_products": {
             "type": "array",
@@ -2254,6 +2326,38 @@
         }
       }
     },
+    "/api/v1/categories": {
+      "get": {
+        "operationId": "listCategories",
+        "tags": [
+          "Categories"
+        ],
+        "summary": "List all categories",
+        "description": "Every category with its depth, parents before children, for building the navigation tree. Not paginated.",
+        "responses": {
+          "200": {
+            "description": "Categories fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryTreeResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/categories/{slug}": {
       "get": {
         "operationId": "listCategoryProducts",
@@ -2261,7 +2365,7 @@
           "Categories"
         ],
         "summary": "List a category's products",
-        "description": "Visible products of exactly this category, 40 per page, priced by their default variant. Also returns the category's filter options and price range.",
+        "description": "Visible products of this category and all its subcategories, 40 per page, priced by their default variant. Also returns the category's filter options and price range.",
         "parameters": [
           {
             "schema": {

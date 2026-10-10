@@ -98,12 +98,27 @@ export function registerCategoryPaths() {
 
   operation({
     method: "get",
+    path: "/api/v1/categories",
+    operationId: "listCategories",
+    tag,
+    summary: "List all categories",
+    description:
+      "Every category with its depth, parents before children, for building the navigation tree. Not paginated.",
+    success: {
+      status: 200,
+      description: "Categories fetched",
+      schema: schemas.CategoryTreeResponseSchema,
+    },
+  });
+
+  operation({
+    method: "get",
     path: "/api/v1/categories/{slug}",
     operationId: "listCategoryProducts",
     tag,
     summary: "List a category's products",
     description:
-      "Visible products of exactly this category, 40 per page, priced by their default variant. Also returns the category's filter options and price range.",
+      "Visible products of this category and all its subcategories, 40 per page, priced by their default variant. Also returns the category's filter options and price range.",
     request: {
       params: z.object({ slug: z.string() }),
       query: pageQuery.extend({

@@ -59,12 +59,16 @@ WHERE p.is_active = TRUE;
 
 -- name: CountProductsByCategory :one
 -- must match the joins and filters of ListProductsByCategory
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = sqlc.arg(slug)
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
 SELECT COUNT(*)
 FROM products p
 JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-JOIN categories c ON c.id = p.category_id
 WHERE p.is_active = TRUE
-AND c.slug = sqlc.arg(slug)
+AND p.category_id IN (SELECT id FROM subtree)
 AND (sqlc.arg(price_min)::int = 0 OR pv.selling_price >= sqlc.arg(price_min)::int)
 AND (sqlc.arg(price_max)::int = 0 OR pv.selling_price <= sqlc.arg(price_max)::int);
 
@@ -81,6 +85,11 @@ LIMIT $1 OFFSET $2;
 
 -- name: GetCategoryFilterOptions :many
 -- Option values of the active variants of visible products only.
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = sqlc.arg(slug)
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
 SELECT
     po.name as option_name,
     pov.value as option_value
@@ -90,8 +99,7 @@ JOIN variant_option_values vov ON vov.option_value_id = pov.id
 JOIN product_variants v ON v.id = vov.variant_id AND v.is_active = TRUE
 JOIN products p ON p.id = po.product_id
 JOIN product_variants dv ON dv.product_id = p.id AND dv.is_default = TRUE AND dv.is_active = TRUE
-JOIN categories c ON p.category_id = c.id
-WHERE c.slug = $1
+WHERE p.category_id IN (SELECT id FROM subtree)
 AND p.is_active = TRUE
 GROUP BY po.name, pov.value
 ORDER BY po.name, pov.value;
@@ -99,20 +107,29 @@ ORDER BY po.name, pov.value;
 -- name: GetMinMaxSellingPrice :one
 -- Over the same default-variant prices that price_min/price_max filter on.
 -- COALESCE: MIN/MAX are NULL when the category has no visible products.
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = sqlc.arg(slug)
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
 SELECT COALESCE(MIN(pv.selling_price), 0)::int AS min_price, COALESCE(MAX(pv.selling_price), 0)::int AS max_price
 FROM product_variants pv
 JOIN products p ON p.id = pv.product_id
-JOIN categories c ON p.category_id = c.id
-WHERE c.slug = $1 AND p.is_active = TRUE AND pv.is_default = TRUE AND pv.is_active = TRUE;
+WHERE p.category_id IN (SELECT id FROM subtree) AND p.is_active = TRUE AND pv.is_default = TRUE AND pv.is_active = TRUE;
 
 
 -- name: ListProductsByCategory :many
+-- The category and all its subcategories (UNION: terminates even on a cycle).
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = sqlc.arg(slug)
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
 SELECT p.*, pv.selling_price, pv.offer_price
 FROM products p
 JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-JOIN categories c ON c.id = p.category_id
 WHERE p.is_active = TRUE
-AND c.slug = sqlc.arg(slug)
+AND p.category_id IN (SELECT id FROM subtree)
 AND (sqlc.arg(price_min)::int = 0 OR pv.selling_price >= sqlc.arg(price_min)::int)
 AND (sqlc.arg(price_max)::int = 0 OR pv.selling_price <= sqlc.arg(price_max)::int)
 ORDER BY
@@ -130,6 +147,7 @@ SELECT
         SELECT COALESCE(
             json_agg(
                 jsonb_build_object('name', po.name, 'value', pov.value)
+                ORDER BY po.name
             ),
             '[]'::json
         )

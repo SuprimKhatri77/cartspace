@@ -41,3 +41,16 @@ export const CategoryListResponseSchema = paginatedResponse(
   CategorySchema,
 ).meta({ id: "CategoryListResponse" });
 export type CategoryListResponse = z.infer<typeof CategoryListResponseSchema>;
+
+export const CategoryNodeSchema = CategorySchema.extend({
+  depth: z.int().nonnegative().describe("0 for a root category"),
+}).meta({
+  id: "CategoryNode",
+  description: "A category with its depth in the category tree.",
+});
+export type CategoryNode = z.infer<typeof CategoryNodeSchema>;
+
+export const CategoryTreeResponseSchema = successResponse(
+  z.array(CategoryNodeSchema).describe("Parents before children"),
+).meta({ id: "CategoryTreeResponse" });
+export type CategoryTreeResponse = z.infer<typeof CategoryTreeResponseSchema>;
