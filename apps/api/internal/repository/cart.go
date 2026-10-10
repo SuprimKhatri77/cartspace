@@ -10,14 +10,14 @@ import (
 
 type CartRepository interface {
 	WithTx(tx pgx.Tx) CartRepository
-	CreateCart(ctx context.Context, userID pgtype.UUID) (db.Cart, error)
-	AddCartItem(ctx context.Context, params db.AddCartItemParams) (db.CartItem, error)
-	GetCartByUserID(ctx context.Context, userID pgtype.UUID) (db.Cart, error)
-	GetVariantByID(ctx context.Context, id pgtype.UUID) (db.ProductVariant, error)
-	ClearCart(ctx context.Context, params db.ClearCartParams) (int64, error)
-	UpdateCartItemQuantity(ctx context.Context, params db.UpdateCartItemQuantityParams) (db.CartItem, error)
+	EnsureCart(ctx context.Context, userID pgtype.UUID) (pgtype.UUID, error)
+	GetCartLines(ctx context.Context, userID pgtype.UUID) ([]db.GetCartLinesRow, error)
+	GetCartItemQuantity(ctx context.Context, params db.GetCartItemQuantityParams) (int32, error)
+	CountCartItems(ctx context.Context, cartID pgtype.UUID) (int64, error)
+	GetVariantAvailability(ctx context.Context, variantID pgtype.UUID) (db.GetVariantAvailabilityRow, error)
+	SetCartItemQuantity(ctx context.Context, params db.SetCartItemQuantityParams) error
 	DeleteCartItem(ctx context.Context, params db.DeleteCartItemParams) (int64, error)
-	GetUserCart(ctx context.Context, userID pgtype.UUID) ([]db.GetUserCartRow, error)
+	ClearCart(ctx context.Context, cartID pgtype.UUID) error
 }
 
 type cartRepository struct {
@@ -32,31 +32,34 @@ func (c *cartRepository) WithTx(tx pgx.Tx) CartRepository {
 	return &cartRepository{queries: c.queries.WithTx(tx)}
 }
 
-func (c *cartRepository) CreateCart(ctx context.Context, userID pgtype.UUID) (db.Cart, error) {
-	return c.queries.CreateCart(ctx, userID)
-}
-func (c *cartRepository) AddCartItem(ctx context.Context, params db.AddCartItemParams) (db.CartItem, error) {
-	return c.queries.AddCartItem(ctx, params)
-}
-func (c *cartRepository) GetCartByUserID(ctx context.Context, id pgtype.UUID) (db.Cart, error) {
-	return c.queries.GetCartByUserID(ctx, id)
-}
-func (c *cartRepository) GetVariantByID(ctx context.Context, id pgtype.UUID) (db.ProductVariant, error) {
-	return c.queries.GetVariantByID(ctx, id)
+func (c *cartRepository) EnsureCart(ctx context.Context, userID pgtype.UUID) (pgtype.UUID, error) {
+	return c.queries.EnsureCart(ctx, userID)
 }
 
-func (c *cartRepository) ClearCart(ctx context.Context, params db.ClearCartParams) (int64, error) {
-	return c.queries.ClearCart(ctx, params)
+func (c *cartRepository) GetCartLines(ctx context.Context, userID pgtype.UUID) ([]db.GetCartLinesRow, error) {
+	return c.queries.GetCartLines(ctx, userID)
 }
 
-func (c *cartRepository) UpdateCartItemQuantity(ctx context.Context, params db.UpdateCartItemQuantityParams) (db.CartItem, error) {
-	return c.queries.UpdateCartItemQuantity(ctx, params)
+func (c *cartRepository) GetCartItemQuantity(ctx context.Context, params db.GetCartItemQuantityParams) (int32, error) {
+	return c.queries.GetCartItemQuantity(ctx, params)
+}
+
+func (c *cartRepository) CountCartItems(ctx context.Context, cartID pgtype.UUID) (int64, error) {
+	return c.queries.CountCartItems(ctx, cartID)
+}
+
+func (c *cartRepository) GetVariantAvailability(ctx context.Context, variantID pgtype.UUID) (db.GetVariantAvailabilityRow, error) {
+	return c.queries.GetVariantAvailability(ctx, variantID)
+}
+
+func (c *cartRepository) SetCartItemQuantity(ctx context.Context, params db.SetCartItemQuantityParams) error {
+	return c.queries.SetCartItemQuantity(ctx, params)
 }
 
 func (c *cartRepository) DeleteCartItem(ctx context.Context, params db.DeleteCartItemParams) (int64, error) {
 	return c.queries.DeleteCartItem(ctx, params)
 }
 
-func (c *cartRepository) GetUserCart(ctx context.Context, userID pgtype.UUID) ([]db.GetUserCartRow, error) {
-	return c.queries.GetUserCart(ctx, userID)
+func (c *cartRepository) ClearCart(ctx context.Context, cartID pgtype.UUID) error {
+	return c.queries.ClearCart(ctx, cartID)
 }

@@ -11,100 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createCart = `-- name: CreateCart :one
+const ensureCart = `-- name: EnsureCart :one
 INSERT INTO carts (user_id)
 VALUES ($1)
-RETURNING id, user_id, created_at, updated_at
+ON CONFLICT (user_id) DO UPDATE SET updated_at = now()
+RETURNING id
 `
 
-func (q *Queries) CreateCart(ctx context.Context, userID pgtype.UUID) (Cart, error) {
-	row := q.db.QueryRow(ctx, createCart, userID)
-	var i Cart
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getCartByUserID = `-- name: GetCartByUserID :one
-SELECT id, user_id, created_at, updated_at FROM carts
-WHERE user_id = $1
-`
-
-func (q *Queries) GetCartByUserID(ctx context.Context, userID pgtype.UUID) (Cart, error) {
-	row := q.db.QueryRow(ctx, getCartByUserID, userID)
-	var i Cart
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getUserCart = `-- name: GetUserCart :many
-SELECT
-    c.id AS cart_id,
-    ci.id AS cart_item_id,
-    ci.variant_id,
-    ci.quantity,
-    ci.unit_price,
-    p.name AS product_name,
-    pv.selling_price,
-    pv.stock,
-    COALESCE(pv.images[1], '')::text AS image
-FROM carts c
-JOIN cart_items ci ON ci.cart_id = c.id
-JOIN product_variants pv ON pv.id = ci.variant_id
-JOIN products p ON p.id = pv.product_id
-WHERE c.user_id = $1
-ORDER BY ci.created_at ASC
-`
-
-type GetUserCartRow struct {
-	CartID       pgtype.UUID `json:"cart_id"`
-	CartItemID   pgtype.UUID `json:"cart_item_id"`
-	VariantID    pgtype.UUID `json:"variant_id"`
-	Quantity     int32       `json:"quantity"`
-	UnitPrice    int32       `json:"unit_price"`
-	ProductName  string      `json:"product_name"`
-	SellingPrice int32       `json:"selling_price"`
-	Stock        int32       `json:"stock"`
-	Image        string      `json:"image"`
-}
-
-// inner joins: a cart with no items returns no rows (LEFT JOIN returned a
-// phantom all-NULL item for an emptied cart)
-func (q *Queries) GetUserCart(ctx context.Context, userID pgtype.UUID) ([]GetUserCartRow, error) {
-	rows, err := q.db.Query(ctx, getUserCart, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetUserCartRow{}
-	for rows.Next() {
-		var i GetUserCartRow
-		if err := rows.Scan(
-			&i.CartID,
-			&i.CartItemID,
-			&i.VariantID,
-			&i.Quantity,
-			&i.UnitPrice,
-			&i.ProductName,
-			&i.SellingPrice,
-			&i.Stock,
-			&i.Image,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+// The user's cart, created on first use. Every cart write calls this first
+// in its transaction: the upsert locks the cart row, so one user's
+// concurrent cart writes run one after another.
+func (q *Queries) EnsureCart(ctx context.Context, userID pgtype.UUID) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, ensureCart, userID)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
 }

@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddToCartData, AddToCartErrors, AddToCartResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ClearCartData, ClearCartErrors, ClearCartResponses, GetCartData, GetCartErrors, GetCartResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListProductsData, ListProductsErrors, ListProductsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses } from './types.gen';
+import type { AddCartItemData, AddCartItemErrors, AddCartItemResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminSetVariantStockData, AdminSetVariantStockErrors, AdminSetVariantStockResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ClearCartData, ClearCartErrors, ClearCartResponses, GetCartData, GetCartErrors, GetCartResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListProductsData, ListProductsErrors, ListProductsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveCartItemData, RemoveCartItemErrors, RemoveCartItemResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -376,34 +376,18 @@ export const adminUpdateVariant = <ThrowOnError extends boolean = false>(options
 });
 
 /**
- * Get my cart
+ * Set a variant's stock
  *
- * The items in the user's cart, oldest first; empty when there is no cart yet.
+ * Sets the counted stock (an absolute value, so retrying is harmless).
  */
-export const getCart = <ThrowOnError extends boolean = false>(options?: Options<GetCartData, ThrowOnError>): RequestResult<GetCartResponses, GetCartErrors, ThrowOnError> => (options?.client ?? client).get<GetCartResponses, GetCartErrors, ThrowOnError>({
+export const adminSetVariantStock = <ThrowOnError extends boolean = false>(options: Options<AdminSetVariantStockData, ThrowOnError>): RequestResult<AdminSetVariantStockResponses, AdminSetVariantStockErrors, ThrowOnError> => (options.client ?? client).put<AdminSetVariantStockResponses, AdminSetVariantStockErrors, ThrowOnError>({
     responseType: 'json',
     security: [{
             in: 'cookie',
             name: 'access_token',
             type: 'apiKey'
         }],
-    url: '/api/v1/carts',
-    ...options
-});
-
-/**
- * Add an item to my cart
- *
- * Creates the cart on first use. Adding a variant that is already in the cart increases its quantity.
- */
-export const addToCart = <ThrowOnError extends boolean = false>(options: Options<AddToCartData, ThrowOnError>): RequestResult<AddToCartResponses, AddToCartErrors, ThrowOnError> => (options.client ?? client).post<AddToCartResponses, AddToCartErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{
-            in: 'cookie',
-            name: 'access_token',
-            type: 'apiKey'
-        }],
-    url: '/api/v1/carts',
+    url: '/api/v1/admin/products/{productID}/variants/{variantID}/stock',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -412,25 +396,75 @@ export const addToCart = <ThrowOnError extends boolean = false>(options: Options
 });
 
 /**
- * Clear my cart
+ * Empty my cart
  *
- * Removes every item; the cart itself stays.
+ * Removes every line; emptying an empty cart succeeds.
  */
-export const clearCart = <ThrowOnError extends boolean = false>(options: Options<ClearCartData, ThrowOnError>): RequestResult<ClearCartResponses, ClearCartErrors, ThrowOnError> => (options.client ?? client).delete<ClearCartResponses, ClearCartErrors, ThrowOnError>({
+export const clearCart = <ThrowOnError extends boolean = false>(options?: Options<ClearCartData, ThrowOnError>): RequestResult<ClearCartResponses, ClearCartErrors, ThrowOnError> => (options?.client ?? client).delete<ClearCartResponses, ClearCartErrors, ThrowOnError>({
     responseType: 'json',
     security: [{
             in: 'cookie',
             name: 'access_token',
             type: 'apiKey'
         }],
-    url: '/api/v1/carts/{cartID}',
+    url: '/api/v1/cart',
     ...options
 });
 
 /**
- * Change an item's quantity
+ * Get my cart
  *
- * Quantity 0 removes the item.
+ * One cart per user, priced live; empty until something is added. Capped at 50 lines, so it is not paginated.
+ */
+export const getCart = <ThrowOnError extends boolean = false>(options?: Options<GetCartData, ThrowOnError>): RequestResult<GetCartResponses, GetCartErrors, ThrowOnError> => (options?.client ?? client).get<GetCartResponses, GetCartErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/cart',
+    ...options
+});
+
+/**
+ * Add to my cart
+ *
+ * Adds to the quantity already in the cart. The stock check counts it; the cart does not reserve stock (checkout does).
+ */
+export const addCartItem = <ThrowOnError extends boolean = false>(options: Options<AddCartItemData, ThrowOnError>): RequestResult<AddCartItemResponses, AddCartItemErrors, ThrowOnError> => (options.client ?? client).post<AddCartItemResponses, AddCartItemErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/cart/items',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove a line
+ */
+export const removeCartItem = <ThrowOnError extends boolean = false>(options: Options<RemoveCartItemData, ThrowOnError>): RequestResult<RemoveCartItemResponses, RemoveCartItemErrors, ThrowOnError> => (options.client ?? client).delete<RemoveCartItemResponses, RemoveCartItemErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/cart/items/{variantID}',
+    ...options
+});
+
+/**
+ * Change a line's quantity
+ *
+ * Lowering always works, so a line that went short or off sale can be fixed; raising needs the variant on sale with enough stock.
  */
 export const updateCartItem = <ThrowOnError extends boolean = false>(options: Options<UpdateCartItemData, ThrowOnError>): RequestResult<UpdateCartItemResponses, UpdateCartItemErrors, ThrowOnError> => (options.client ?? client).patch<UpdateCartItemResponses, UpdateCartItemErrors, ThrowOnError>({
     responseType: 'json',
@@ -439,7 +473,7 @@ export const updateCartItem = <ThrowOnError extends boolean = false>(options: Op
             name: 'access_token',
             type: 'apiKey'
         }],
-    url: '/api/v1/carts/{cartID}/{variantID}',
+    url: '/api/v1/cart/items/{variantID}',
     ...options,
     headers: {
         'Content-Type': 'application/json',

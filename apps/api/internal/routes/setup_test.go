@@ -47,11 +47,13 @@ func TestSetupRegistersAllRoutes(t *testing.T) {
 		"PUT /api/v1/admin/products/:productID/variants/:variantID",
 		"DELETE /api/v1/admin/products/:productID/variants/:variantID",
 		"GET /api/v1/admin/products/:productID/variants/:variantID",
+		"PUT /api/v1/admin/products/:productID/variants/:variantID/stock",
 
-		"GET /api/v1/carts",
-		"POST /api/v1/carts",
-		"DELETE /api/v1/carts/:cartID",
-		"PATCH /api/v1/carts/:cartID/:variantID",
+		"GET /api/v1/cart",
+		"DELETE /api/v1/cart",
+		"POST /api/v1/cart/items",
+		"PATCH /api/v1/cart/items/:variantID",
+		"DELETE /api/v1/cart/items/:variantID",
 	}
 
 	got := map[string]bool{}

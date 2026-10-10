@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { MobileNav } from "./mobile-nav";
 import type { Collection as NavCategory } from "@/modules/catalog/api";
 import { SearchDialog } from "@/modules/search/components/search-dialog";
+import { BagButton, BagDrawer } from "@/modules/cart/components/bag";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
 
@@ -60,8 +61,10 @@ export function HeaderShell({ categories }: { categories: NavCategory[] }) {
           <SearchDialog collections={categories} />
           <ThemeToggle />
           <UserMenu />
+          <BagButton />
         </div>
       </div>
+      <BagDrawer />
     </header>
   );
 }

@@ -41,10 +41,9 @@ const (
 	CyclicCategoryReference = "CYCLIC_CATEGORY_REFERENCE"
 
 	// cart
-	CartNotFound           = "CART_NOT_FOUND"
-	CartAlreadyExists      = "CART_ALREADY_EXISTS"
-	InvalidCartID          = "INVALID_CART_ID"
-	InvalidVariantQuantity = "INVALID_VARIANT_QUANTITY"
-	InsufficientStock      = "INSUFFICIENT_STOCK"
-	CartItemNotFound       = "CART_ITEM_NOT_FOUND"
+	VariantUnavailable = "VARIANT_UNAVAILABLE"
+	InsufficientStock  = "INSUFFICIENT_STOCK"
+	CartQuantityLimit  = "CART_QUANTITY_LIMIT"
+	CartFull           = "CART_FULL"
+	CartItemNotFound   = "CART_ITEM_NOT_FOUND"
 )

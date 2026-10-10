@@ -40,11 +40,10 @@ export const ErrorCodeSchema = z
     "SELF_REFERENCING_CATEGORY",
     "CYCLIC_CATEGORY_REFERENCE",
     // cart
-    "CART_NOT_FOUND",
-    "CART_ALREADY_EXISTS",
-    "INVALID_CART_ID",
-    "INVALID_VARIANT_QUANTITY",
+    "VARIANT_UNAVAILABLE",
     "INSUFFICIENT_STOCK",
+    "CART_QUANTITY_LIMIT",
+    "CART_FULL",
     "CART_ITEM_NOT_FOUND",
   ])
   .meta({ id: "ErrorCode", description: "Machine-readable failure code." });

@@ -9,9 +9,10 @@ import (
 )
 
 func setupCartRoutes(router *gin.RouterGroup, cfg config.Config) {
-	carts := router.Group("/carts", middleware.RequireAuth(cfg.Config))
-	carts.GET("", cart.GetUserCart(cfg.CartRepo))
-	carts.POST("", cart.CreateCart(cfg.CartRepo, cfg.PgxPool))
-	carts.DELETE("/:cartID", cart.ClearCartItems(cfg.CartRepo))
-	carts.PATCH("/:cartID/:variantID", cart.UpdateQuantity(cfg.CartRepo))
+	carts := router.Group("/cart", middleware.RequireAuth(cfg.Config))
+	carts.GET("", cart.GetCart(cfg.CartRepo))
+	carts.DELETE("", cart.ClearCart(cfg.CartRepo, cfg.PgxPool))
+	carts.POST("/items", cart.AddItem(cfg.CartRepo, cfg.PgxPool))
+	carts.PATCH("/items/:variantID", cart.UpdateItem(cfg.CartRepo, cfg.PgxPool))
+	carts.DELETE("/items/:variantID", cart.RemoveItem(cfg.CartRepo, cfg.PgxPool))
 }

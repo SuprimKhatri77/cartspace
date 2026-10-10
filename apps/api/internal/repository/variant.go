@@ -23,7 +23,7 @@ type VariantRepository interface {
 	UpdateVariant(ctx context.Context, params db.UpdateVariantParams) (db.ProductVariant, error)
 	DeleteVariantOptionValues(ctx context.Context, id pgtype.UUID) error
 	DeleteVariant(ctx context.Context, params db.DeleteVariantParams) (pgconn.CommandTag, error)
-	UpdateVariantStock(ctx context.Context, params db.UpdateVariantStockParams) (db.ProductVariant, error)
+	SetVariantStock(ctx context.Context, params db.SetVariantStockParams) (db.ProductVariant, error)
 }
 
 // concrete struct wrapping *db.Queries
@@ -90,6 +90,6 @@ func (r *variantRepository) DeleteVariant(ctx context.Context, params db.DeleteV
 	return r.queries.DeleteVariant(ctx, params)
 }
 
-func (r *variantRepository) UpdateVariantStock(ctx context.Context, params db.UpdateVariantStockParams) (db.ProductVariant, error) {
-	return r.queries.UpdateVariantStock(ctx, params)
+func (r *variantRepository) SetVariantStock(ctx context.Context, params db.SetVariantStockParams) (db.ProductVariant, error) {
+	return r.queries.SetVariantStock(ctx, params)
 }

@@ -8,10 +8,6 @@ SELECT * FROM product_variants
 WHERE product_id = $1 AND is_active = TRUE
 ORDER BY is_default DESC, created_at ASC;
 
--- name: GetVariantByID :one
-SELECT * FROM product_variants
-WHERE id = $1;
-
 -- name: GetProductVariant :one
 -- Admin routes address a variant through its product, so a variant id from
 -- another product is not found.
@@ -27,9 +23,10 @@ SELECT EXISTS (
 SELECT * FROM product_variants
 WHERE product_id = $1 AND is_default = TRUE;
 
--- name: UpdateVariantStock :one
-UPDATE product_variants SET stock = stock + @delta
-WHERE id = @id
+-- name: SetVariantStock :one
+-- Admin stock count: an absolute value, for a variant of the given product.
+UPDATE product_variants SET stock = @stock
+WHERE id = @id AND product_id = @product_id
 RETURNING *;
 
 -- name: UpdateVariant :one

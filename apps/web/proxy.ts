@@ -15,5 +15,5 @@ export async function proxy(req: NextRequest) {
 
 // Only guarded paths run the proxy; storefront pages skip it entirely.
 export const config = {
-  matcher: ["/admin/:path*", "/account/:path*", "/auth/:path*"],
+  matcher: ["/admin/:path*", "/account/:path*", "/cart/:path*", "/auth/:path*"],
 };

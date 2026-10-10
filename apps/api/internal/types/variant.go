@@ -29,5 +29,6 @@ type UpdateProductVariant struct {
 }
 
 type UpdateStock struct {
-	Stock int `json:"stock" binding:"required,min=0,max=10000"`
+	// A pointer so 0 passes "required".
+	Stock *int `json:"stock" binding:"required,min=0,max=10000"`
 }
