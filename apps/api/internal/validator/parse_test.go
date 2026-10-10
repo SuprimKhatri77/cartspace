@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -99,5 +100,98 @@ func TestBindJSONTrimsBeforeValidating(t *testing.T) {
 
 	if _, code := run(`{"email":"a@b.co","code":" a ","password":"x"}`); code != http.StatusBadRequest {
 		t.Fatalf("min=2 must apply to the trimmed value, got %d", code)
+	}
+}
+
+type nestedItem struct {
+	Name string `json:"name" binding:"required,min=2"`
+}
+
+type nestedTestBody struct {
+	Images    []string     `json:"images" binding:"required,min=1,dive,url"`
+	PublicIDs []string     `json:"image_public_ids" label:"Image public IDs" binding:"required,samelen=Images,dive,required" msg_samelen:"Provide one public ID per image"`
+	Items     []nestedItem `json:"items" binding:"unique=Name,dive"`
+	Stock     *int         `json:"stock" binding:"required,min=0,max=10"`
+	Price     int          `json:"price" binding:"required,gt=0"`
+	Offer     *int         `json:"offer" binding:"omitempty,gt=0,ltfield=Price"`
+}
+
+func bindNested(t *testing.T, body string) (int, string) {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+	Init()
+	r := gin.New()
+	r.POST("/", func(c *gin.Context) {
+		if _, ok := BindJSON[nestedTestBody](c); ok {
+			c.Status(http.StatusOK)
+		}
+	})
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body)))
+	return w.Code, w.Body.String()
+}
+
+func TestBindJSONFieldPathsAndCodes(t *testing.T) {
+	const valid = `"images":["https://x.io/a.png"],"image_public_ids":["a"],"stock":0,"price":100`
+
+	tests := []struct {
+		name     string
+		body     string
+		contains []string
+	}{
+		{"valid, zero stock allowed", `{` + valid + `}`, nil},
+		{"dive item path", `{"images":["https://x.io/a.png","nope"],"image_public_ids":["a","b"],"stock":1,"price":1}`,
+			[]string{`"field":"images.1"`, `"INVALID_URL"`, `"Images must be a valid URL"`}},
+		{"nested struct path", `{` + valid + `,"items":[{"name":"ok"},{"name":"x"}]}`,
+			[]string{`"field":"items.1.name"`, `"TOO_SHORT"`, `"Name must be at least 2 characters"`}},
+		{"dive required uses json name", `{"images":["https://x.io/a.png"],"image_public_ids":[""],"stock":1,"price":1}`,
+			[]string{`"field":"image_public_ids.0"`, `"REQUIRED_FIELD"`, `"Image public IDs is required"`}},
+		{"samelen", `{"images":["https://x.io/a.png","https://x.io/b.png"],"image_public_ids":["a"],"stock":1,"price":1}`,
+			[]string{`"field":"image_public_ids"`, `"LENGTH_MISMATCH"`, `"Provide one public ID per image"`}},
+		{"unique", `{` + valid + `,"items":[{"name":"ab"},{"name":"ab"}]}`,
+			[]string{`"field":"items"`, `"DUPLICATE_ITEM"`}},
+		{"numeric max is a range, not characters", `{"images":["https://x.io/a.png"],"image_public_ids":["a"],"stock":11,"price":1}`,
+			[]string{`"field":"stock"`, `"OUT_OF_RANGE"`, `"Stock must be at most 10"`}},
+		{"missing pointer int is required", `{"images":["https://x.io/a.png"],"image_public_ids":["a"],"price":1}`,
+			[]string{`"field":"stock"`, `"REQUIRED_FIELD"`}},
+		{"ltfield", `{` + valid + `,"offer":100}`,
+			[]string{`"field":"offer"`, `"OUT_OF_RANGE"`, `"Offer must be less than Price"`}},
+		{"offer below price ok", `{` + valid + `,"offer":99}`, nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code, body := bindNested(t, tt.body)
+			if tt.contains == nil {
+				if code != http.StatusOK {
+					t.Fatalf("want 200, got %d %s", code, body)
+				}
+				return
+			}
+			if code != http.StatusBadRequest {
+				t.Fatalf("want 400, got %d %s", code, body)
+			}
+			for _, want := range tt.contains {
+				if !strings.Contains(body, want) {
+					t.Errorf("body %s missing %s", body, want)
+				}
+			}
+		})
+	}
+}
+
+func TestToSnake(t *testing.T) {
+	for in, want := range map[string]string{
+		"ImagePublicIDs": "image_public_ids",
+		"SellingPrice":   "selling_price",
+		"ID":             "id",
+		"Name":           "name",
+		"URLValue":       "url_value",
+		"ImageIDsName":   "image_ids_name",
+		"URLs":           "urls",
+	} {
+		if got := toSnake(in); got != want {
+			t.Errorf("toSnake(%q) = %q, want %q", in, got, want)
+		}
 	}
 }

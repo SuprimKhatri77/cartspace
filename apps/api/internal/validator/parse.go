@@ -5,10 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 	"unicode"
 
 	"github.com/go-playground/validator/v10"
+
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
@@ -22,7 +25,7 @@ func Parse(err error, obj any) []types.AppError {
 		}
 		return []types.AppError{
 			{
-				Code:    "INVALID_TYPE",
+				Code:    constants.FieldInvalidType,
 				Field:   field,
 				Message: fmt.Sprintf("%s must be %s", label, jsonKindName(typeErr.Type)),
 			},
@@ -34,22 +37,24 @@ func Parse(err error, obj any) []types.AppError {
 	if !errors.As(err, &ve) {
 		return []types.AppError{
 			{
-				Code:    "INVALID_REQUEST",
+				Code:    constants.InvalidRequestBody,
 				Message: "Invalid request body",
 			},
 		}
 	}
 
-	var errs []types.AppError
+	errs := make([]types.AppError, 0, len(ve))
 
 	for _, fe := range ve {
-		field := getStructField(obj, fe)
-		jsonField := jsonName(field, fe)
-		label := fieldLabel(field, jsonField)
+		field, path := resolveField(reflect.TypeOf(obj), fe.StructNamespace())
+		if path == "" {
+			path = strings.ToLower(fe.Field())
+		}
+		label := fieldLabel(field, path)
 
 		errs = append(errs, types.AppError{
-			Code:    mapTagToCode(fe.Tag()),
-			Field:   jsonField,
+			Code:    mapTagToCode(fe),
+			Field:   path,
 			Message: messageFor(fe, field, label),
 		})
 	}
@@ -67,42 +72,42 @@ func messageFor(fe validator.FieldError, field *reflect.StructField, label strin
 	return buildMessage(fe, label)
 }
 
-func mapTagToCode(tag string) string {
-	switch tag {
-	case "required":
-		return "REQUIRED_FIELD"
-	case "min":
-		return "TOO_SHORT"
-	case "max":
-		return "TOO_LONG"
-	case "email":
-		return "INVALID_EMAIL"
-	case "uuid":
-		return "INVALID_UUID"
-	case "url":
-		return "INVALID_URL"
-	case "alphaspace":
-		return "INVALID_FORMAT"
-	case "alphanum":
-		return "INVALID_FORMAT"
-	case "gt", "gte", "lt", "lte":
-		return "OUT_OF_RANGE"
-	case "oneof":
-		return "INVALID_VALUE"
-	case "boolean":
-		return "INVALID_TYPE"
-	case "numeric":
-		return "INVALID_TYPE"
-	case "dive":
-		return "INVALID_ITEM"
-	case "required_if":
-		return "REQUIRED_FIELD"
+func mapTagToCode(fe validator.FieldError) string {
+	switch fe.Tag() {
+	case "required", "required_if":
+		return constants.FieldRequired
 	case "not_blank":
-		return "BLANK_FIELD"
+		return constants.FieldBlank
+	case "min":
+		if isNumber(fe.Kind()) {
+			return constants.FieldOutOfRange
+		}
+		return constants.FieldTooShort
+	case "max":
+		if isNumber(fe.Kind()) {
+			return constants.FieldOutOfRange
+		}
+		return constants.FieldTooLong
+	case "gt", "gte", "lt", "lte", "gtfield", "ltfield":
+		return constants.FieldOutOfRange
+	case "email":
+		return constants.FieldInvalidEmail
+	case "uuid":
+		return constants.FieldInvalidUUID
+	case "url":
+		return constants.FieldInvalidURL
+	case "alphaspace", "alphanum":
+		return constants.FieldInvalidFormat
+	case "oneof":
+		return constants.FieldInvalidValue
 	case "date_format":
-		return "INVALID_DATE"
+		return constants.FieldInvalidDate
+	case "unique":
+		return constants.FieldDuplicate
+	case "samelen":
+		return constants.FieldLengthMismatch
 	default:
-		return "VALIDATION_ERROR"
+		return constants.FieldInvalid
 	}
 }
 
@@ -111,13 +116,19 @@ func buildMessage(fe validator.FieldError, label string) string {
 	case "required":
 		return fmt.Sprintf("%s is required", label)
 	case "min":
-		if fe.Kind() == reflect.Slice {
+		switch {
+		case isCollection(fe.Kind()):
 			return fmt.Sprintf("%s must have at least %s item(s)", label, fe.Param())
+		case isNumber(fe.Kind()):
+			return fmt.Sprintf("%s must be at least %s", label, fe.Param())
 		}
 		return fmt.Sprintf("%s must be at least %s characters", label, fe.Param())
 	case "max":
-		if fe.Kind() == reflect.Slice {
+		switch {
+		case isCollection(fe.Kind()):
 			return fmt.Sprintf("%s cannot have more than %s item(s)", label, fe.Param())
+		case isNumber(fe.Kind()):
+			return fmt.Sprintf("%s must be at most %s", label, fe.Param())
 		}
 		return fmt.Sprintf("%s cannot exceed %s characters", label, fe.Param())
 	case "email":
@@ -144,8 +155,14 @@ func buildMessage(fe validator.FieldError, label string) string {
 		return fmt.Sprintf("%s must be a number", label)
 	case "alphanum":
 		return fmt.Sprintf("%s can only contain letters and numbers", label)
-	case "dive":
-		return fmt.Sprintf("%s contains an invalid item", label)
+	case "unique":
+		return fmt.Sprintf("%s must not contain duplicates", label)
+	case "samelen":
+		return fmt.Sprintf("%s must have one entry per %s", label, humanize(toSnake(fe.Param())))
+	case "ltfield":
+		return fmt.Sprintf("%s must be less than %s", label, humanize(toSnake(fe.Param())))
+	case "gtfield":
+		return fmt.Sprintf("%s must be greater than %s", label, humanize(toSnake(fe.Param())))
 	case "required_if":
 		return fmt.Sprintf("%s is required", label)
 	case "not_blank":
@@ -157,49 +174,121 @@ func buildMessage(fe validator.FieldError, label string) string {
 	}
 }
 
-func getStructField(obj any, fe validator.FieldError) *reflect.StructField {
-	t := reflect.TypeOf(obj)
-	if t == nil {
-		return nil
-	}
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	if t.Kind() != reflect.Struct {
-		return nil
+// resolveField walks a validator struct namespace such as
+// "CreateVariant.Properties[0].Name" through the request type and returns the
+// failing struct field plus its JSON path in react-hook-form style
+// ("properties.0.name", "images.2").
+func resolveField(t reflect.Type, structNamespace string) (*reflect.StructField, string) {
+	segments := strings.Split(structNamespace, ".")
+	if len(segments) < 2 || t == nil {
+		return nil, ""
 	}
 
-	field, ok := t.FieldByName(fe.StructField())
-	if !ok {
-		return nil
-	}
-	return &field
-}
+	var (
+		field *reflect.StructField
+		path  []string
+	)
+	for _, seg := range segments[1:] { // segments[0] is the root type name
+		name, index := splitIndex(seg)
 
-func jsonName(field *reflect.StructField, fe validator.FieldError) string {
-	if field != nil {
-		if tag := field.Tag.Get("json"); tag != "" {
-			name := strings.Split(tag, ",")[0]
-			if name != "" && name != "-" {
-				return stripIndex(name)
+		t = deref(t)
+		if t.Kind() != reflect.Struct {
+			return nil, ""
+		}
+		f, ok := t.FieldByName(name)
+		if !ok {
+			return nil, ""
+		}
+		field = &f
+		path = append(path, jsonFieldName(f))
+
+		t = f.Type
+		if index != "" {
+			path = append(path, index)
+			if t = deref(t); t.Kind() == reflect.Slice || t.Kind() == reflect.Array || t.Kind() == reflect.Map {
+				t = t.Elem()
 			}
 		}
 	}
-
-	name := fe.Field()
-	if name == "" {
-		name = fe.StructField()
-	}
-	return stripIndex(strings.ToLower(name))
+	return field, strings.Join(path, ".")
 }
 
-func fieldLabel(field *reflect.StructField, jsonField string) string {
+func jsonFieldName(f reflect.StructField) string {
+	if tag := f.Tag.Get("json"); tag != "" {
+		if name := strings.Split(tag, ",")[0]; name != "" && name != "-" {
+			return name
+		}
+	}
+	return toSnake(f.Name)
+}
+
+// splitIndex splits "Images[2]" into ("Images", "2").
+func splitIndex(seg string) (string, string) {
+	open := strings.Index(seg, "[")
+	if open == -1 || !strings.HasSuffix(seg, "]") {
+		return seg, ""
+	}
+	return seg[:open], seg[open+1 : len(seg)-1]
+}
+
+func deref(t reflect.Type) reflect.Type {
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	return t
+}
+
+func isNumber(k reflect.Kind) bool {
+	switch k {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return true
+	}
+	return false
+}
+
+func isCollection(k reflect.Kind) bool {
+	return k == reflect.Slice || k == reflect.Array || k == reflect.Map
+}
+
+// pluralAcronym matches a plural initialism such as "IDs" or "URLs".
+var pluralAcronym = regexp.MustCompile(`[A-Z]{2,}s(?:[A-Z]|$)`)
+
+// toSnake turns a Go field name like "ImagePublicIDs" into "image_public_ids".
+func toSnake(name string) string {
+	// "IDs" -> "Ids" so the plural s stays attached to its initialism
+	name = pluralAcronym.ReplaceAllStringFunc(name, func(m string) string {
+		next := ""
+		if last := m[len(m)-1]; last != 's' {
+			m, next = m[:len(m)-1], string(last) // keep the next word's capital
+		}
+		return m[:1] + strings.ToLower(m[1:]) + next
+	})
+	runes := []rune(name)
+	var b strings.Builder
+	for i, r := range runes {
+		if unicode.IsUpper(r) {
+			prevLower := i > 0 && !unicode.IsUpper(runes[i-1])
+			nextLower := i+1 < len(runes) && unicode.IsLower(runes[i+1])
+			if i > 0 && (prevLower || (nextLower && unicode.IsUpper(runes[i-1]))) {
+				b.WriteByte('_')
+			}
+			r = unicode.ToLower(r)
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
+func fieldLabel(field *reflect.StructField, path string) string {
 	if field != nil {
 		if label := strings.TrimSpace(field.Tag.Get("label")); label != "" {
 			return label
 		}
+		return humanize(jsonFieldName(*field))
 	}
-	return humanize(jsonField)
+	return humanize(path)
 }
 
 func humanize(name string) string {
