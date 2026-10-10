@@ -6,142 +6,72 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
-	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
-	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 )
 
+// UpdateProduct replaces every editable field of a product.
 func UpdateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		productIDFromParams := c.Param("productID")
-
-		if productIDFromParams == "" {
-			rlog.Warn(c, "missing product ID")
-
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Missing product ID",
-				Code:    constants.MissingProductID,
-			})
-			return
-		}
-
-		var productID pgtype.UUID
-		if err := productID.Scan(productIDFromParams); err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid product ID format",
-				Code:    constants.InvalidProductID,
-			})
-			return
-		}
-
-		updateProductRequest, ok := validator.BindJSON[types.UpdateProduct](c)
+		productID, ok := httpx.PathUUID(c, "productID", constants.InvalidProductID, "product ID")
 		if !ok {
 			return
 		}
 
+		body, ok := validator.BindJSON[types.UpdateProduct](c)
+		if !ok {
+			return
+		}
+		req := (*types.CreateProduct)(body)
+
 		product, err := queries.GetProductByID(ctx, productID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				c.JSON(http.StatusNotFound, types.APIResponse{
-					Success: false,
-					Message: "Product not found",
-					Code:    constants.ProductNotFound,
-				})
+				httpx.Fail(c, http.StatusNotFound, constants.ProductNotFound, "Product not found")
 				return
 			}
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to process request",
-				Code:    constants.InternalServerError,
-			})
+			httpx.Internal(c, "failed to fetch product", err, "product_id", productID)
 			return
 		}
 
-		newSlug := utils.Slugify(updateProductRequest.Name)
-		if newSlug != product.Slug {
-			slugExists, err := queries.ProductSlugExists(ctx, newSlug)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, types.APIResponse{
-					Success: false,
-					Message: "Failed to process request",
-					Code:    constants.InternalServerError,
-				})
-				return
-			}
-
-			if slugExists {
-				newSlug, err = utils.SlugWithSuffix(newSlug)
-				if err != nil {
-					c.JSON(http.StatusInternalServerError, types.APIResponse{
-						Success: false,
-						Message: "Failed to generate slug",
-						Code:    constants.InternalServerError,
-					})
-					return
-				}
-			}
-
-		}
-
-		categoryID, err := utils.ConvertToUUID(updateProductRequest.CategoryID)
-		if err != nil {
-			rlog.Error(c, "failed to parse the category ID", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to process request",
-				Code:    constants.InternalServerError,
-			})
+		slug, ok := productSlug(c, queries, req.Name, product.Slug)
+		if !ok {
 			return
 		}
 
-		description := pgtype.Text{String: updateProductRequest.Description, Valid: true}
-
-		isActive := product.IsActive
-		if updateProductRequest.IsActive != nil {
-			isActive = *updateProductRequest.IsActive
-		}
-
-		isFeatured := product.IsFeatured
-		if updateProductRequest.IsFeatured != nil {
-			isFeatured = *updateProductRequest.IsFeatured
-		}
-
-		updatedProduct, err := queries.UpdateProduct(ctx, db.UpdateProductParams{
+		cols := toProductColumns(req)
+		updated, err := queries.UpdateProduct(ctx, db.UpdateProductParams{
 			ID:             productID,
-			Name:           updateProductRequest.Name,
-			Features:       updateProductRequest.Features,
-			Images:         updateProductRequest.Images,
-			ImagePublicIds: updateProductRequest.ImagePublicIDs,
-			IsActive:       isActive,
-			IsFeatured:     isFeatured,
-			Description:    description,
-			CategoryID:     categoryID,
-			Slug:           newSlug,
+			Name:           req.Name,
+			Slug:           slug,
+			CategoryID:     cols.categoryID,
+			Description:    cols.description,
+			Features:       cols.features,
+			Images:         req.Images,
+			ImagePublicIds: req.ImagePublicIDs,
+			IsActive:       *req.IsActive,
+			IsFeatured:     *req.IsFeatured,
 		})
-
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to update the product",
-				Code:    constants.InternalServerError,
-			})
+			if errors.Is(err, pgx.ErrNoRows) {
+				// deleted between the read and the update
+				httpx.Fail(c, http.StatusNotFound, constants.ProductNotFound, "Product not found")
+				return
+			}
+			writeProductError(c, err, "failed to update product")
 			return
 		}
 
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
 			Message: "Product updated",
-			Data:    updatedProduct,
+			Data:    updated,
 		})
-
 	}
 }

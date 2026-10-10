@@ -5,51 +5,30 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
+	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
-	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 )
 
 func DeleteVariant(queries repository.VariantRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx := c.Request.Context()
-
-		variantIDFromParams := c.Param("variantID")
-		if variantIDFromParams == "" {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Missing variant ID",
-				Code:    constants.MissingVariantID,
-			})
+		productID, variantID, ok := variantIDs(c)
+		if !ok {
 			return
 		}
 
-		variantID, err := utils.ConvertToUUID(variantIDFromParams)
+		result, err := queries.DeleteVariant(c.Request.Context(), db.DeleteVariantParams{
+			ID:        variantID,
+			ProductID: productID,
+		})
 		if err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid variant ID",
-				Code:    constants.InvalidVariantID,
-			})
-			return
-		}
-
-		result, err := queries.DeleteVariant(ctx, variantID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to delete variant",
-				Code:    constants.InternalServerError,
-			})
+			httpx.Internal(c, "failed to delete variant", err, "variant_id", variantID)
 			return
 		}
 
 		if result.RowsAffected() == 0 {
-			c.JSON(http.StatusNotFound, types.APIResponse{
-				Success: false,
-				Message: "Variant not found",
-				Code:    constants.VariantNotFound,
-			})
+			httpx.Fail(c, http.StatusNotFound, constants.VariantNotFound, "Variant not found")
 			return
 		}
 

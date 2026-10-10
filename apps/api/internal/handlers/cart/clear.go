@@ -6,43 +6,22 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
-	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 )
 
 func ClearCartItems(queries repository.CartRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		userIDFromContext := c.MustGet(constants.UserIDKey).(string)
-		userID, err := utils.ConvertToUUID(userIDFromContext)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid ID format",
-				Code:    constants.InvalidIDFormat,
-			})
+		userID, ok := httpx.UserID(c)
+		if !ok {
 			return
 		}
 
-		cartIDFromParam := c.Param("cartID")
-		if cartIDFromParam == "" {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Missing cart ID",
-				Code:    constants.MissingCartID,
-			})
-			return
-		}
-
-		cartID, err := utils.ConvertToUUID(cartIDFromParam)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid ID format",
-				Code:    constants.InvalidIDFormat,
-			})
+		cartID, ok := httpx.PathUUID(c, "cartID", constants.InvalidCartID, "cart ID")
+		if !ok {
 			return
 		}
 
@@ -51,11 +30,7 @@ func ClearCartItems(queries repository.CartRepository) gin.HandlerFunc {
 			UserID: userID,
 		})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to clear cart",
-				Code:    constants.InternalServerError,
-			})
+			httpx.Internal(c, "failed to clear cart", err, "cart_id", cartID)
 			return
 		}
 

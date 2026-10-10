@@ -7,58 +7,32 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
-	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 )
 
-// used to fetch a particular product
+// GetProductByID returns one product (active or not) for the admin editor.
 func GetProductByID(queries repository.ProductRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx := c.Request.Context()
-
-		productIDFromParams := c.Param("productID")
-		if productIDFromParams == "" {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Missing product ID",
-				Code:    constants.MissingProductID,
-			})
+		productID, ok := httpx.PathUUID(c, "productID", constants.InvalidProductID, "product ID")
+		if !ok {
 			return
 		}
 
-		productID, err := utils.ConvertToUUID(productIDFromParams)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid product ID format",
-				Code:    constants.InvalidProductID,
-			})
-			return
-		}
-
-		product, err := queries.GetProductByID(ctx, productID)
-
+		product, err := queries.GetProductByID(c.Request.Context(), productID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				c.JSON(http.StatusNotFound, types.APIResponse{
-					Success: false,
-					Message: "Product not found",
-					Code:    constants.ProductNotFound,
-				})
+				httpx.Fail(c, http.StatusNotFound, constants.ProductNotFound, "Product not found")
 				return
 			}
-
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to fetch the product",
-				Code:    constants.InternalServerError,
-			})
+			httpx.Internal(c, "failed to fetch product", err, "product_id", productID)
 			return
 		}
 
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
+			Message: "Product fetched",
 			Data:    product,
 		})
 	}

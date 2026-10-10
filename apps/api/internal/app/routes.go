@@ -2,14 +2,17 @@ package app
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	"github.com/suprimkhatri77/cartspace/backend/internal/database"
 	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/middleware"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/cloudinary"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/routes"
 	routesconfig "github.com/suprimkhatri77/cartspace/backend/internal/routes/config"
@@ -31,6 +34,16 @@ func buildRouter(
 	r.Use(middleware.Recovery())
 	r.Use(gin.Logger())
 	r.Use(middleware.CORS(cfg))
+
+	// JSON for unknown paths and wrong methods too; the global middleware
+	// above (request ID, CORS) still runs for them.
+	r.HandleMethodNotAllowed = true
+	r.NoRoute(func(c *gin.Context) {
+		httpx.Fail(c, http.StatusNotFound, constants.RouteNotFound, "Route not found")
+	})
+	r.NoMethod(func(c *gin.Context) {
+		httpx.Fail(c, http.StatusMethodNotAllowed, constants.MethodNotAllowed, "Method not allowed")
+	})
 
 	routes.Setup(r, routesconfig.Config{
 		Config:      cfg,

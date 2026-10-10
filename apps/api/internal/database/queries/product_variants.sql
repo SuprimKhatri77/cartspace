@@ -12,6 +12,12 @@ ORDER BY is_default DESC, created_at ASC;
 SELECT * FROM product_variants
 WHERE id = $1;
 
+-- name: GetProductVariant :one
+-- Admin routes address a variant through its product, so a variant id from
+-- another product is not found.
+SELECT * FROM product_variants
+WHERE id = @id AND product_id = @product_id;
+
 -- name: VariantSKUExists :one
 SELECT EXISTS (
     SELECT 1 FROM product_variants WHERE sku = $1
@@ -27,21 +33,20 @@ WHERE id = @id
 RETURNING *;
 
 -- name: UpdateVariant :one
+-- sku and option_combination_key are set at creation and never change here.
 UPDATE product_variants SET
-    sku = $2,
-    stock = $3,
-    images = $4,
-    image_public_ids = $5,
-    selling_price = $6,
-    offer_price = $7,
-    is_default = $8,
-    is_active = $9,
-    option_combination_key = $10
-WHERE id = $1
+    stock = @stock,
+    images = @images,
+    image_public_ids = @image_public_ids,
+    selling_price = @selling_price,
+    offer_price = @offer_price,
+    is_default = @is_default,
+    is_active = @is_active
+WHERE id = @id AND product_id = @product_id
 RETURNING *;
 
 -- name: DeleteVariant :execresult
-DELETE FROM product_variants WHERE id = $1;
+DELETE FROM product_variants WHERE id = @id AND product_id = @product_id;
 
 -- name: FetchExistingProductOptions :many
 SELECT * FROM product_options

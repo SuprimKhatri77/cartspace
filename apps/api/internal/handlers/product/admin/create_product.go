@@ -4,94 +4,38 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
-	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
-	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 )
 
 func CreateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx := c.Request.Context()
-
-		createProductRequest, ok := validator.BindJSON[types.CreateProduct](c)
+		req, ok := validator.BindJSON[types.CreateProduct](c)
 		if !ok {
 			return
 		}
 
-		if createProductRequest.IsActive == nil || createProductRequest.IsFeatured == nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid request data",
-				Code:    constants.ValidationFailed,
-			})
+		slug, ok := productSlug(c, queries, req.Name, "")
+		if !ok {
 			return
 		}
 
-		slug := utils.Slugify(createProductRequest.Name)
-
-		slugExists, err := queries.ProductSlugExists(ctx, slug)
-
-		if err != nil {
-			rlog.Error(c, "failed to check existing prod slug in db", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to process request",
-				Code:    constants.InternalServerError,
-			})
-			return
-		}
-
-		if slugExists {
-			slug, err = utils.SlugWithSuffix(slug)
-			if err != nil {
-				rlog.Error(c, "failed to generate slug suffix", err)
-				c.JSON(http.StatusInternalServerError, types.APIResponse{
-					Success: false,
-					Message: "Failed to generate slug",
-					Code:    constants.InternalServerError,
-				})
-				return
-			}
-		}
-
-		categoryID, err := utils.ConvertToUUID(createProductRequest.CategoryID)
-		if err != nil {
-			rlog.Error(c, "failed to parse the category ID", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to parse the category ID",
-				Code:    constants.InternalServerError,
-			})
-			return
-		}
-
-		description := pgtype.Text{String: createProductRequest.Description, Valid: true}
-
-		product, err := queries.CreateProduct(ctx, db.CreateProductParams{
-			Name:           createProductRequest.Name,
-			Features:       createProductRequest.Features,
-			Images:         createProductRequest.Images,
-			ImagePublicIds: createProductRequest.ImagePublicIDs,
-			IsActive:       *createProductRequest.IsActive,
-			IsFeatured:     *createProductRequest.IsFeatured,
+		cols := toProductColumns(req)
+		product, err := queries.CreateProduct(c.Request.Context(), db.CreateProductParams{
+			Name:           req.Name,
 			Slug:           slug,
-			CategoryID:     categoryID,
-			Description:    description,
+			CategoryID:     cols.categoryID,
+			Description:    cols.description,
+			Features:       cols.features,
+			Images:         req.Images,
+			ImagePublicIds: req.ImagePublicIDs,
+			IsActive:       *req.IsActive,
+			IsFeatured:     *req.IsFeatured,
 		})
-
 		if err != nil {
-			rlog.Error(c, "failed to insert product in db", err)
-
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to create product",
-				Code:    constants.InternalServerError,
-			})
+			writeProductError(c, err, "failed to create product")
 			return
 		}
 

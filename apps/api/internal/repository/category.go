@@ -20,6 +20,7 @@ type CategoryRepository interface {
 	CategorySlugExists(ctx context.Context, slug string) (bool, error)
 
 	GetCategoryByID(ctx context.Context, id pgtype.UUID) (dbgen.Category, error)
+	GetCategoryAncestors(ctx context.Context, id pgtype.UUID) ([]dbgen.GetCategoryAncestorsRow, error)
 
 	GetPaginatedCategories(ctx context.Context, params dbgen.GetPaginatedCategoriesParams) ([]dbgen.Category, error)
 

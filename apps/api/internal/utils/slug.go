@@ -23,3 +23,15 @@ func SlugWithSuffix(base string) (string, error) {
 	}
 	return base + "-" + gen(), nil
 }
+
+// slugSuffixLen is the length of the "-xxxxxxx" suffix SlugWithSuffix adds.
+const slugSuffixLen = 8
+
+// SlugMatches reports whether current is base, or base plus a SlugWithSuffix
+// suffix, so a record whose name still slugifies to base keeps its URL.
+func SlugMatches(current, base string) bool {
+	if current == base {
+		return true
+	}
+	return len(current) == len(base)+slugSuffixLen && strings.HasPrefix(current, base+"-")
+}

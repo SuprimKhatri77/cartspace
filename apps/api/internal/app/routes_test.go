@@ -3,6 +3,7 @@ package app
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -36,5 +37,34 @@ func TestClientIPIgnoresForwardedForUnlessProxyTrusted(t *testing.T) {
 	}
 	if _, err := buildRouter(&config.Config{TrustedProxies: []string{"not-an-ip"}}, nil, nil, &database.DB{}); err == nil {
 		t.Fatal("invalid TRUSTED_PROXIES must fail startup")
+	}
+}
+
+func TestUnknownRouteAndMethodReturnJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	r, err := buildRouter(&config.Config{}, nil, nil, &database.DB{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		method, path string
+		status       int
+		code         string
+	}{
+		{http.MethodGet, "/api/v1/nope", http.StatusNotFound, `"code":"ROUTE_NOT_FOUND"`},
+		{http.MethodDelete, "/api/v1/health", http.StatusMethodNotAllowed, `"code":"METHOD_NOT_ALLOWED"`},
+	}
+	for _, tt := range tests {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest(tt.method, tt.path, nil))
+
+		if w.Code != tt.status || !strings.Contains(w.Body.String(), tt.code) {
+			t.Errorf("%s %s = %d %s, want %d %s", tt.method, tt.path, w.Code, w.Body, tt.status, tt.code)
+		}
+		if w.Header().Get("X-Request-ID") == "" {
+			t.Errorf("%s %s: global middleware skipped (no X-Request-ID)", tt.method, tt.path)
+		}
 	}
 }

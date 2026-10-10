@@ -2,7 +2,6 @@ package admin
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -17,167 +17,104 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 )
 
+// cycleConstraint is raised by the categories_no_cycle trigger.
+const cycleConstraint = "categories_no_cycle"
+
+// UpdateCategory renames a category and optionally moves it under another
+// parent. An omitted parent_id keeps the current parent.
 func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		updateCategoryRequest, ok := validator.BindJSON[types.UpdateCategory](c)
+		categoryID, ok := httpx.PathUUID(c, "id", constants.InvalidCategoryID, "category ID")
 		if !ok {
 			return
 		}
 
-		categoryID, err := utils.ConvertToUUID(c.Param("id"))
-		if err != nil {
-			rlog.Warn(c, "error converting the id to UUID", "error", err)
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid category ID format",
-				Code:    constants.ValidationFailed,
-			})
+		req, ok := validator.BindJSON[types.UpdateCategory](c)
+		if !ok {
 			return
 		}
 
 		category, err := queries.GetCategoryByID(ctx, categoryID)
-
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				c.JSON(http.StatusNotFound, types.APIResponse{
-					Success: false,
-					Message: "Category not found",
-					Code:    constants.CategoryNotFound,
-				})
+				httpx.Fail(c, http.StatusNotFound, constants.CategoryNotFound, "Category not found")
 				return
 			}
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to process request",
-				Code:    constants.InternalServerError,
-			})
+			httpx.Internal(c, "failed to fetch category", err, "category_id", categoryID)
 			return
 		}
-		var slug string
 
-		if updateCategoryRequest.Name != category.Name {
-			slug = utils.Slugify(updateCategoryRequest.Name)
-
-			slugExists, err := queries.CategorySlugExists(ctx, slug)
-			if err != nil {
-
-				rlog.Error(c, "failed to get category", err)
-				c.JSON(http.StatusInternalServerError, types.APIResponse{
-					Success: false,
-					Message: "Something went wrong",
-					Code:    constants.InternalServerError,
-				})
-
-				return
-			}
-
-			if slugExists {
-				slug, err = utils.SlugWithSuffix(slug)
-				if err != nil {
-					c.JSON(http.StatusInternalServerError, types.APIResponse{
-						Success: false,
-						Message: "Failed to generate slug",
-						Code:    constants.InternalServerError,
-					})
-					return
-				}
-			}
-		} else {
-			slug = category.Slug
+		slug, ok := uniqueCategorySlug(c, queries, req.Name, category.Slug)
+		if !ok {
+			return
 		}
 
 		parentID := category.ParentID
-
-		var categoryParentIDString string
-		if category.ParentID.Valid {
-			val, _ := category.ParentID.Value()
-			categoryParentIDString = fmt.Sprintf("%v", val)
+		if req.ParentID != "" {
+			// the binding's uuid rule already validated the format
+			parentID, _ = utils.ConvertToUUID(req.ParentID)
 		}
 
-		if updateCategoryRequest.ParentID != "" && updateCategoryRequest.ParentID != categoryParentIDString {
-			parentID, err = utils.ConvertToUUID(updateCategoryRequest.ParentID)
-			if err != nil {
-				c.JSON(http.StatusBadRequest, types.APIResponse{
-					Success: false,
-					Message: "Invalid parent category ID format",
-					Code:    constants.ValidationFailed,
-				})
+		if !sameUUID(parentID, category.ParentID) {
+			if sameUUID(parentID, categoryID) {
+				httpx.Fail(c, http.StatusBadRequest, constants.SelfReferencingCategory, "A category cannot be its own parent")
 				return
 			}
 
-			parentCategory, err := queries.GetCategoryByID(ctx, parentID)
+			// The new parent's ancestor chain (which includes the parent itself)
+			// must not contain this category, or the tree would become a cycle.
+			ancestors, err := queries.GetCategoryAncestors(ctx, parentID)
 			if err != nil {
-				if errors.Is(err, pgx.ErrNoRows) {
-					c.JSON(http.StatusNotFound, types.APIResponse{
-						Success: false,
-						Message: "Parent category not found",
-						Code:    constants.CategoryNotFound,
-					})
-				} else {
-					c.JSON(http.StatusInternalServerError, types.APIResponse{
-						Success: false,
-						Message: "Something went wrong",
-						Code:    constants.InternalServerError,
-					})
+				httpx.Internal(c, "failed to fetch category ancestors", err, "parent_id", parentID)
+				return
+			}
+			if len(ancestors) == 0 {
+				rlog.Warn(c, "parent category not found", "parent_id", parentID)
+				httpx.Fail(c, http.StatusNotFound, constants.CategoryNotFound, "Parent category not found")
+				return
+			}
+			for _, a := range ancestors {
+				if sameUUID(a.ID, categoryID) {
+					httpx.Fail(c, http.StatusBadRequest, constants.CyclicCategoryReference,
+						"Assigning this parent would create a circular reference")
+					return
 				}
-				return
 			}
-
-			// self referencing check A -> A
-			if parentID == categoryID {
-				c.JSON(http.StatusBadRequest, types.APIResponse{
-					Success: false,
-					Message: "A category cannot be its own parent",
-					Code:    constants.SelfReferencingCategory,
-				})
-				return
-			}
-
-			// TODO: recursive cycle detection
-
-			// shallow cyclic reference check A -> B -> A
-			if parentCategory.ParentID == category.ID {
-				c.JSON(http.StatusBadRequest, types.APIResponse{
-					Success: false,
-					Message: "Assigning this parent would create a circular reference",
-					Code:    constants.CyclicCategoryReference,
-				})
-				return
-			}
-
 		}
 
-		updatedCategory, err := queries.UpdateCategory(ctx, db.UpdateCategoryParams{
-			Name:     updateCategoryRequest.Name,
+		updated, err := queries.UpdateCategory(ctx, db.UpdateCategoryParams{
+			Name:     req.Name,
 			Slug:     slug,
 			ID:       categoryID,
 			ParentID: parentID,
 		})
 		if err != nil {
 			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23514" {
-				c.JSON(http.StatusBadRequest, types.APIResponse{
-					Success: false,
-					Message: "A category cannot be its own parent",
-					Code:    constants.SelfReferencingCategory,
-				})
-				return
+			switch {
+			case errors.Is(err, pgx.ErrNoRows):
+				// deleted between the read and the update
+				httpx.Fail(c, http.StatusNotFound, constants.CategoryNotFound, "Category not found")
+			case errors.As(err, &pgErr) && pgErr.Code == "23505":
+				httpx.Fail(c, http.StatusConflict, constants.CategoryAlreadyExists, "Category already exists")
+			case errors.As(err, &pgErr) && pgErr.ConstraintName == cycleConstraint:
+				// a concurrent move made this one cyclic (see migration 000004)
+				httpx.Fail(c, http.StatusBadRequest, constants.CyclicCategoryReference,
+					"Assigning this parent would create a circular reference")
+			case errors.As(err, &pgErr) && pgErr.Code == "23503":
+				// parent deleted between the check and the update
+				httpx.Fail(c, http.StatusNotFound, constants.CategoryNotFound, "Parent category not found")
+			default:
+				httpx.Internal(c, "failed to update category", err, "category_id", categoryID)
 			}
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to update category",
-				Code:    constants.InternalServerError,
-			})
 			return
 		}
 
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
 			Message: "Category updated",
-			Data:    updatedCategory,
+			Data:    updated,
 		})
-
 	}
 }

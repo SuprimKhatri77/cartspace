@@ -4,7 +4,7 @@ CREATE TABLE products (
     slug             TEXT NOT NULL UNIQUE,
     category_id      UUID REFERENCES categories(id) ON DELETE SET NULL,
     description      TEXT,
-    features         TEXT[],
+    features         TEXT[] NOT NULL DEFAULT '{}',
     images           TEXT[] NOT NULL,
     image_public_ids TEXT[] NOT NULL,
     is_active        BOOLEAN NOT NULL DEFAULT TRUE,

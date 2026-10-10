@@ -12,7 +12,7 @@ import (
 func setupVariantRoutes(router *gin.RouterGroup, cfg config.Config) {
 	admin := router.Group("/admin/products/:productID/variants", middleware.RequireAuth(cfg.Config), middleware.RequireRole(constants.RoleAdmin))
 	admin.POST("", adminVariant.CreateProductVariant(cfg.VariantRepo, cfg.PgxPool))
-	admin.PUT("/:variantID", adminVariant.UpdateProductVariant(cfg.VariantRepo, cfg.PgxPool))
+	admin.PUT("/:variantID", adminVariant.UpdateProductVariant(cfg.VariantRepo))
 	admin.DELETE("/:variantID", adminVariant.DeleteVariant(cfg.VariantRepo))
 	admin.GET("/:variantID", adminVariant.GetByVariantID(cfg.VariantRepo))
 }

@@ -3,216 +3,119 @@ package user
 import (
 	"errors"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
-	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"golang.org/x/sync/errgroup"
 )
 
-// maxPriceFilter bounds price_min/price_max (whole currency units) so the
-// cents conversion fits in int32; it matches the max variant price.
-const maxPriceFilter = 1_000_000
+// MaxPriceFilter bounds price_min/price_max (in cents); it matches the
+// largest variant price.
+const MaxPriceFilter = 100_000_000
 
+// SortOptions are the accepted values of the sort query parameter.
+var SortOptions = []string{"newest", "price_asc", "price_desc"}
+
+// ListProductByCategory lists the visible products of one category with
+// optional price filters (default-variant price, in cents) and sorting.
 func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
-		const pageLimit = 40
+		const pageLimit int64 = 40
 
 		slug := c.Param("slug")
-		if slug == "" {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Missing category slug",
-				Code:    constants.MissingCategorySlug,
-			})
+
+		page, ok := httpx.ParsePage(c)
+		if !ok {
 			return
 		}
 
-		pageStr := c.DefaultQuery("page", "1")
 		sort := c.DefaultQuery("sort", "newest")
-		priceMinStr := c.DefaultQuery("price_min", "0")
-		priceMaxStr := c.DefaultQuery("price_max", "0")
-
-		page, err := strconv.Atoi(pageStr)
-		if err != nil || page <= 0 {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid page parameter",
-				Code:    constants.InvalidPageParam,
-			})
+		if !slices.Contains(SortOptions, sort) {
+			httpx.Fail(c, http.StatusBadRequest, constants.InvalidQueryParam,
+				"sort must be one of: newest, price_asc, price_desc")
 			return
 		}
 
-		priceMin, err := strconv.Atoi(priceMinStr)
-		if err != nil || priceMin < 0 || priceMin > maxPriceFilter {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid price filter",
-				Code:    constants.InvalidPriceFilter,
-			})
-			return
-		}
-
-		priceMax, err := strconv.Atoi(priceMaxStr)
-		if err != nil || priceMax < 0 || priceMax > maxPriceFilter {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid price filter",
-				Code:    constants.InvalidPriceFilter,
-			})
+		priceMin, okMin := parsePrice(c.Query("price_min"))
+		priceMax, okMax := parsePrice(c.Query("price_max"))
+		if !okMin || !okMax || (priceMin > 0 && priceMax > 0 && priceMin > priceMax) {
+			httpx.Fail(c, http.StatusBadRequest, constants.InvalidPriceFilter, "Invalid price filter")
 			return
 		}
 
 		if _, err := queries.GetCategoryBySlug(ctx, slug); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				c.JSON(http.StatusNotFound, types.APIResponse{
-					Success: false,
-					Message: "Category not found",
-					Code:    constants.CategoryNotFound,
-				})
+				httpx.Fail(c, http.StatusNotFound, constants.CategoryNotFound, "Category not found")
 				return
 			}
-			rlog.Error(c, "failed to fetch category", err, "slug", slug)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to process request",
-				Code:    constants.InternalServerError,
-			})
+			httpx.Internal(c, "failed to fetch category", err, "slug", slug)
 			return
 		}
 
 		total, err := queries.CountProductsByCategory(ctx, db.CountProductsByCategoryParams{
-			Slug:    slug,
-			Column2: int32(priceMin * 100),
-			Column3: int32(priceMax * 100),
+			Slug:     slug,
+			PriceMin: priceMin,
+			PriceMax: priceMax,
 		})
 		if err != nil {
-			rlog.Error(c, "failed to count products", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to fetch products",
-				Code:    constants.InternalServerError,
-			})
+			httpx.Internal(c, "failed to count category products", err, "slug", slug)
 			return
 		}
 
-		// an empty result still has page 1 (with filter options and price range)
-		totalPages := max((total+pageLimit-1)/pageLimit, 1)
-		if page > int(totalPages) {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid page parameter",
-				Code:    constants.InvalidPageParam,
-			})
+		if !httpx.CheckPageInRange(c, page, total, pageLimit) {
 			return
 		}
 
-		offset := pageLimit * (page - 1)
+		g, gctx := errgroup.WithContext(ctx)
 
-		g, ctx := errgroup.WithContext(ctx)
+		var (
+			products      []db.ListProductsByCategoryRow
+			filterOptions []db.GetCategoryFilterOptionsRow
+			priceRange    db.GetMinMaxSellingPriceRow
+		)
 
-		var filterOptions []db.GetCategoryFilterOptionsRow
-		var products []db.ListProductsByCategoryRow
-		var priceRange db.GetMinMaxSellingPriceRow
-
-		g.Go(func() error {
-			switch sort {
-			case "price_asc":
-				rows, err := queries.ListProductsByCategoryPriceAsc(ctx, db.ListProductsByCategoryPriceAscParams{
-					Slug:    slug,
-					Limit:   pageLimit,
-					Offset:  int32(offset),
-					Column2: int32(priceMin * 100),
-					Column3: int32(priceMax * 100),
-				})
-				if err != nil {
-					return err
-				}
-				for _, r := range rows {
-					products = append(products, db.ListProductsByCategoryRow{
-						ID:           r.ID,
-						Name:         r.Name,
-						Slug:         r.Slug,
-						SellingPrice: r.SellingPrice,
-						OfferPrice:   r.OfferPrice,
-						Images:       r.Images,
-						IsActive:     r.IsActive,
-						IsFeatured:   r.IsFeatured,
-					})
-				}
-			case "price_desc":
-				rows, err := queries.ListProductsByCategoryPriceDesc(ctx, db.ListProductsByCategoryPriceDescParams{
-					Slug:    slug,
-					Limit:   pageLimit,
-					Offset:  int32(offset),
-					Column2: int32(priceMin * 100),
-					Column3: int32(priceMax * 100),
-				})
-				if err != nil {
-					return err
-				}
-				for _, r := range rows {
-					products = append(products, db.ListProductsByCategoryRow{
-						ID:           r.ID,
-						Name:         r.Name,
-						Slug:         r.Slug,
-						SellingPrice: r.SellingPrice,
-						OfferPrice:   r.OfferPrice,
-						Images:       r.Images,
-						IsActive:     r.IsActive,
-						IsFeatured:   r.IsFeatured,
-					})
-				}
-			default:
-				var err error
-				products, err = queries.ListProductsByCategory(ctx, db.ListProductsByCategoryParams{
-					Slug:    slug,
-					Limit:   pageLimit,
-					Offset:  int32(offset),
-					Column2: int32(priceMin * 100),
-					Column3: int32(priceMax * 100),
-				})
-				if err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-
+		// each goroutine owns its err; errgroup returns the first failure
 		g.Go(func() error {
 			var err error
-			filterOptions, err = queries.GetCategoryFilterOptions(ctx, slug)
+			products, err = queries.ListProductsByCategory(gctx, db.ListProductsByCategoryParams{
+				Slug:       slug,
+				PriceMin:   priceMin,
+				PriceMax:   priceMax,
+				Sort:       sort,
+				PageLimit:  int32(pageLimit),
+				PageOffset: httpx.Offset(page, pageLimit),
+			})
 			return err
 		})
 
 		g.Go(func() error {
 			var err error
-			priceRange, err = queries.GetMinMaxSellingPrice(ctx, slug)
+			filterOptions, err = queries.GetCategoryFilterOptions(gctx, slug)
+			return err
+		})
+
+		g.Go(func() error {
+			var err error
+			priceRange, err = queries.GetMinMaxSellingPrice(gctx, slug)
 			return err
 		})
 
 		if err := g.Wait(); err != nil {
-			rlog.Error(c, "failed to list category products", err, "slug", slug)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to process request",
-				Code:    constants.InternalServerError,
-			})
+			httpx.Internal(c, "failed to list category products", err, "slug", slug)
 			return
-		}
-
-		if products == nil {
-			products = []db.ListProductsByCategoryRow{}
 		}
 
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
+			Message: "Products fetched",
 			Data: types.ListProductsByCategoryResponse{
 				Products:      products,
 				FilterOptions: filterOptions,
@@ -220,6 +123,17 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 			},
 			Meta: types.NewPaginationMeta(total, page, pageLimit),
 		})
-
 	}
+}
+
+// parsePrice reads an optional price filter in cents; "" means no bound (0).
+func parsePrice(raw string) (int32, bool) {
+	if raw == "" {
+		return 0, true
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < 0 || n > MaxPriceFilter {
+		return 0, false
+	}
+	return int32(n), true
 }

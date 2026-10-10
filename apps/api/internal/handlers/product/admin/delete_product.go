@@ -5,52 +5,28 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
-	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 )
 
+// DeleteProduct deletes a product; its variants, options and cart items go
+// with it (ON DELETE CASCADE).
 func DeleteProduct(queries repository.ProductRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx := c.Request.Context()
-
-		productIDFromParams := c.Param("productID")
-
-		if productIDFromParams == "" {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Missing product ID",
-				Code:    constants.MissingProductID,
-			})
+		productID, ok := httpx.PathUUID(c, "productID", constants.InvalidProductID, "product ID")
+		if !ok {
 			return
 		}
 
-		productID, err := utils.ConvertToUUID(productIDFromParams)
+		result, err := queries.DeleteProduct(c.Request.Context(), productID)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid product ID format",
-				Code:    constants.InvalidProductID,
-			})
-			return
-		}
-
-		result, err := queries.DeleteProduct(ctx, productID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to delete product",
-				Code:    constants.InternalServerError,
-			})
+			httpx.Internal(c, "failed to delete product", err, "product_id", productID)
 			return
 		}
 
 		if result.RowsAffected() == 0 {
-			c.JSON(http.StatusNotFound, types.APIResponse{
-				Success: false,
-				Message: "Product not found",
-				Code:    constants.ProductNotFound,
-			})
+			httpx.Fail(c, http.StatusNotFound, constants.ProductNotFound, "Product not found")
 			return
 		}
 

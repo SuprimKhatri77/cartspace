@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
@@ -21,132 +22,98 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		createCategoryRequest, ok := validator.BindJSON[types.CreateCategory](c)
+		req, ok := validator.BindJSON[types.CreateCategory](c)
 		if !ok {
 			return
 		}
 
-		slug := utils.Slugify(createCategoryRequest.Name)
-
-		slugExists, err := queries.CategorySlugExists(ctx, slug)
-		if err != nil {
-			rlog.Error(c, "failed to query the db for slug check", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to process request",
-				Code:    constants.InternalServerError,
-			})
-
+		slug, ok := uniqueCategorySlug(c, queries, req.Name, "")
+		if !ok {
 			return
 		}
 
-		if slugExists {
-			slug, err = utils.SlugWithSuffix(slug)
+		var (
+			category db.Category
+			err      error
+			message  = "Category created"
+		)
 
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, types.APIResponse{
-					Success: false,
-					Message: "Failed to generate unique slug",
-					Code:    constants.InternalServerError,
-				})
-				return
-			}
+		if req.ParentID != "" {
+			// the binding's uuid rule already validated the format
+			parentID, _ := utils.ConvertToUUID(req.ParentID)
 
-		}
-
-		if createCategoryRequest.ParentID != "" {
-			var parentID pgtype.UUID
-
-			if err := parentID.Scan(createCategoryRequest.ParentID); err != nil {
-				rlog.Warn(c, "invalid parent id", "error", err)
-				c.JSON(http.StatusBadRequest, types.APIResponse{
-					Success: false,
-					Message: "Invalid parent category ID",
-					Code:    constants.ValidationFailed,
-				})
-				return
-			}
-
-			_, err := queries.GetCategoryByID(ctx, parentID)
-
-			if err != nil {
+			if _, err := queries.GetCategoryByID(ctx, parentID); err != nil {
 				if errors.Is(err, pgx.ErrNoRows) {
 					rlog.Warn(c, "parent category not found", "parent_id", parentID)
-					c.JSON(http.StatusNotFound, types.APIResponse{
-						Success: false,
-						Message: "Parent not found",
-						Code:    constants.CategoryNotFound,
-					})
+					httpx.Fail(c, http.StatusNotFound, constants.CategoryNotFound, "Parent category not found")
 					return
 				}
-				rlog.Error(c, "failed to fetch parent category", err, "parent_id", parentID)
-				c.JSON(http.StatusInternalServerError, types.APIResponse{
-					Success: false,
-					Message: "Failed to process request",
-					Code:    constants.InternalServerError,
-				})
+				httpx.Internal(c, "failed to fetch parent category", err, "parent_id", parentID)
 				return
 			}
 
-			category, err := queries.CreateSubCategory(ctx, db.CreateSubCategoryParams{
-				Name:     createCategoryRequest.Name,
+			category, err = queries.CreateSubCategory(ctx, db.CreateSubCategoryParams{
+				Name:     req.Name,
 				ParentID: parentID,
 				Slug:     slug,
 			})
-			if err != nil {
-				var pgErr *pgconn.PgError
-				if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-					c.JSON(http.StatusConflict, types.APIResponse{
-						Success: false,
-						Message: "Category already exists",
-						Code:    constants.CategoryAlreadyExists,
-					})
-					return
-				}
-				c.JSON(http.StatusInternalServerError, types.APIResponse{
-					Success: false,
-					Message: "Something went wrong",
-					Code:    constants.InternalServerError,
-				})
-				return
-			}
-
-			c.JSON(http.StatusCreated, types.APIResponse{
-				Success: true,
-				Message: "Subcategory created",
-				Data:    category,
+			message = "Subcategory created"
+		} else {
+			category, err = queries.CreateCategory(ctx, db.CreateCategoryParams{
+				Name: req.Name,
+				Slug: slug,
 			})
-
-			return
 		}
-
-		category, err := queries.CreateCategory(ctx, db.CreateCategoryParams{
-			Name: createCategoryRequest.Name,
-			Slug: slug,
-		})
 
 		if err != nil {
 			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-				c.JSON(http.StatusConflict, types.APIResponse{
-					Success: false,
-					Message: "Category already exists",
-					Code:    constants.CategoryAlreadyExists,
-				})
-				return
+			switch {
+			case errors.As(err, &pgErr) && pgErr.Code == "23505":
+				httpx.Fail(c, http.StatusConflict, constants.CategoryAlreadyExists, "Category already exists")
+			case errors.As(err, &pgErr) && pgErr.Code == "23503":
+				// parent deleted between the check and the insert
+				httpx.Fail(c, http.StatusNotFound, constants.CategoryNotFound, "Parent category not found")
+			default:
+				httpx.Internal(c, "failed to create category", err)
 			}
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to create category",
-				Code:    constants.InternalServerError,
-			})
 			return
 		}
 
 		c.JSON(http.StatusCreated, types.APIResponse{
 			Success: true,
-			Message: "Category created",
+			Message: message,
 			Data:    category,
 		})
 	}
+}
+
+// uniqueCategorySlug slugifies name, adding a random suffix when another
+// category has the slug. A category keeps its current slug when the name
+// still slugifies to it. On failure it writes a 500 and returns false.
+func uniqueCategorySlug(c *gin.Context, queries repository.CategoryRepository, name, current string) (string, bool) {
+	slug := utils.Slugify(name)
+	if current != "" && utils.SlugMatches(current, slug) {
+		return current, true
+	}
+
+	exists, err := queries.CategorySlugExists(c.Request.Context(), slug)
+	if err != nil {
+		httpx.Internal(c, "failed to check category slug", err)
+		return "", false
+	}
+	if !exists {
+		return slug, true
+	}
+
+	slug, err = utils.SlugWithSuffix(slug)
+	if err != nil {
+		httpx.Internal(c, "failed to generate category slug", err)
+		return "", false
+	}
+	return slug, true
+}
+
+// sameUUID reports whether two nullable UUIDs are equal (two NULLs are).
+func sameUUID(a, b pgtype.UUID) bool {
+	return a.Valid == b.Valid && (!a.Valid || a.Bytes == b.Bytes)
 }

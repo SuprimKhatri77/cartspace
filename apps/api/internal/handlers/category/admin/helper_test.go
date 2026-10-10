@@ -33,6 +33,12 @@ type mockCategoryRepo struct {
 	getCategoryBySlugFn func(ctx context.Context, slug string) (db.Category, error)
 
 	updateCategoryFn func(ctx context.Context, params db.UpdateCategoryParams) (db.Category, error)
+
+	getCategoryAncestorsFn func(ctx context.Context, id pgtype.UUID) ([]db.GetCategoryAncestorsRow, error)
+}
+
+func (m *mockCategoryRepo) GetCategoryAncestors(ctx context.Context, id pgtype.UUID) ([]db.GetCategoryAncestorsRow, error) {
+	return m.getCategoryAncestorsFn(ctx, id)
 }
 
 func (m *mockCategoryRepo) CreateCategory(ctx context.Context, params db.CreateCategoryParams) (db.Category, error) {

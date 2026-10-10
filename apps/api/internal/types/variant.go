@@ -6,23 +6,24 @@ type VariantProperty struct {
 	Type  string `json:"type" binding:"required,oneof=text color"`
 }
 
+// Prices are integer cents; max 100000000 is 1,000,000.00.
 type CreateProductVariant struct {
 	Images         []string          `json:"images" binding:"required,min=1,max=5,dive,url"`
-	ImagePublicIDs []string          `json:"image_public_ids" binding:"required,min=1,max=5,dive,required"`
-	Stock          int               `json:"stock" binding:"required,min=1,max=10000"`
-	SellingPrice   float64           `json:"selling_price" binding:"required,gt=0,max=1000000"`
-	OfferPrice     float64           `json:"offer_price,omitempty" binding:"omitempty,gt=0,max=1000000"`
+	ImagePublicIDs []string          `json:"image_public_ids" label:"Image public IDs" binding:"required,min=1,max=5,samelen=Images,dive,required" msg_samelen:"Provide one public ID per image"`
+	Stock          *int              `json:"stock" binding:"required,min=0,max=10000"`
+	SellingPrice   int               `json:"selling_price" binding:"required,gt=0,max=100000000"`
+	OfferPrice     *int              `json:"offer_price" binding:"omitempty,gt=0,ltfield=SellingPrice"`
 	IsDefault      *bool             `json:"is_default" binding:"required"`
 	IsActive       *bool             `json:"is_active" binding:"required"`
-	Properties     []VariantProperty `json:"properties,omitempty" binding:"omitempty,dive,required"`
+	Properties     []VariantProperty `json:"properties" binding:"max=10,unique=Name,dive"`
 }
 
 type UpdateProductVariant struct {
 	Images         []string `json:"images" binding:"required,min=1,max=5,dive,url"`
-	ImagePublicIDs []string `json:"image_public_ids" binding:"required,min=1,max=5,dive,required"`
-	Stock          int      `json:"stock" binding:"required,min=1,max=10000"`
-	SellingPrice   float64  `json:"selling_price" binding:"required,gt=0,max=1000000"`
-	OfferPrice     float64  `json:"offer_price,omitempty" binding:"omitempty,gt=0,max=1000000"`
+	ImagePublicIDs []string `json:"image_public_ids" label:"Image public IDs" binding:"required,min=1,max=5,samelen=Images,dive,required" msg_samelen:"Provide one public ID per image"`
+	Stock          *int     `json:"stock" binding:"required,min=0,max=10000"`
+	SellingPrice   int      `json:"selling_price" binding:"required,gt=0,max=100000000"`
+	OfferPrice     *int     `json:"offer_price" binding:"omitempty,gt=0,ltfield=SellingPrice"`
 	IsDefault      *bool    `json:"is_default" binding:"required"`
 	IsActive       *bool    `json:"is_active" binding:"required"`
 }
