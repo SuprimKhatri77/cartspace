@@ -6,6 +6,8 @@ import (
 	"log/slog"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 )
@@ -22,7 +24,22 @@ func attrs(c *gin.Context, extra ...any) []any {
 	if userID := c.GetString(constants.UserIDKey); userID != "" {
 		a = append(a, "actor_id", userID)
 	}
-	return append(a, extra...)
+	return append(a, normalize(extra)...)
+}
+
+// normalize renders values that slog would print as raw structs, e.g.
+// pgtype.UUID as {Bytes:[...] Valid:true}, as readable strings.
+func normalize(kv []any) []any {
+	for i, v := range kv {
+		if id, ok := v.(pgtype.UUID); ok {
+			if id.Valid {
+				kv[i] = uuid.UUID(id.Bytes).String()
+			} else {
+				kv[i] = "<null>"
+			}
+		}
+	}
+	return kv
 }
 
 func Error(c *gin.Context, msg string, err error, extra ...any) {

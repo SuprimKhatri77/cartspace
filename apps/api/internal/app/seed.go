@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -119,7 +120,7 @@ func upsertSeedUser(ctx context.Context, queries *dbgen.Queries, u seedUser) err
 		return fmt.Errorf("create %s: %w", u.Email, err)
 	}
 
-	slog.Info("seeded user", "email", created.Email, "role", created.Role, "id", created.ID)
+	slog.Info("seeded user", "email", created.Email, "role", created.Role, "id", uuid.UUID(created.ID.Bytes).String())
 	return nil
 }
 
