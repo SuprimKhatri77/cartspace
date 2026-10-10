@@ -72,14 +72,8 @@ func UpdateQuantity(queries repository.CartRepository) gin.HandlerFunc {
 			return
 		}
 
-		var req types.UpdateItemQuantity
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid request data",
-				Code:    constants.ValidationFailed,
-				Errors:  validator.Parse(err, req),
-			})
+		req, ok := validator.BindJSON[types.UpdateItemQuantity](c)
+		if !ok {
 			return
 		}
 		variant, err := queries.GetVariantByID(ctx, variantID)

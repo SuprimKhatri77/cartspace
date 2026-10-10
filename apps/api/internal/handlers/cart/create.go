@@ -32,18 +32,12 @@ func CreateCart(queries repository.CartRepository, pool *pgxpool.Pool) gin.Handl
 			return
 		}
 
-		var req types.CreateCartRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid request data",
-				Code:    constants.ValidationFailed,
-				Errors:  validator.Parse(err, req),
-			})
+		req, ok := validator.BindJSON[types.CreateCartRequest](c)
+		if !ok {
 			return
 		}
 
-		utils.TrimStruct(&req)
+		utils.TrimStruct(req)
 
 		variantID, err := utils.ConvertToUUID(req.VariantID)
 

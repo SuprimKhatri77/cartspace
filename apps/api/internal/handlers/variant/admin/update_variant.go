@@ -1,10 +1,7 @@
 package admin
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
-	"log/slog"
 	"math"
 	"net/http"
 
@@ -14,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
@@ -28,7 +26,7 @@ func UpdateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 		variantIDFromParams := c.Param("variantID")
 
 		if productIDFromParams == "" {
-			slog.Error("missing product ID")
+			rlog.Warn(c, "missing product ID")
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Missing product ID",
@@ -38,7 +36,7 @@ func UpdateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 		}
 
 		if variantIDFromParams == "" {
-			slog.Error("missing variant ID")
+			rlog.Warn(c, "missing variant ID")
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Missing variant ID",
@@ -49,7 +47,7 @@ func UpdateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 
 		productID, err := utils.ConvertToUUID(productIDFromParams)
 		if err != nil {
-			slog.Error("invalid product ID", "productID", productIDFromParams, "error", err)
+			rlog.Warn(c, "invalid product ID", "error", err, "productID", productIDFromParams)
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Invalid product ID",
@@ -60,7 +58,7 @@ func UpdateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 
 		variantID, err := utils.ConvertToUUID(variantIDFromParams)
 		if err != nil {
-			slog.Error("invalid variant ID", "variantID", variantIDFromParams, "error", err)
+			rlog.Warn(c, "invalid variant ID", "error", err, "variantID", variantIDFromParams)
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Invalid variant ID",
@@ -69,44 +67,15 @@ func UpdateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 			return
 		}
 
-		var req types.UpdateProductVariant
-
-		if err := c.ShouldBindJSON(&req); err != nil {
-			slog.Error("invalid request body", "error", err)
-
-			var unmarshalErr *json.UnmarshalTypeError
-			if errors.As(err, &unmarshalErr) {
-				c.JSON(http.StatusBadRequest, types.APIResponse{
-					Success: false,
-					Message: "Invalid request data",
-					Code:    constants.ValidationFailed,
-					Errors: []types.AppError{
-						{
-							Code:    "INVALID_TYPE",
-							Field:   unmarshalErr.Field,
-							Message: fmt.Sprintf("%s must be a %s", unmarshalErr.Field, unmarshalErr.Type),
-						},
-					},
-				})
-				return
-			}
-
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid request data",
-				Code:    constants.ValidationFailed,
-				Errors:  validator.Parse(err, req),
-			})
+		req, ok := validator.BindJSON[types.UpdateProductVariant](c)
+		if !ok {
 			return
 		}
 
 		if req.OfferPrice != 0 &&
 			req.OfferPrice >= req.SellingPrice {
 
-			slog.Error("invalid offer price",
-				"offerPrice", req.OfferPrice,
-				"sellingPrice", req.SellingPrice,
-			)
+			rlog.Warn(c, "invalid offer price", "offerPrice", req.OfferPrice, "sellingPrice", req.SellingPrice)
 
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
@@ -124,10 +93,7 @@ func UpdateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 		}
 
 		if len(req.ImagePublicIDs) != len(req.Images) {
-			slog.Error("image mismatch",
-				"imagesCount", len(req.Images),
-				"imagePublicIDsCount", len(req.ImagePublicIDs),
-			)
+			rlog.Warn(c, "image mismatch", "imagesCount", len(req.Images), "imagePublicIDsCount", len(req.ImagePublicIDs))
 
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
@@ -144,12 +110,12 @@ func UpdateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 			return
 		}
 
-		utils.TrimStruct(&req)
+		utils.TrimStruct(req)
 
 		variant, err := queries.GetVariantByID(ctx, variantID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				slog.Error("variant not found", "variantID", variantID)
+				rlog.Warn(c, "variant not found", "variantID", variantID)
 				c.JSON(http.StatusNotFound, types.APIResponse{
 					Success: false,
 					Message: "Variant not found",
@@ -158,7 +124,7 @@ func UpdateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 				return
 			}
 
-			slog.Error("failed to fetch variant", "variantID", variantID, "error", err)
+			rlog.Error(c, "failed to fetch variant", err, "variantID", variantID)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",
@@ -170,7 +136,7 @@ func UpdateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 		_, err = queries.GetProductByID(ctx, productID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				slog.Error("product not found", "productID", productID)
+				rlog.Warn(c, "product not found", "productID", productID)
 				c.JSON(http.StatusNotFound, types.APIResponse{
 					Success: false,
 					Message: "Product not found",
@@ -179,7 +145,7 @@ func UpdateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 				return
 			}
 
-			slog.Error("failed to fetch product", "productID", productID, "error", err)
+			rlog.Error(c, "failed to fetch product", err, "productID", productID)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",
@@ -208,7 +174,7 @@ func UpdateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 		})
 
 		if err != nil {
-			slog.Error("failed to update variant", "variantID", variantIDFromParams, "error", err)
+			rlog.Error(c, "failed to update variant", err, "variantID", variantIDFromParams)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to update variant",

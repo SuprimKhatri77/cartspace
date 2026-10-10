@@ -1,26 +1,29 @@
 package middleware
 
 import (
-	"log"
+	"fmt"
 	"net/http"
+	"runtime/debug"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
-// Recovery returns a middleware that recovers from panics and responds with 500.
+// Recovery recovers from panics, logs them with the stack and request
+// context, and responds with 500.
 func Recovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
-			if err := recover(); err != nil {
-				log.Printf("panic recovered: %v", err)
-				c.JSON(http.StatusInternalServerError, types.APIResponse{
+			if rec := recover(); rec != nil {
+				rlog.Error(c, "panic recovered", fmt.Errorf("%v", rec), "stack", string(debug.Stack()))
+				c.AbortWithStatusJSON(http.StatusInternalServerError, types.APIResponse{
 					Success: false,
 					Message: "Failed to process request",
 					Code:    constants.InternalServerError,
 				})
-				c.Abort()
 			}
 		}()
 		c.Next()

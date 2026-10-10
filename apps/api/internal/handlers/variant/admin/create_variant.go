@@ -1,10 +1,7 @@
 package admin
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
-	"log/slog"
 	"math"
 	"net/http"
 	"sort"
@@ -18,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
@@ -31,7 +29,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 		productIDFromParams := c.Param("productID")
 
 		if productIDFromParams == "" {
-			slog.Error("missing product ID")
+			rlog.Warn(c, "missing product ID")
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Missing product ID",
@@ -42,7 +40,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 
 		productID, err := utils.ConvertToUUID(productIDFromParams)
 		if err != nil {
-			slog.Error("invalid product ID", "productID", productIDFromParams, "error", err)
+			rlog.Warn(c, "invalid product ID", "error", err, "productID", productIDFromParams)
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Invalid product ID",
@@ -51,41 +49,13 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 			return
 		}
 
-		var req types.CreateProductVariant
-		if err := c.ShouldBindJSON(&req); err != nil {
-			slog.Error("invalid request body", "error", err)
-
-			var unmarshalErr *json.UnmarshalTypeError
-			if errors.As(err, &unmarshalErr) {
-				c.JSON(http.StatusBadRequest, types.APIResponse{
-					Success: false,
-					Message: "Invalid request data",
-					Code:    constants.ValidationFailed,
-					Errors: []types.AppError{
-						{
-							Code:    "INVALID_TYPE",
-							Field:   unmarshalErr.Field,
-							Message: fmt.Sprintf("%s must be a %s", unmarshalErr.Field, unmarshalErr.Type),
-						},
-					},
-				})
-				return
-			}
-
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid request data",
-				Code:    constants.ValidationFailed,
-				Errors:  validator.Parse(err, req),
-			})
+		req, ok := validator.BindJSON[types.CreateProductVariant](c)
+		if !ok {
 			return
 		}
 
 		if req.OfferPrice >= req.SellingPrice {
-			slog.Error("invalid offer price",
-				"offerPrice", req.OfferPrice,
-				"sellingPrice", req.SellingPrice,
-			)
+			rlog.Warn(c, "invalid offer price", "offerPrice", req.OfferPrice, "sellingPrice", req.SellingPrice)
 
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
@@ -96,10 +66,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 		}
 
 		if len(req.ImagePublicIDs) != len(req.Images) {
-			slog.Error("image mismatch",
-				"imagesCount", len(req.Images),
-				"imagePublicIDsCount", len(req.ImagePublicIDs),
-			)
+			rlog.Warn(c, "image mismatch", "imagesCount", len(req.Images), "imagePublicIDsCount", len(req.ImagePublicIDs))
 
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
@@ -109,7 +76,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 			return
 		}
 
-		utils.TrimStruct(&req)
+		utils.TrimStruct(req)
 
 		props := make([]string, len(req.Properties))
 		names := make([]string, len(req.Properties))
@@ -126,7 +93,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 
 		tx, err := pool.Begin(ctx)
 		if err != nil {
-			slog.Error("failed to begin transaction", "error", err)
+			rlog.Error(c, "failed to begin transaction", err)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",
@@ -141,7 +108,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 		product, err := qtx.GetProductByID(ctx, productID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				slog.Error("product not found", "productID", productID)
+				rlog.Warn(c, "product not found", "productID", productID)
 				c.JSON(http.StatusBadRequest, types.APIResponse{
 					Success: false,
 					Message: "Product not found",
@@ -150,7 +117,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 				return
 			}
 
-			slog.Error("failed to fetch product", "productID", productID, "error", err)
+			rlog.Error(c, "failed to fetch product", err, "productID", productID)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",
@@ -205,7 +172,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 
 				if pgError.ConstraintName == "product_variants_sku_key" {
 
-					slog.Warn("SKU conflict, regenerating", "sku", sku)
+					rlog.Warn(c, "SKU conflict, regenerating", "sku", sku)
 
 					sku = utils.GenerateSKU(product.Name, variantOptions)
 
@@ -223,11 +190,10 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 					})
 
 					if err != nil {
-						slog.Error("failed to create variant after SKU retry", "error", err)
-
 						var retryPgError *pgconn.PgError
 						if errors.As(err, &retryPgError) && retryPgError.Code == "23505" &&
 							retryPgError.ConstraintName == "uq_variant_combination" {
+							rlog.Warn(c, "variant combination already exists")
 							c.JSON(http.StatusConflict, types.APIResponse{
 								Success: false,
 								Message: "Variant with this combination already exists",
@@ -236,6 +202,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 							return
 						}
 
+						rlog.Error(c, "failed to create variant after SKU retry", err)
 						c.JSON(http.StatusInternalServerError, types.APIResponse{
 							Success: false,
 							Message: "Failed to create variant",
@@ -246,7 +213,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 				}
 
 			} else {
-				slog.Error("failed to create variant", "error", err)
+				rlog.Error(c, "failed to create variant", err)
 				c.JSON(http.StatusInternalServerError, types.APIResponse{
 					Success: false,
 					Message: "Failed to create variant",
@@ -312,7 +279,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 				})
 
 				if err != nil {
-					slog.Error("failed to create product option", "name", prop.Name, "error", err)
+					rlog.Error(c, "failed to create product option", err, "name", prop.Name)
 					c.JSON(http.StatusInternalServerError, types.APIResponse{
 						Success: false,
 						Message: "Failed to create variant",
@@ -331,7 +298,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 				})
 
 				if err != nil {
-					slog.Error("failed to create option value", "value", prop.Value, "error", err)
+					rlog.Error(c, "failed to create option value", err, "value", prop.Value)
 					c.JSON(http.StatusInternalServerError, types.APIResponse{
 						Success: false,
 						Message: "Failed to create variant",
@@ -347,11 +314,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 			})
 
 			if err != nil {
-				slog.Error("failed to create variant option value",
-					"variantID", variant.ID,
-					"optionValueID", value.ID,
-					"error", err,
-				)
+				rlog.Error(c, "failed to create variant option value", err, "variantID", variant.ID, "optionValueID", value.ID)
 
 				c.JSON(http.StatusInternalServerError, types.APIResponse{
 					Success: false,
@@ -363,7 +326,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 		}
 
 		if err := tx.Commit(ctx); err != nil {
-			slog.Error("transaction commit failed", "variantID", variant.ID, "error", err)
+			rlog.Error(c, "transaction commit failed", err, "variantID", variant.ID)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to create variant",

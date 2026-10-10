@@ -3,7 +3,6 @@ package admin
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
@@ -21,25 +21,16 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		var updateCategoryRequest types.UpdateCategory
-
-		if err := c.ShouldBindJSON(&updateCategoryRequest); err != nil {
-			slog.Error("invalid request body", "error", err)
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid request data",
-				Errors:  validator.Parse(err, updateCategoryRequest),
-				Code:    constants.ValidationFailed,
-			})
-
+		updateCategoryRequest, ok := validator.BindJSON[types.UpdateCategory](c)
+		if !ok {
 			return
 		}
 
-		utils.TrimStruct(&updateCategoryRequest)
+		utils.TrimStruct(updateCategoryRequest)
 
 		categoryID, err := utils.ConvertToUUID(c.Param("id"))
 		if err != nil {
-			slog.Error("error converting the id to UUID", "error", err)
+			rlog.Warn(c, "error converting the id to UUID", "error", err)
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Invalid category ID format",
@@ -74,7 +65,7 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 			slugExists, err := queries.CategorySlugExists(ctx, slug)
 			if err != nil {
 
-				slog.Error("failed to get category", "error", err)
+				rlog.Error(c, "failed to get category", err)
 				c.JSON(http.StatusInternalServerError, types.APIResponse{
 					Success: false,
 					Message: "Something went wrong",

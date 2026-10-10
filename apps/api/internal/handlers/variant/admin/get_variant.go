@@ -2,12 +2,12 @@ package admin
 
 import (
 	"errors"
-	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
@@ -41,8 +41,8 @@ func GetByVariantID(queries repository.VariantRepository) gin.HandlerFunc {
 		variant, err := queries.GetVariantByID(ctx, variantID)
 
 		if err != nil {
-			slog.Error("failed to get variant", "variantID", variantID, "error", err)
 			if errors.Is(err, pgx.ErrNoRows) {
+				rlog.Warn(c, "variant not found", "variantID", variantID)
 				c.JSON(http.StatusNotFound, types.APIResponse{
 					Success: false,
 					Message: "Variant not found",
@@ -50,6 +50,7 @@ func GetByVariantID(queries repository.VariantRepository) gin.HandlerFunc {
 				})
 				return
 			}
+			rlog.Error(c, "failed to get variant", err, "variantID", variantID)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",

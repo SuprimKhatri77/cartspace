@@ -1,7 +1,6 @@
 package user
 
 import (
-	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -93,14 +92,6 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 
 		offset := pageLimit * (page - 1)
 
-		slog.Debug("query params",
-			"slug", slug,
-			"priceMin", priceMin,
-			"priceMax", priceMax,
-			"offset", offset,
-			"limit", pageLimit,
-		)
-
 		g, ctx := errgroup.WithContext(ctx)
 
 		var filterOptions []db.GetCategoryFilterOptionsRow
@@ -153,7 +144,6 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 					})
 				}
 			default:
-				slog.Debug("i am being triggered")
 				products, err = queries.ListProductsByCategory(ctx, db.ListProductsByCategoryParams{
 					Slug:    slug,
 					Limit:   pageLimit,

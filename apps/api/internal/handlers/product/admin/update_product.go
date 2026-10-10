@@ -2,7 +2,6 @@ package admin
 
 import (
 	"errors"
-	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
@@ -23,7 +23,7 @@ func UpdateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 		productIDFromParams := c.Param("productID")
 
 		if productIDFromParams == "" {
-			slog.Debug("Missing product ID")
+			rlog.Warn(c, "missing product ID")
 
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
@@ -43,20 +43,12 @@ func UpdateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			return
 		}
 
-		var updateProductRequest types.UpdateProduct
-
-		if err := c.ShouldBindJSON(&updateProductRequest); err != nil {
-			slog.Error("Invalid request body", "error", err)
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid data",
-				Errors:  validator.Parse(err, updateProductRequest),
-				Code:    constants.ValidationFailed,
-			})
+		updateProductRequest, ok := validator.BindJSON[types.UpdateProduct](c)
+		if !ok {
 			return
 		}
 
-		utils.TrimStruct(&updateProductRequest)
+		utils.TrimStruct(updateProductRequest)
 
 		product, err := queries.GetProductByID(ctx, productID)
 		if err != nil {
@@ -104,7 +96,7 @@ func UpdateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 
 		categoryID, err := utils.ConvertToUUID(updateProductRequest.CategoryID)
 		if err != nil {
-			slog.Error("failed to parse the category ID", "error", err)
+			rlog.Error(c, "failed to parse the category ID", err)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",
