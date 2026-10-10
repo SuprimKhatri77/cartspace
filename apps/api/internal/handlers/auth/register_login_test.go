@@ -3,6 +3,7 @@ package auth
 import (
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -46,6 +47,14 @@ func TestRegister(t *testing.T) {
 		}}
 		if r := do(t, Register(m, testConfig()), http.MethodPost, body, nil); r.code != http.StatusBadRequest {
 			t.Fatalf("got %d", r.code)
+		}
+	})
+
+	t.Run("72 multibyte chars exceed bcrypt's 72 bytes: 400 not 500", func(t *testing.T) {
+		long := map[string]string{"name": "Ada", "email": "ada@example.com", "password": strings.Repeat("é", 72)}
+		r := do(t, Register(&mockRepo{t: t}, testConfig()), http.MethodPost, long, nil)
+		if r.code != http.StatusBadRequest || len(r.body.Errors) != 1 || r.body.Errors[0].Field != "password" {
+			t.Fatalf("got %d %+v", r.code, r.body)
 		}
 	})
 

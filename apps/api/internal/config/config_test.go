@@ -29,3 +29,13 @@ func TestValidateAuth(t *testing.T) {
 		})
 	}
 }
+
+func TestSplitList(t *testing.T) {
+	got := splitList(" 10.0.0.0/8, ,172.16.0.1 ,")
+	if len(got) != 2 || got[0] != "10.0.0.0/8" || got[1] != "172.16.0.1" {
+		t.Fatalf("got %q", got)
+	}
+	if splitList("") != nil {
+		t.Fatal("empty value must give no proxies")
+	}
+}

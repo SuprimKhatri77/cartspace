@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
@@ -18,8 +20,13 @@ func buildRouter(
 	queries *dbgen.Queries,
 	cld *cloudinary.Client,
 	db *database.DB,
-) *gin.Engine {
+) (*gin.Engine, error) {
 	r := gin.New()
+	// Only listed proxies may set X-Forwarded-For; otherwise ClientIP() is
+	// the socket address, so clients can't spoof the ip we log and store.
+	if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+		return nil, fmt.Errorf("TRUSTED_PROXIES: %w", err)
+	}
 	r.Use(middleware.RequestID())
 	r.Use(middleware.Recovery())
 	r.Use(gin.Logger())
@@ -33,5 +40,5 @@ func buildRouter(
 		VariantRepo: repository.NewVariantRepository(queries),
 		CartRepo:    repository.NewCartRepository(queries),
 	})
-	return r
+	return r, nil
 }

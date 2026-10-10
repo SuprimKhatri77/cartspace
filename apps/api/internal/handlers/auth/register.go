@@ -27,6 +27,16 @@ func Register(queries repository.AuthRepository, cfg *config.Config) gin.Handler
 		email := session.NormalizeEmail(req.Email)
 
 		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if errors.Is(err, bcrypt.ErrPasswordTooLong) {
+			// max=72 counts characters; bcrypt's limit is 72 bytes (multibyte chars)
+			c.JSON(http.StatusBadRequest, types.APIResponse{
+				Success: false,
+				Message: "Invalid request body",
+				Code:    constants.ValidationFailed,
+				Errors:  []types.AppError{{Code: "TOO_LONG", Field: "password", Message: "Password is too long"}},
+			})
+			return
+		}
 		if err != nil {
 			rlog.Error(c, "failed to hash password", err)
 			internalError(c)

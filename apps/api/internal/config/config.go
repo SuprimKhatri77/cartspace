@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -22,6 +23,7 @@ type Config struct {
 	FrontendURL         string
 	CookieDomain        string
 	OpenAPIPath         string
+	TrustedProxies      []string // proxies allowed to set X-Forwarded-For; none by default
 
 	AccessTokenTTL     time.Duration
 	RefreshTokenTTL    time.Duration
@@ -73,6 +75,7 @@ func Load() (*Config, error) {
 		FrontendURL:         frontendURL,
 		CookieDomain:        cookieDomain,
 		OpenAPIPath:         openapiPath,
+		TrustedProxies:      splitList(os.Getenv("TRUSTED_PROXIES")),
 
 		AccessTokenTTL:     15 * time.Minute,
 		RefreshTokenTTL:    30 * 24 * time.Hour,
@@ -94,4 +97,15 @@ func (c *Config) ValidateAuth() error {
 		return errors.New("JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different")
 	}
 	return nil
+}
+
+// splitList parses a comma-separated env value, dropping empty entries.
+func splitList(v string) []string {
+	var out []string
+	for _, part := range strings.Split(v, ",") {
+		if part = strings.TrimSpace(part); part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }

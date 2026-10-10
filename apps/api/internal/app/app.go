@@ -47,7 +47,11 @@ func New(ctx context.Context) (*App, error) {
 	queries := dbgen.New(db.Pool)
 	validator.Init()
 
-	r := buildRouter(cfg, queries, cldClient, db)
+	r, err := buildRouter(cfg, queries, cldClient, db)
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
 
 	return &App{
 		Cfg:       cfg,

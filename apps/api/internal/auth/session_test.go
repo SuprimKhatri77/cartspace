@@ -69,3 +69,16 @@ func TestNormalizeEmail(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestTruncate(t *testing.T) {
+	if got := truncate("short", 10); got != "short" {
+		t.Fatalf("got %q", got)
+	}
+	// "é" is 2 bytes; cutting at 2 would split it, so it backs off to 1 byte
+	if got := truncate("aé", 2); got != "a" {
+		t.Fatalf("got %q", got)
+	}
+	if got := truncate("abcdef", 3); got != "abc" {
+		t.Fatalf("got %q", got)
+	}
+}

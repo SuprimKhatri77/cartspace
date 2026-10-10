@@ -30,6 +30,7 @@ var dummyHash = sync.OnceValue(func() []byte {
 })
 
 func Login(queries repository.AuthRepository, cfg *config.Config) gin.HandlerFunc {
+	dummyHash() // compute now, so the first unknown-email login isn't slower
 	return func(c *gin.Context) {
 		req, ok := validator.BindJSON[types.LoginRequest](c)
 		if !ok {

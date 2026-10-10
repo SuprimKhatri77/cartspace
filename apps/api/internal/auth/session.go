@@ -3,6 +3,7 @@ package auth
 import (
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -78,7 +79,7 @@ func IssueSession(c *gin.Context, queries repository.AuthRepository, cfg *config
 		ID:               familyID,
 		UserID:           user.ID,
 		CurrentTokenHash: HashRefreshToken(tokens.RefreshToken),
-		UserAgent:        utils.ToNullableText(c.Request.UserAgent()),
+		UserAgent:        utils.ToNullableText(truncate(c.Request.UserAgent(), maxUserAgentLen)),
 		IpAddress:        utils.ToNullableText(c.ClientIP()),
 		ExpiresAt:        pgtype.Timestamptz{Time: expiresAt, Valid: true},
 	})
@@ -135,4 +136,18 @@ func NewPublicUser(user db.User) PublicUser {
 		pu.ImageURL = &user.ImageUrl.String
 	}
 	return pu
+}
+
+// maxUserAgentLen bounds what a client can make us store per session.
+const maxUserAgentLen = 512
+
+// truncate cuts s to at most n bytes without splitting a UTF-8 character.
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+	return s[:n]
 }
