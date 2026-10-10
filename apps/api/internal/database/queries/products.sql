@@ -31,17 +31,47 @@ RETURNING *;
 -- name: DeleteProduct :execresult
 DELETE FROM products WHERE id = $1;
 
--- name: GetProductsCount :one
-SELECT COUNT(*) FROM products;
+-- Admin product table: every product, active or not. Count and list share
+-- the filters: a name search (an ILIKE pattern the handler escapes), the
+-- active flag and a category with its subcategories.
+
+-- name: CountAdminProducts :one
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = sqlc.narg(category_slug)::text
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
+SELECT COUNT(*)
+FROM products p
+WHERE (sqlc.narg(name_pattern)::text IS NULL OR p.name ILIKE sqlc.narg(name_pattern)::text)
+AND (sqlc.narg(active)::bool IS NULL OR p.is_active = sqlc.narg(active)::bool)
+AND (sqlc.narg(category_slug)::text IS NULL OR p.category_id IN (SELECT id FROM subtree));
 
 -- name: AdminProductsList :many
-SELECT 
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = sqlc.narg(category_slug)::text
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
+SELECT
     p.*,
-    c.name AS category_name
+    c.name AS category_name,
+    dv.selling_price AS default_price,
+    COALESCE(vs.total_stock, 0)::int AS total_stock,
+    COALESCE(vs.variant_count, 0)::int AS variant_count
 FROM products p
 LEFT JOIN categories c ON p.category_id = c.id
+LEFT JOIN product_variants dv ON dv.product_id = p.id AND dv.is_default
+LEFT JOIN LATERAL (
+    SELECT SUM(v.stock)::int AS total_stock, COUNT(*)::int AS variant_count
+    FROM product_variants v
+    WHERE v.product_id = p.id
+) vs ON TRUE
+WHERE (sqlc.narg(name_pattern)::text IS NULL OR p.name ILIKE sqlc.narg(name_pattern)::text)
+AND (sqlc.narg(active)::bool IS NULL OR p.is_active = sqlc.narg(active)::bool)
+AND (sqlc.narg(category_slug)::text IS NULL OR p.category_id IN (SELECT id FROM subtree))
 ORDER BY p.created_at DESC, p.id DESC
-LIMIT $1 OFFSET $2;
+LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 
 -- Storefront listings. The four queries below share one scope (an optional
 -- category with all its subcategories, featured_only and the search terms);

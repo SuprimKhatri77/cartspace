@@ -1,0 +1,145 @@
+import { describe, expect, test } from "bun:test";
+import type { CategoryNode } from "@repo/types";
+import { withoutErrors } from "@/lib/forms";
+import {
+  categoryPath,
+  orderTree,
+  subtreeIds,
+} from "@/modules/admin/lib/categories";
+import { fromLocalInput, toLocalInput } from "@/modules/admin/lib/datetime";
+import {
+  adminProductsQuery,
+  adminProductsSearch,
+  EMPTY_FILTERS,
+  pageWindow,
+  parseAdminProductFilters,
+} from "@/modules/admin/lib/filters";
+import { move, rejectImage } from "@/modules/admin/lib/upload";
+
+describe("admin product filters", () => {
+  test("parse search params, falling back on junk", () => {
+    expect(parseAdminProductFilters({})).toEqual(EMPTY_FILTERS);
+    expect(
+      parseAdminProductFilters({
+        page: "3",
+        q: "  linen ",
+        status: "inactive",
+        category: "tops",
+      }),
+    ).toEqual({ page: 3, q: "linen", status: "inactive", category: "tops" });
+    expect(parseAdminProductFilters({ page: "-1", status: "deleted" })).toEqual(
+      EMPTY_FILTERS,
+    );
+    expect(parseAdminProductFilters({ page: "2.5" }).page).toBe(1);
+    expect(parseAdminProductFilters({ q: ["a", "b"] }).q).toBe("a");
+  });
+
+  test("query and URL leave out defaults", () => {
+    expect(adminProductsQuery(EMPTY_FILTERS)).toEqual({ page: 1 });
+    expect(adminProductsSearch(EMPTY_FILTERS)).toBe("");
+    const f = {
+      page: 2,
+      q: "wool coat",
+      status: "active" as const,
+      category: "",
+    };
+    expect(adminProductsQuery(f)).toEqual({
+      page: 2,
+      q: "wool coat",
+      status: "active",
+    });
+    expect(adminProductsSearch(f)).toBe("?q=wool+coat&status=active&page=2");
+    // a round trip gives the same filters
+    const params = Object.fromEntries(
+      new URLSearchParams(adminProductsSearch(f)),
+    );
+    expect(parseAdminProductFilters(params)).toEqual(f);
+  });
+
+  test("page window", () => {
+    expect(pageWindow(1, 1)).toEqual([1]);
+    expect(pageWindow(1, 3)).toEqual([1, 2, 3]);
+    expect(pageWindow(5, 10)).toEqual([1, null, 4, 5, 6, null, 10]);
+    expect(pageWindow(1, 10)).toEqual([1, 2, null, 10]);
+    expect(pageWindow(10, 10)).toEqual([1, null, 9, 10]);
+    // a gap of one page shows the page
+    expect(pageWindow(4, 10)).toEqual([1, 2, 3, 4, 5, null, 10]);
+    expect(pageWindow(7, 10)).toEqual([1, null, 6, 7, 8, 9, 10]);
+  });
+});
+
+const node = (
+  id: string,
+  name: string,
+  parent_id: string | null,
+  depth: number,
+): CategoryNode => ({
+  id,
+  name,
+  slug: name.toLowerCase(),
+  parent_id,
+  depth,
+  created_at: "2026-10-10T00:00:00Z",
+  updated_at: "2026-10-10T00:00:00Z",
+});
+
+// As the API sends them: parents before children, not grouped.
+const nodes = [
+  node("h", "Home", null, 0),
+  node("c", "Clothing", null, 0),
+  node("t", "Tops", "c", 1),
+  node("k", "Kitchen", "h", 1),
+  node("b", "Bottoms", "c", 1),
+  node("s", "Shirts", "t", 2),
+];
+
+describe("category tree", () => {
+  test("orders each parent before its children, A–Z", () => {
+    expect(orderTree(nodes).map((n) => n.name)).toEqual([
+      "Clothing",
+      "Bottoms",
+      "Tops",
+      "Shirts",
+      "Home",
+      "Kitchen",
+    ]);
+  });
+
+  test("subtree and path", () => {
+    expect([...subtreeIds(nodes, "c")].sort()).toEqual(["b", "c", "s", "t"]);
+    expect([...subtreeIds(nodes, "s")]).toEqual(["s"]);
+    expect(categoryPath(nodes, "s")).toBe("Clothing / Tops / Shirts");
+    expect(categoryPath(nodes, "missing")).toBe("");
+  });
+});
+
+describe("admin helpers", () => {
+  test("move", () => {
+    expect(move(["a", "b", "c"], 0, 2)).toEqual(["b", "c", "a"]);
+    expect(move(["a", "b", "c"], 2, 1)).toEqual(["a", "c", "b"]);
+    expect(move(["a", "b"], 0, -1)).toEqual(["a", "b"]);
+  });
+
+  test("rejectImage", () => {
+    const file = (type: string, size: number) =>
+      new File([new Uint8Array(size)], "photo", { type });
+    expect(rejectImage(file("image/jpeg", 10))).toBeNull();
+    expect(rejectImage(file("image/gif", 10))).toContain("isn't");
+    expect(rejectImage(file("image/png", 11 * 1024 * 1024))).toContain("10 MB");
+  });
+
+  test("datetime-local round trip", () => {
+    const iso = "2026-10-12T18:30:00.000Z";
+    expect(fromLocalInput(toLocalInput(iso))).toBe(iso);
+    expect(toLocalInput(null)).toBe("");
+    expect(fromLocalInput("")).toBeUndefined();
+    expect(fromLocalInput("nonsense")).toBeUndefined();
+  });
+
+  test("withoutErrors", () => {
+    const errors = { name: "Enter a name", price: "Enter a price" };
+    expect(withoutErrors(errors, "name")).toEqual({ price: "Enter a price" });
+    // unchanged errors keep their identity (no re-render)
+    expect(withoutErrors(errors, "stock")).toBe(errors);
+  });
+});

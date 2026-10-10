@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState } from "react";
+import { shouldRetry } from "@/lib/api/errors";
 
 export function ReactQueryProvider({
   children,
@@ -13,8 +14,9 @@ export function ReactQueryProvider({
     () =>
       new QueryClient({
         defaultOptions: {
-          // Server components render the data; don't refetch it straight away.
-          queries: { staleTime: 60_000 },
+          // Server components render the data; don't refetch it straight
+          // away. A 4xx won't change on a retry, so it shows at once.
+          queries: { staleTime: 60_000, retry: shouldRetry },
         },
       }),
   );

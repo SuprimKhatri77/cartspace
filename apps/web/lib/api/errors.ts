@@ -18,3 +18,13 @@ export function mapFieldErrors(
   }
   return out;
 }
+
+/**
+ * Whether a failed query is worth retrying: network trouble and 5xx may pass,
+ * a 4xx answer (not found, invalid, forbidden) will only repeat itself.
+ */
+export function shouldRetry(failureCount: number, err: unknown): boolean {
+  const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+  if (status !== undefined && status >= 400 && status < 500) return false;
+  return failureCount < 3;
+}

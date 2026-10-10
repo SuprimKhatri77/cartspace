@@ -66,6 +66,14 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 
 		sku := utils.GenerateSKU(product.Name, variantOptions)
 
+		// A new default takes over from the current one.
+		if *req.IsDefault {
+			if err := qtx.ClearOtherDefaults(ctx, db.ClearOtherDefaultsParams{ProductID: productID}); err != nil {
+				httpx.Internal(c, "failed to clear the default variant", err, "product_id", productID)
+				return
+			}
+		}
+
 		// The SKU's random part makes a collision practically impossible; a
 		// unique violation aborts the transaction, so it is not retried here.
 		variant, err := qtx.CreateProductVariant(ctx, db.CreateProductVariantParams{
@@ -76,6 +84,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 			ImagePublicIds:       req.ImagePublicIDs,
 			SellingPrice:         int32(req.SellingPrice),
 			OfferPrice:           toOfferPrice(req.OfferPrice),
+			OfferExpiresAt:       toOfferExpiry(req.OfferPrice, req.OfferExpiresAt),
 			OptionCombinationKey: combinationKey,
 			IsDefault:            *req.IsDefault,
 			IsActive:             *req.IsActive,

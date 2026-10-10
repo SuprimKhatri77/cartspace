@@ -75,6 +75,35 @@ func TestUpdateCategory_WithParentID(t *testing.T) {
 	}
 }
 
+func TestUpdateCategory_OmittedParentMakesRoot(t *testing.T) {
+	var got db.UpdateCategoryParams
+	repo := &mockCategoryRepo{
+		getCategoryByIDFn: func(_ context.Context, _ pgtype.UUID) (db.Category, error) {
+			return FakeSubCategory(), nil
+		},
+		categorySlugExistsFn: func(_ context.Context, _ string) (bool, error) {
+			return false, nil
+		},
+		updateCategoryFn: func(_ context.Context, p db.UpdateCategoryParams) (db.Category, error) {
+			got = p
+			return db.Category{ID: p.ID}, nil
+		},
+	}
+
+	router := setupRouter(func(r *gin.Engine) {
+		r.PUT("/api/category/:id", adminCategory.UpdateCategory(repo))
+	})
+
+	_, categoryID := getRandomUUID()
+	w := makeRequest(t, router, "PUT", "/api/category/"+categoryID, map[string]string{"name": "fake category"})
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d %s", w.Code, w.Body)
+	}
+	if got.ParentID.Valid {
+		t.Errorf("expected the category to become a root, got parent %v", got.ParentID)
+	}
+}
+
 func TestUpdateCategory_InvalidRequestBody(t *testing.T) {
 	repo := &mockCategoryRepo{}
 

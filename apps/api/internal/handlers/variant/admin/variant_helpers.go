@@ -3,6 +3,7 @@ package admin
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -32,6 +33,15 @@ func toOfferPrice(cents *int) pgtype.Int4 {
 		return pgtype.Int4{}
 	}
 	return pgtype.Int4{Int32: int32(*cents), Valid: true}
+}
+
+// toOfferExpiry maps an offer's optional end to a nullable column. Without
+// an offer there is nothing to expire, so the end is dropped.
+func toOfferExpiry(offer *int, ends *time.Time) pgtype.Timestamptz {
+	if offer == nil || ends == nil {
+		return pgtype.Timestamptz{}
+	}
+	return pgtype.Timestamptz{Time: *ends, Valid: true}
 }
 
 // writeVariantError maps a variant insert/update failure to a response.

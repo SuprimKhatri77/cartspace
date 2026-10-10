@@ -38,3 +38,14 @@ function friendlyMessage(issue: z.core.$ZodIssue, label: string): string {
       return issue.message;
   }
 }
+
+/** Field errors without the given fields, for clearing them as they're edited. */
+export function withoutErrors(
+  errors: Record<string, string>,
+  ...fields: string[]
+): Record<string, string> {
+  if (!fields.some((f) => f in errors)) return errors;
+  const next = { ...errors };
+  for (const f of fields) delete next[f];
+  return next;
+}

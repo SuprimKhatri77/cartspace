@@ -14,7 +14,7 @@ type ProductRepository interface {
 	GetProductByID(ctx context.Context, id pgtype.UUID) (db.Product, error)
 	UpdateProduct(ctx context.Context, params db.UpdateProductParams) (db.Product, error)
 	DeleteProduct(ctx context.Context, id pgtype.UUID) (pgconn.CommandTag, error)
-	GetProductsCount(ctx context.Context) (int64, error)
+	CountAdminProducts(ctx context.Context, args db.CountAdminProductsParams) (int64, error)
 	GetCategoryBySlug(ctx context.Context, slug string) (db.Category, error)
 
 	// for /admin/products route
