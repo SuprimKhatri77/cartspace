@@ -43,6 +43,8 @@ export function useCartMutations() {
 
   function rollback(error: unknown, context?: { previous?: Cart }) {
     if (context?.previous) queryClient.setQueryData(key, context.previous);
+    // The snapshot may hold another write's optimistic state; resync.
+    void queryClient.invalidateQueries({ queryKey: key });
     toast.error(cartErrorMessage(error));
   }
 
