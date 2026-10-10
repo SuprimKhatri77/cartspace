@@ -36,6 +36,7 @@ func UpdateProductVariant(queries repository.VariantRepository) gin.HandlerFunc 
 			ImagePublicIds: req.ImagePublicIDs,
 			SellingPrice:   int32(req.SellingPrice),
 			OfferPrice:     toOfferPrice(req.OfferPrice),
+			OfferExpiresAt: toOfferExpiry(req.OfferPrice, req.OfferExpiresAt),
 			IsDefault:      *req.IsDefault,
 			IsActive:       *req.IsActive,
 		})

@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
@@ -20,8 +21,8 @@ import (
 // cycleConstraint is raised by the categories_no_cycle trigger.
 const cycleConstraint = "categories_no_cycle"
 
-// UpdateCategory renames a category and optionally moves it under another
-// parent. An omitted parent_id keeps the current parent.
+// UpdateCategory renames and places a category. Like every PUT it replaces
+// the whole resource: an omitted parent_id makes it a root category.
 func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
@@ -51,13 +52,14 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 			return
 		}
 
-		parentID := category.ParentID
+		var parentID pgtype.UUID
 		if req.ParentID != "" {
 			// the binding's uuid rule already validated the format
 			parentID, _ = utils.ConvertToUUID(req.ParentID)
 		}
 
-		if !sameUUID(parentID, category.ParentID) {
+		// A root has no ancestors to check.
+		if parentID.Valid && !sameUUID(parentID, category.ParentID) {
 			if sameUUID(parentID, categoryID) {
 				httpx.Fail(c, http.StatusBadRequest, constants.SelfReferencingCategory, "A category cannot be its own parent")
 				return

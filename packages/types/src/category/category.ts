@@ -23,7 +23,7 @@ export const CategoryBodySchema = z
   .object({
     name: z.string().trim().min(2).max(20),
     parent_id: Uuid.optional().describe(
-      "Create: makes it a subcategory. Update: moves it; omit to keep the parent.",
+      "Makes it a subcategory; omit for a root category (an update moves it).",
     ),
   })
   .meta({

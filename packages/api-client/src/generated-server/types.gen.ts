@@ -113,7 +113,7 @@ export type CategoryResponse = {
 export type CategoryBody = {
     name: string;
     /**
-     * Create: makes it a subcategory. Update: moves it; omit to keep the parent.
+     * Makes it a subcategory; omit for a root category (an update moves it).
      */
     parent_id?: string;
 };
@@ -495,6 +495,10 @@ export type CreateVariantBody = {
      */
     offer_price?: number;
     /**
+     * When the offer ends; omit for an open-ended offer. Ignored without an offer.
+     */
+    offer_expires_at?: string;
+    /**
      * A product has at most one default variant.
      */
     is_default: boolean;
@@ -526,6 +530,10 @@ export type UpdateVariantBody = {
      * Must be below selling_price; omit for no offer.
      */
     offer_price?: number;
+    /**
+     * When the offer ends; omit for an open-ended offer. Ignored without an offer.
+     */
+    offer_expires_at?: string;
     /**
      * A product has at most one default variant.
      */

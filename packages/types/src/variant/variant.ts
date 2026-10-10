@@ -75,6 +75,9 @@ const variantFields = {
     .positive()
     .optional()
     .describe("Must be below selling_price; omit for no offer."),
+  offer_expires_at: Timestamp.optional().describe(
+    "When the offer ends; omit for an open-ended offer. Ignored without an offer.",
+  ),
   is_default: z
     .boolean()
     .describe("A product has at most one default variant."),

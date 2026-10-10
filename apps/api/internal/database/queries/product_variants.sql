@@ -1,6 +1,6 @@
 -- name: CreateProductVariant :one
-INSERT INTO product_variants (product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, option_combination_key)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO product_variants (product_id, sku, stock, images, image_public_ids, selling_price, offer_price, offer_expires_at, is_default, is_active, option_combination_key)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 
 -- name: GetVariantsByProduct :many
@@ -37,6 +37,7 @@ UPDATE product_variants SET
     image_public_ids = @image_public_ids,
     selling_price = @selling_price,
     offer_price = @offer_price,
+    offer_expires_at = @offer_expires_at,
     is_default = @is_default,
     is_active = @is_active
 WHERE id = @id AND product_id = @product_id

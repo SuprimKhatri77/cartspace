@@ -409,7 +409,7 @@
           "parent_id": {
             "type": "string",
             "format": "uuid",
-            "description": "Create: makes it a subcategory. Update: moves it; omit to keep the parent."
+            "description": "Makes it a subcategory; omit for a root category (an update moves it)."
           }
         },
         "required": [
@@ -1571,6 +1571,11 @@
             "exclusiveMinimum": 0,
             "description": "Must be below selling_price; omit for no offer."
           },
+          "offer_expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the offer ends; omit for an open-ended offer. Ignored without an offer."
+          },
           "is_default": {
             "type": "boolean",
             "description": "A product has at most one default variant."
@@ -1660,6 +1665,11 @@
             "type": "integer",
             "exclusiveMinimum": 0,
             "description": "Must be below selling_price; omit for no offer."
+          },
+          "offer_expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the offer ends; omit for an open-ended offer. Ignored without an offer."
           },
           "is_default": {
             "type": "boolean",

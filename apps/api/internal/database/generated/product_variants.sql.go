@@ -13,22 +13,23 @@ import (
 )
 
 const createProductVariant = `-- name: CreateProductVariant :one
-INSERT INTO product_variants (product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, option_combination_key)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO product_variants (product_id, sku, stock, images, image_public_ids, selling_price, offer_price, offer_expires_at, is_default, is_active, option_combination_key)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at
 `
 
 type CreateProductVariantParams struct {
-	ProductID            pgtype.UUID `json:"product_id"`
-	Sku                  pgtype.Text `json:"sku"`
-	Stock                int32       `json:"stock"`
-	Images               []string    `json:"images"`
-	ImagePublicIds       []string    `json:"image_public_ids"`
-	SellingPrice         int32       `json:"selling_price"`
-	OfferPrice           pgtype.Int4 `json:"offer_price"`
-	IsDefault            bool        `json:"is_default"`
-	IsActive             bool        `json:"is_active"`
-	OptionCombinationKey string      `json:"option_combination_key"`
+	ProductID            pgtype.UUID        `json:"product_id"`
+	Sku                  pgtype.Text        `json:"sku"`
+	Stock                int32              `json:"stock"`
+	Images               []string           `json:"images"`
+	ImagePublicIds       []string           `json:"image_public_ids"`
+	SellingPrice         int32              `json:"selling_price"`
+	OfferPrice           pgtype.Int4        `json:"offer_price"`
+	OfferExpiresAt       pgtype.Timestamptz `json:"offer_expires_at"`
+	IsDefault            bool               `json:"is_default"`
+	IsActive             bool               `json:"is_active"`
+	OptionCombinationKey string             `json:"option_combination_key"`
 }
 
 func (q *Queries) CreateProductVariant(ctx context.Context, arg CreateProductVariantParams) (ProductVariant, error) {
@@ -40,6 +41,7 @@ func (q *Queries) CreateProductVariant(ctx context.Context, arg CreateProductVar
 		arg.ImagePublicIds,
 		arg.SellingPrice,
 		arg.OfferPrice,
+		arg.OfferExpiresAt,
 		arg.IsDefault,
 		arg.IsActive,
 		arg.OptionCombinationKey,
@@ -221,22 +223,24 @@ UPDATE product_variants SET
     image_public_ids = $3,
     selling_price = $4,
     offer_price = $5,
-    is_default = $6,
-    is_active = $7
-WHERE id = $8 AND product_id = $9
+    offer_expires_at = $6,
+    is_default = $7,
+    is_active = $8
+WHERE id = $9 AND product_id = $10
 RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at
 `
 
 type UpdateVariantParams struct {
-	Stock          int32       `json:"stock"`
-	Images         []string    `json:"images"`
-	ImagePublicIds []string    `json:"image_public_ids"`
-	SellingPrice   int32       `json:"selling_price"`
-	OfferPrice     pgtype.Int4 `json:"offer_price"`
-	IsDefault      bool        `json:"is_default"`
-	IsActive       bool        `json:"is_active"`
-	ID             pgtype.UUID `json:"id"`
-	ProductID      pgtype.UUID `json:"product_id"`
+	Stock          int32              `json:"stock"`
+	Images         []string           `json:"images"`
+	ImagePublicIds []string           `json:"image_public_ids"`
+	SellingPrice   int32              `json:"selling_price"`
+	OfferPrice     pgtype.Int4        `json:"offer_price"`
+	OfferExpiresAt pgtype.Timestamptz `json:"offer_expires_at"`
+	IsDefault      bool               `json:"is_default"`
+	IsActive       bool               `json:"is_active"`
+	ID             pgtype.UUID        `json:"id"`
+	ProductID      pgtype.UUID        `json:"product_id"`
 }
 
 // sku and option_combination_key are set at creation and never change here.
@@ -247,6 +251,7 @@ func (q *Queries) UpdateVariant(ctx context.Context, arg UpdateVariantParams) (P
 		arg.ImagePublicIds,
 		arg.SellingPrice,
 		arg.OfferPrice,
+		arg.OfferExpiresAt,
 		arg.IsDefault,
 		arg.IsActive,
 		arg.ID,

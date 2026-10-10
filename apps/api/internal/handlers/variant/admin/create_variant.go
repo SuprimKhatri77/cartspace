@@ -76,6 +76,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 			ImagePublicIds:       req.ImagePublicIDs,
 			SellingPrice:         int32(req.SellingPrice),
 			OfferPrice:           toOfferPrice(req.OfferPrice),
+			OfferExpiresAt:       toOfferExpiry(req.OfferPrice, req.OfferExpiresAt),
 			OptionCombinationKey: combinationKey,
 			IsDefault:            *req.IsDefault,
 			IsActive:             *req.IsActive,
