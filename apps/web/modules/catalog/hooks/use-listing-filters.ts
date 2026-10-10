@@ -21,18 +21,14 @@ export function useListingFilters() {
 
   const setFilters = useCallback(
     (next: ListingFilters) => {
-      const query = new URLSearchParams(filtersToSearch(next));
-      // Keep a search term (q) that isn't one of the filters.
-      const q = params.get("q");
-      if (q) query.set("q", q);
-      const search = query.toString();
+      const search = filtersToSearch(next);
       window.history.pushState(
         null,
         "",
         search ? `${pathname}?${search}` : pathname,
       );
     },
-    [params, pathname],
+    [pathname],
   );
 
   return { filters, setFilters };

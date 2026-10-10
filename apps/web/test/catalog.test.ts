@@ -14,10 +14,15 @@ import {
   clearFilters,
   DEFAULT_FILTERS,
   filtersToSearch,
+  isSearching,
   listingQuery,
+  normalizeSearch,
   parseFilters,
+  sortOptionsFor,
   toggleOption,
+  withSearch,
 } from "@/modules/catalog/lib/filters";
+import { addRecent, MAX_RECENT } from "@/modules/search/lib/recent-searches";
 import { compareOptionValues } from "@/modules/catalog/lib/option-order";
 import {
   findVariant,
@@ -65,6 +70,7 @@ describe("listing filters", () => {
       ),
     );
     expect(filters).toEqual({
+      q: "",
       sort: "price_desc",
       priceMin: 2000,
       priceMax: 8050,
@@ -159,6 +165,10 @@ describe("listing filters", () => {
       ...DEFAULT_FILTERS,
       sort: "price_desc",
     });
+    // the search survives clearing filters and doesn't count as one
+    const searched = { ...busy, q: "linen" };
+    expect(activeFilterCount(searched)).toBe(3);
+    expect(clearFilters(searched).q).toBe("linen");
   });
 
   test("option values sort like a size chart", () => {
@@ -329,5 +339,63 @@ describe("variants", () => {
     const sel = { color: "Blue", size: "M" };
     expect(isAvailable(variants, sel, "size", "L")).toBe(false);
     expect(isAvailable(variants, sel, "color", "Red")).toBe(true);
+  });
+});
+
+describe("search", () => {
+  test("normalises the search", () => {
+    expect(normalizeSearch("  linen   shirt ")).toBe("linen shirt");
+    expect(normalizeSearch("a".repeat(150))).toHaveLength(100);
+    // capped by code points, so an emoji is never split in half
+    expect(Array.from(normalizeSearch("😀".repeat(120)))).toHaveLength(100);
+    expect(isSearching("!!")).toBe(false);
+    expect(isSearching("टोपी")).toBe(true);
+  });
+
+  test("a search sorts by relevance by default", () => {
+    const filters = parseFilters(new URLSearchParams("q=linen"));
+    expect(filters).toEqual({
+      ...DEFAULT_FILTERS,
+      q: "linen",
+      sort: "relevance",
+    });
+    // the default sort stays out of the URL and the API query
+    expect(filtersToSearch(filters)).toBe("q=linen");
+    expect(listingQuery(filters, 1)).toEqual({ page: 1, q: "linen" });
+    // a chosen sort is kept, newest included
+    const newest = parseFilters(new URLSearchParams("q=linen&sort=newest"));
+    expect(newest.sort).toBe("newest");
+    expect(listingQuery(newest, 1)).toEqual({
+      page: 1,
+      q: "linen",
+      sort: "newest",
+    });
+  });
+
+  test("relevance needs a search", () => {
+    expect(parseFilters(new URLSearchParams("sort=relevance")).sort).toBe(
+      "newest",
+    );
+    expect(
+      parseFilters(new URLSearchParams("q=%21%21&sort=relevance")).sort,
+    ).toBe("newest");
+    expect(sortOptionsFor("").map((o) => o.value)).not.toContain("relevance");
+    expect(sortOptionsFor("tee").map((o) => o.value)).toContain("relevance");
+  });
+
+  test("withSearch moves a default sort along and keeps a chosen one", () => {
+    const searched = withSearch(DEFAULT_FILTERS, " linen ");
+    expect(searched).toMatchObject({ q: "linen", sort: "relevance" });
+    expect(withSearch(searched, "")).toMatchObject({ q: "", sort: "newest" });
+    const cheap = { ...searched, sort: "price_asc" as const };
+    expect(withSearch(cheap, "wool").sort).toBe("price_asc");
+    expect(withSearch(cheap, "").sort).toBe("price_asc");
+  });
+
+  test("recent searches", () => {
+    expect(addRecent(["Linen", "wool"], "linen")).toEqual(["linen", "wool"]);
+    const many = addRecent(["a", "b", "c", "d", "e"], "f");
+    expect(many).toHaveLength(MAX_RECENT);
+    expect(many[0]).toBe("f");
   });
 });

@@ -84,8 +84,14 @@ export const listingQuery = z.object({
     .max(100_000)
     .optional()
     .openapi({ description: "1-based page number (default 1)" }),
+  q: z.string().max(100).optional().openapi({
+    description:
+      "Search. Words of letters and digits (at most 8) all have to match, each as a prefix, against the name, category path, description and features. Without letters or digits it is ignored.",
+    example: "linen shirt",
+  }),
   sort: schemas.SortOptionSchema.optional().openapi({
-    description: "Default `newest`; prices sort by what the customer pays",
+    description:
+      "Default `relevance` with a search, else `newest`; prices sort by what the customer pays",
   }),
   featured: z
     .boolean()
@@ -115,5 +121,5 @@ export const listingQuery = z.object({
 });
 
 export const listingErrors = {
-  400: "Invalid page, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)",
+  400: "Invalid page, search, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)",
 } as const;

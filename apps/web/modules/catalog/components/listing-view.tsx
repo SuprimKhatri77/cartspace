@@ -22,7 +22,9 @@ import { useListingFilters } from "../hooks/use-listing-filters";
 import {
   activeFilterCount,
   clearFilters,
+  sortOptionsFor,
   toggleOption,
+  withSearch,
   type ListingFilters,
 } from "../lib/filters";
 import { optionLabel } from "../lib/option-order";
@@ -120,6 +122,7 @@ export function ListingView({ category }: { category: string | null }) {
           </div>
           <SortMenu
             value={filters.sort}
+            options={sortOptionsFor(filters.q)}
             onChange={(sort) => change({ ...filters, sort })}
           />
         </div>
@@ -152,29 +155,7 @@ export function ListingView({ category }: { category: string | null }) {
               }
             />
           ) : total === 0 && !query.isPending && !updating ? (
-            <EmptyState
-              eyebrow="No results"
-              title={
-                active
-                  ? "Nothing matches these filters."
-                  : "This collection is resting."
-              }
-              action={
-                active ? (
-                  <Button onClick={() => change(clearFilters(filters))}>
-                    Clear filters
-                  </Button>
-                ) : (
-                  <Link href="/shop" className={buttonVariants()}>
-                    Browse everything
-                  </Link>
-                )
-              }
-            >
-              {active
-                ? "Try removing a filter or widening the price range."
-                : "New pieces arrive often. In the meantime, the rest of the shop is open."}
-            </EmptyState>
+            <NoResults filters={filters} onChange={change} />
           ) : (
             <>
               <div
@@ -279,6 +260,68 @@ function MobileFilters({
   );
 }
 
+function NoResults({
+  filters,
+  onChange,
+}: {
+  filters: ListingFilters;
+  onChange: (next: ListingFilters) => void;
+}) {
+  const active = activeFilterCount(filters) > 0;
+
+  if (filters.q) {
+    return (
+      <EmptyState
+        eyebrow="No results"
+        title={`Nothing found for “${filters.q}”${active ? " with these filters" : ""}.`}
+        action={
+          <div className="flex flex-wrap justify-center gap-2">
+            {active && (
+              <Button onClick={() => onChange(clearFilters(filters))}>
+                Clear filters
+              </Button>
+            )}
+            <Button
+              variant={active ? "outline" : "default"}
+              onClick={() => onChange(withSearch(filters, ""))}
+            >
+              Clear search
+            </Button>
+          </div>
+        }
+      >
+        Check the spelling, or try a broader word such as “shirt” or “leather”.
+      </EmptyState>
+    );
+  }
+
+  return (
+    <EmptyState
+      eyebrow="No results"
+      title={
+        active
+          ? "Nothing matches these filters."
+          : "This collection is resting."
+      }
+      action={
+        active ? (
+          <Button onClick={() => onChange(clearFilters(filters))}>
+            Clear filters
+          </Button>
+        ) : (
+          <Link href="/shop" className={buttonVariants()}>
+            Browse everything
+          </Link>
+        )
+      }
+    >
+      {active
+        ? "Try removing a filter or widening the price range."
+        : "New pieces arrive often. In the meantime, the rest of the shop is open."}
+    </EmptyState>
+  );
+}
+
 function ActivePills({
   filters,
   onChange,
@@ -286,19 +329,25 @@ function ActivePills({
   filters: ListingFilters;
   onChange: (next: ListingFilters) => void;
 }) {
-  if (activeFilterCount(filters) === 0) return null;
+  const count = activeFilterCount(filters);
+  if (count === 0 && !filters.q) return null;
 
-  const pills: { label: string; remove: () => void }[] = filters.options.map(
-    (option) => {
-      const at = option.indexOf(":");
-      const name = option.slice(0, at);
-      const value = option.slice(at + 1);
-      return {
-        label: `${optionLabel(name)}: ${value}`,
-        remove: () => onChange(toggleOption(filters, name, value)),
-      };
-    },
-  );
+  const pills: { label: string; remove: () => void }[] = [];
+  if (filters.q) {
+    pills.push({
+      label: `Search: ${filters.q}`,
+      remove: () => onChange(withSearch(filters, "")),
+    });
+  }
+  for (const option of filters.options) {
+    const at = option.indexOf(":");
+    const name = option.slice(0, at);
+    const value = option.slice(at + 1);
+    pills.push({
+      label: `${optionLabel(name)}: ${value}`,
+      remove: () => onChange(toggleOption(filters, name, value)),
+    });
+  }
   if (filters.priceMin > 0 || filters.priceMax > 0) {
     const lo = filters.priceMin ? formatPriceShort(filters.priceMin) : "Any";
     const hi = filters.priceMax ? formatPriceShort(filters.priceMax) : "any";
@@ -322,19 +371,21 @@ function ActivePills({
           type="button"
           onClick={pill.remove}
           className="animate-rise group inline-flex h-8 items-center gap-1.5 border border-border bg-secondary/60 pr-2 pl-3 text-xs transition-colors hover:border-foreground"
-          aria-label={`Remove filter ${pill.label}`}
+          aria-label={`Remove ${pill.label}`}
         >
           {pill.label}
           <XIcon className="size-3 text-muted-foreground transition-transform duration-300 group-hover:rotate-90 group-hover:text-foreground" />
         </button>
       ))}
-      <button
-        type="button"
-        onClick={() => onChange(clearFilters(filters))}
-        className="link-underline ml-1 text-xs text-muted-foreground hover:text-foreground"
-      >
-        Clear all
-      </button>
+      {count > 0 && (
+        <button
+          type="button"
+          onClick={() => onChange(clearFilters(filters))}
+          className="link-underline ml-1 text-xs text-muted-foreground hover:text-foreground"
+        >
+          Clear filters
+        </button>
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
@@ -31,10 +32,17 @@ const (
 	MaxOptionFilters = 20
 	// maxOptionPart matches the variant property name/value length limits.
 	maxOptionPart = 20
+
+	// MaxSearchLength bounds the q query parameter (in characters).
+	MaxSearchLength = 100
+	// maxSearchTerms caps the words a search matches on; later ones are
+	// ignored.
+	maxSearchTerms = 8
 )
 
-// SortOptions are the accepted values of the sort query parameter.
-var SortOptions = []string{"newest", "price_asc", "price_desc"}
+// SortOptions are the accepted values of the sort query parameter. relevance
+// only means something with a search; without one it falls back to newest.
+var SortOptions = []string{"relevance", "newest", "price_asc", "price_desc"}
 
 // ListProducts lists every visible product (active, with an active default
 // variant).
@@ -65,6 +73,7 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 type listingQuery struct {
 	page         int
 	sort         string
+	searchTerms  []string
 	featured     bool
 	priceMin     int32
 	priceMax     int32
@@ -81,11 +90,27 @@ func parseListingQuery(c *gin.Context) (listingQuery, bool) {
 	}
 	q.page = page
 
-	q.sort = c.DefaultQuery("sort", "newest")
+	search := c.Query("q")
+	if utf8.RuneCountInString(search) > MaxSearchLength {
+		httpx.Fail(c, http.StatusBadRequest, constants.InvalidQueryParam,
+			"q must be at most 100 characters")
+		return q, false
+	}
+	q.searchTerms = searchTerms(search)
+
+	// A search sorts by relevance unless told otherwise.
+	defaultSort := "newest"
+	if len(q.searchTerms) > 0 {
+		defaultSort = "relevance"
+	}
+	q.sort = c.DefaultQuery("sort", defaultSort)
 	if !slices.Contains(SortOptions, q.sort) {
 		httpx.Fail(c, http.StatusBadRequest, constants.InvalidQueryParam,
-			"sort must be one of: newest, price_asc, price_desc")
+			"sort must be one of: relevance, newest, price_asc, price_desc")
 		return q, false
+	}
+	if q.sort == "relevance" && len(q.searchTerms) == 0 {
+		q.sort = "newest"
 	}
 
 	switch c.Query("featured") {
@@ -127,6 +152,7 @@ func listing(c *gin.Context, queries repository.ProductRepository, slug pgtype.T
 	total, err := queries.CountStorefrontProducts(ctx, db.CountStorefrontProductsParams{
 		CategorySlug: slug,
 		FeaturedOnly: q.featured,
+		SearchTerms:  q.searchTerms,
 		PriceMin:     q.priceMin,
 		PriceMax:     q.priceMax,
 		OptionNames:  q.optionNames,
@@ -156,6 +182,7 @@ func listing(c *gin.Context, queries repository.ProductRepository, slug pgtype.T
 			products, err = queries.ListStorefrontProducts(gctx, db.ListStorefrontProductsParams{
 				CategorySlug: slug,
 				FeaturedOnly: q.featured,
+				SearchTerms:  q.searchTerms,
 				PriceMin:     q.priceMin,
 				PriceMax:     q.priceMax,
 				OptionNames:  q.optionNames,
@@ -173,6 +200,7 @@ func listing(c *gin.Context, queries repository.ProductRepository, slug pgtype.T
 		filterOptions, err = queries.GetStorefrontFilterOptions(gctx, db.GetStorefrontFilterOptionsParams{
 			CategorySlug: slug,
 			FeaturedOnly: q.featured,
+			SearchTerms:  q.searchTerms,
 		})
 		return err
 	})
@@ -182,6 +210,7 @@ func listing(c *gin.Context, queries repository.ProductRepository, slug pgtype.T
 		priceRange, err = queries.GetStorefrontPriceRange(gctx, db.GetStorefrontPriceRangeParams{
 			CategorySlug: slug,
 			FeaturedOnly: q.featured,
+			SearchTerms:  q.searchTerms,
 		})
 		return err
 	})
@@ -201,6 +230,26 @@ func listing(c *gin.Context, queries repository.ProductRepository, slug pgtype.T
 		},
 		Meta: types.NewPaginationMeta(total, q.page, listingPageSize),
 	})
+}
+
+// searchTerms splits a search into lowercase words of letters (with their
+// combining marks) and digits, deduplicated and capped at maxSearchTerms.
+// Everything else separates words, so "t-shirt" searches for "t" and "shirt", and no term can carry
+// tsquery syntax. A search without letters or digits has no terms.
+func searchTerms(raw string) []string {
+	terms := []string{}
+	words := strings.FieldsFunc(strings.ToLower(raw), func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsMark(r) && !unicode.IsDigit(r)
+	})
+	for _, word := range words {
+		if len(terms) == maxSearchTerms {
+			break
+		}
+		if !slices.Contains(terms, word) {
+			terms = append(terms, word)
+		}
+	}
+	return terms
 }
 
 // parsePrice reads an optional price filter in cents; "" means no bound (0).

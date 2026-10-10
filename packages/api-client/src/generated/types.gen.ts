@@ -911,9 +911,13 @@ export type ListCategoryProductsData = {
          */
         page?: number;
         /**
-         * Default `newest`; prices sort by what the customer pays
+         * Search. Words of letters and digits (at most 8) all have to match, each as a prefix, against the name, category path, description and features. Without letters or digits it is ignored.
          */
-        sort?: 'newest' | 'price_asc' | 'price_desc';
+        q?: string;
+        /**
+         * Default `relevance` with a search, else `newest`; prices sort by what the customer pays
+         */
+        sort?: 'relevance' | 'newest' | 'price_asc' | 'price_desc';
         /**
          * Only featured products (default false)
          */
@@ -936,7 +940,7 @@ export type ListCategoryProductsData = {
 
 export type ListCategoryProductsErrors = {
     /**
-     * Invalid page, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)
+     * Invalid page, search, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)
      */
     400: ApiError;
     /**
@@ -969,9 +973,13 @@ export type ListProductsData = {
          */
         page?: number;
         /**
-         * Default `newest`; prices sort by what the customer pays
+         * Search. Words of letters and digits (at most 8) all have to match, each as a prefix, against the name, category path, description and features. Without letters or digits it is ignored.
          */
-        sort?: 'newest' | 'price_asc' | 'price_desc';
+        q?: string;
+        /**
+         * Default `relevance` with a search, else `newest`; prices sort by what the customer pays
+         */
+        sort?: 'relevance' | 'newest' | 'price_asc' | 'price_desc';
         /**
          * Only featured products (default false)
          */
@@ -994,7 +1002,7 @@ export type ListProductsData = {
 
 export type ListProductsErrors = {
     /**
-     * Invalid page, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)
+     * Invalid page, search, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)
      */
     400: ApiError;
     /**

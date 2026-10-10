@@ -51,11 +51,22 @@ export function FilterPanel({
   priceRange: PriceRange;
 }) {
   const groups = groupFacets(facets);
+  // Sections come and go with the facets (a search or the editor's picks
+  // toggle changes them), so track what the shopper closed: a section that
+  // appears later starts open, and a closed one stays closed.
+  const [closed, setClosed] = useState<string[]>([]);
+  const sections = ["price", ...groups.map((g) => g.name), "edit"];
 
   return (
     <Accordion
       multiple
-      defaultValue={["price", ...groups.map((g) => g.name), "edit"]}
+      value={sections.filter((section) => !closed.includes(section))}
+      onValueChange={(open) =>
+        setClosed((prev) => [
+          ...prev.filter((s) => !open.includes(s)),
+          ...sections.filter((s) => !open.includes(s) && !prev.includes(s)),
+        ])
+      }
       className="w-full"
     >
       {priceRange.max_price > priceRange.min_price && (

@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -24,6 +26,7 @@ type listingRepo struct {
 	list  *db.ListStorefrontProductsParams
 	count *db.CountStorefrontProductsParams
 	facet *db.GetStorefrontFilterOptionsParams
+	price *db.GetStorefrontPriceRangeParams
 }
 
 func (r *listingRepo) GetCategoryBySlug(context.Context, string) (db.Category, error) {
@@ -45,7 +48,8 @@ func (r *listingRepo) GetStorefrontFilterOptions(_ context.Context, arg db.GetSt
 	return []db.GetStorefrontFilterOptionsRow{{OptionName: "color", OptionValue: "Black", OptionType: "color"}}, nil
 }
 
-func (r *listingRepo) GetStorefrontPriceRange(context.Context, db.GetStorefrontPriceRangeParams) (db.GetStorefrontPriceRangeRow, error) {
+func (r *listingRepo) GetStorefrontPriceRange(_ context.Context, arg db.GetStorefrontPriceRangeParams) (db.GetStorefrontPriceRangeRow, error) {
+	r.price = &arg
 	return db.GetStorefrontPriceRangeRow{MinPrice: 100, MaxPrice: 900}, nil
 }
 
@@ -139,6 +143,7 @@ func TestListingBadQuery(t *testing.T) {
 		"option=:M",
 		"option=size:",
 		"option=" + "abcdefghijklmnopqrstu:M", // 21-character name
+		"q=" + strings.Repeat("a", 101),
 	} {
 		repo := &listingRepo{total: 1}
 		w := serveListing(repo, "/products?"+q)
@@ -166,5 +171,42 @@ func TestListByUnknownCategory(t *testing.T) {
 	w := serveListing(&listingRepo{categoryErr: pgx.ErrNoRows}, "/categories/nope")
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", w.Code)
+	}
+}
+
+func TestListingSearch(t *testing.T) {
+	tests := []struct {
+		name      string
+		query     string
+		wantTerms []string
+		wantSort  string
+	}{
+		{"words are lowercased, deduplicated and split on punctuation", "Linen  SHIRT linen t-shirt!!", []string{"linen", "shirt", "t"}, "relevance"},
+		{"an explicit sort wins over relevance", "linen&sort=price_asc", []string{"linen"}, "price_asc"},
+		{"relevance without a search falls back to newest", "&sort=relevance", []string{}, "newest"},
+		{"a search without letters or digits has no terms", "%25%25 --", []string{}, "newest"},
+		{"combining marks stay inside a word", url.QueryEscape("नेपाली टोपी"), []string{"नेपाली", "टोपी"}, "relevance"},
+		{"at most 8 terms", "a b c d e f g h i j", []string{"a", "b", "c", "d", "e", "f", "g", "h"}, "relevance"},
+		{"exactly 100 characters is allowed", strings.Repeat("a", 100), []string{strings.Repeat("a", 100)}, "relevance"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &listingRepo{total: 1}
+			target := "/products?q=" + strings.ReplaceAll(tt.query, " ", "+")
+			w := serveListing(repo, target)
+			if w.Code != http.StatusOK {
+				t.Fatalf("status = %d, body %s", w.Code, w.Body.String())
+			}
+			if !slices.Equal(repo.list.SearchTerms, tt.wantTerms) || repo.list.Sort != tt.wantSort {
+				t.Errorf("terms %q sort %q, want %q %q", repo.list.SearchTerms, repo.list.Sort, tt.wantTerms, tt.wantSort)
+			}
+			// the count, facets and price range follow the search
+			if !slices.Equal(repo.count.SearchTerms, tt.wantTerms) ||
+				!slices.Equal(repo.facet.SearchTerms, tt.wantTerms) ||
+				!slices.Equal(repo.price.SearchTerms, tt.wantTerms) {
+				t.Errorf("scope differs: count %q facets %q price %q",
+					repo.count.SearchTerms, repo.facet.SearchTerms, repo.price.SearchTerms)
+			}
+		})
 	}
 }

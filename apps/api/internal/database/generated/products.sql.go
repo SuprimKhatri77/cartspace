@@ -87,14 +87,19 @@ SELECT COUNT(*)
 FROM storefront_products sp
 WHERE ($1::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
 AND (NOT $2::bool OR sp.is_featured)
-AND ($3::int = 0 OR sp.price >= $3::int)
-AND ($4::int = 0 OR sp.price <= $4::int)
 AND (
-    cardinality($5::text[]) = 0
+    cardinality($3::text[]) = 0
+    OR product_search_document(sp.name, sp.description, sp.features, sp.category_id) @@ search_tsquery($3::text[])
+    OR name_has_terms(sp.name, $3::text[])
+)
+AND ($4::int = 0 OR sp.price >= $4::int)
+AND ($5::int = 0 OR sp.price <= $5::int)
+AND (
+    cardinality($6::text[]) = 0
     OR EXISTS (
         SELECT 1 FROM product_variants v
         WHERE v.product_id = sp.id AND v.is_active = TRUE
-        AND variant_matches_options(v.id, $5::text[], $6::text[])
+        AND variant_matches_options(v.id, $6::text[], $7::text[])
     )
 )
 `
@@ -102,6 +107,7 @@ AND (
 type CountStorefrontProductsParams struct {
 	CategorySlug pgtype.Text `json:"category_slug"`
 	FeaturedOnly bool        `json:"featured_only"`
+	SearchTerms  []string    `json:"search_terms"`
 	PriceMin     int32       `json:"price_min"`
 	PriceMax     int32       `json:"price_max"`
 	OptionNames  []string    `json:"option_names"`
@@ -112,6 +118,7 @@ func (q *Queries) CountStorefrontProducts(ctx context.Context, arg CountStorefro
 	row := q.db.QueryRow(ctx, countStorefrontProducts,
 		arg.CategorySlug,
 		arg.FeaturedOnly,
+		arg.SearchTerms,
 		arg.PriceMin,
 		arg.PriceMax,
 		arg.OptionNames,
@@ -357,6 +364,11 @@ JOIN variant_option_values vov ON vov.option_value_id = pov.id
 JOIN product_variants v ON v.id = vov.variant_id AND v.is_active = TRUE
 WHERE ($1::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
 AND (NOT $2::bool OR sp.is_featured)
+AND (
+    cardinality($3::text[]) = 0
+    OR product_search_document(sp.name, sp.description, sp.features, sp.category_id) @@ search_tsquery($3::text[])
+    OR name_has_terms(sp.name, $3::text[])
+)
 GROUP BY po.name, pov.value
 ORDER BY po.name, pov.value
 `
@@ -364,6 +376,7 @@ ORDER BY po.name, pov.value
 type GetStorefrontFilterOptionsParams struct {
 	CategorySlug pgtype.Text `json:"category_slug"`
 	FeaturedOnly bool        `json:"featured_only"`
+	SearchTerms  []string    `json:"search_terms"`
 }
 
 type GetStorefrontFilterOptionsRow struct {
@@ -375,7 +388,7 @@ type GetStorefrontFilterOptionsRow struct {
 // Option values of the active variants of the products in scope. An option
 // is a colour when any product declares it as one.
 func (q *Queries) GetStorefrontFilterOptions(ctx context.Context, arg GetStorefrontFilterOptionsParams) ([]GetStorefrontFilterOptionsRow, error) {
-	rows, err := q.db.Query(ctx, getStorefrontFilterOptions, arg.CategorySlug, arg.FeaturedOnly)
+	rows, err := q.db.Query(ctx, getStorefrontFilterOptions, arg.CategorySlug, arg.FeaturedOnly, arg.SearchTerms)
 	if err != nil {
 		return nil, err
 	}
@@ -406,11 +419,17 @@ SELECT
 FROM storefront_products sp
 WHERE ($1::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
 AND (NOT $2::bool OR sp.is_featured)
+AND (
+    cardinality($3::text[]) = 0
+    OR product_search_document(sp.name, sp.description, sp.features, sp.category_id) @@ search_tsquery($3::text[])
+    OR name_has_terms(sp.name, $3::text[])
+)
 `
 
 type GetStorefrontPriceRangeParams struct {
 	CategorySlug pgtype.Text `json:"category_slug"`
 	FeaturedOnly bool        `json:"featured_only"`
+	SearchTerms  []string    `json:"search_terms"`
 }
 
 type GetStorefrontPriceRangeRow struct {
@@ -421,7 +440,7 @@ type GetStorefrontPriceRangeRow struct {
 // Over the same prices that price_min/price_max filter on. COALESCE: MIN and
 // MAX are NULL when nothing is in scope.
 func (q *Queries) GetStorefrontPriceRange(ctx context.Context, arg GetStorefrontPriceRangeParams) (GetStorefrontPriceRangeRow, error) {
-	row := q.db.QueryRow(ctx, getStorefrontPriceRange, arg.CategorySlug, arg.FeaturedOnly)
+	row := q.db.QueryRow(ctx, getStorefrontPriceRange, arg.CategorySlug, arg.FeaturedOnly, arg.SearchTerms)
 	var i GetStorefrontPriceRangeRow
 	err := row.Scan(&i.MinPrice, &i.MaxPrice)
 	return i, err
@@ -508,27 +527,40 @@ SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.
 FROM storefront_products sp
 WHERE ($1::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
 AND (NOT $2::bool OR sp.is_featured)
-AND ($3::int = 0 OR sp.price >= $3::int)
-AND ($4::int = 0 OR sp.price <= $4::int)
 AND (
-    cardinality($5::text[]) = 0
+    cardinality($3::text[]) = 0
+    OR product_search_document(sp.name, sp.description, sp.features, sp.category_id) @@ search_tsquery($3::text[])
+    OR name_has_terms(sp.name, $3::text[])
+)
+AND ($4::int = 0 OR sp.price >= $4::int)
+AND ($5::int = 0 OR sp.price <= $5::int)
+AND (
+    cardinality($6::text[]) = 0
     OR EXISTS (
         SELECT 1 FROM product_variants v
         WHERE v.product_id = sp.id AND v.is_active = TRUE
-        AND variant_matches_options(v.id, $5::text[], $6::text[])
+        AND variant_matches_options(v.id, $6::text[], $7::text[])
     )
 )
 ORDER BY
-    CASE WHEN $7::text = 'price_asc' THEN sp.price END ASC,
-    CASE WHEN $7::text = 'price_desc' THEN sp.price END DESC,
+    -- Relevance: text rank, plus a bonus when the name holds every term.
+    CASE WHEN $8::text = 'relevance' THEN
+        ts_rank(
+            product_search_document(sp.name, sp.description, sp.features, sp.category_id),
+            search_tsquery($3::text[])
+        ) + CASE WHEN name_has_terms(sp.name, $3::text[]) THEN 1 ELSE 0 END
+    END DESC NULLS LAST,
+    CASE WHEN $8::text = 'price_asc' THEN sp.price END ASC,
+    CASE WHEN $8::text = 'price_desc' THEN sp.price END DESC,
     sp.created_at DESC,
     sp.id DESC
-LIMIT $9 OFFSET $8
+LIMIT $10 OFFSET $9
 `
 
 type ListStorefrontProductsParams struct {
 	CategorySlug pgtype.Text `json:"category_slug"`
 	FeaturedOnly bool        `json:"featured_only"`
+	SearchTerms  []string    `json:"search_terms"`
 	PriceMin     int32       `json:"price_min"`
 	PriceMax     int32       `json:"price_max"`
 	OptionNames  []string    `json:"option_names"`
@@ -539,13 +571,15 @@ type ListStorefrontProductsParams struct {
 }
 
 // Storefront listings. The four queries below share one scope (an optional
-// category with all its subcategories, and featured_only); count and list
-// also share the price and option filters. Keep their WHERE clauses in sync.
+// category with all its subcategories, featured_only and the search terms);
+// count and list also share the price and option filters. Keep their WHERE
+// clauses in sync. Search terms are lowercase letters and digits (listing.go).
 // UNION (not UNION ALL) in the subtree CTE terminates even on a cycle.
 func (q *Queries) ListStorefrontProducts(ctx context.Context, arg ListStorefrontProductsParams) ([]StorefrontProduct, error) {
 	rows, err := q.db.Query(ctx, listStorefrontProducts,
 		arg.CategorySlug,
 		arg.FeaturedOnly,
+		arg.SearchTerms,
 		arg.PriceMin,
 		arg.PriceMax,
 		arg.OptionNames,
