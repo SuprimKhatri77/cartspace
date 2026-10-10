@@ -14,8 +14,8 @@
   },
   "devDependencies": {
     "@repo/typescript-config": "*",
-    "@types/node": "^22.15.3",
-    "tsx": "^4.19.2",
-    "typescript": "5.9.2"
+    "@types/node": "^26.6.4",
+    "tsx": "^4.23.15",
+    "typescript": "5.9.3"
   }
 }
