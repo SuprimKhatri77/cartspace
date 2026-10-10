@@ -5,3 +5,7 @@ CREATE TABLE carts (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT carts_user_id_unique UNIQUE (user_id)
 );
+
+CREATE TRIGGER carts_updated_at
+BEFORE UPDATE ON carts
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();

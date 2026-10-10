@@ -9,8 +9,8 @@ CREATE TABLE products (
     image_public_ids TEXT[] NOT NULL,
     is_active        BOOLEAN NOT NULL DEFAULT TRUE,
     is_featured      BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at       TIMESTAMPTZ DEFAULT NOW(),
-    updated_at       TIMESTAMPTZ DEFAULT NOW()
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX product_category_created_idx ON products(category_id, created_at);

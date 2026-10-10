@@ -3,8 +3,8 @@ CREATE TABLE categories (
     name       TEXT NOT NULL UNIQUE,
     slug       TEXT NOT NULL UNIQUE,
     parent_id  UUID REFERENCES categories(id) ON DELETE SET NULL CHECK (id != parent_id),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX categories_parent_idx ON categories(parent_id);
