@@ -93,6 +93,39 @@ type Session struct {
 	RevokedAt         pgtype.Timestamptz `json:"revoked_at"`
 }
 
+type StorefrontProduct struct {
+	ID             pgtype.UUID        `json:"id"`
+	Name           string             `json:"name"`
+	Slug           string             `json:"slug"`
+	CategoryID     pgtype.UUID        `json:"category_id"`
+	Description    pgtype.Text        `json:"description"`
+	Features       []string           `json:"features"`
+	Images         []string           `json:"images"`
+	ImagePublicIds []string           `json:"image_public_ids"`
+	IsActive       bool               `json:"is_active"`
+	IsFeatured     bool               `json:"is_featured"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	VariantID      pgtype.UUID        `json:"variant_id"`
+	SellingPrice   int32              `json:"selling_price"`
+	OfferPrice     pgtype.Int4        `json:"offer_price"`
+	Price          int32              `json:"price"`
+}
+
+type StorefrontVariant struct {
+	ID             pgtype.UUID        `json:"id"`
+	ProductID      pgtype.UUID        `json:"product_id"`
+	Sku            pgtype.Text        `json:"sku"`
+	Stock          int32              `json:"stock"`
+	Images         []string           `json:"images"`
+	SellingPrice   int32              `json:"selling_price"`
+	OfferPrice     pgtype.Int4        `json:"offer_price"`
+	Price          int32              `json:"price"`
+	OfferExpiresAt pgtype.Timestamptz `json:"offer_expires_at"`
+	IsDefault      bool               `json:"is_default"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type User struct {
 	ID           pgtype.UUID        `json:"id"`
 	Name         string             `json:"name"`

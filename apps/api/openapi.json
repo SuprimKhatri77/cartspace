@@ -477,7 +477,7 @@
         ],
         "description": "A category with its depth in the category tree."
       },
-      "CategoryListingResponse": {
+      "ProductListingResponse": {
         "type": "object",
         "properties": {
           "success": {
@@ -490,7 +490,7 @@
             "type": "string"
           },
           "data": {
-            "$ref": "#/components/schemas/CategoryListing"
+            "$ref": "#/components/schemas/ProductListing"
           },
           "meta": {
             "$ref": "#/components/schemas/PaginationMeta"
@@ -503,7 +503,7 @@
           "meta"
         ]
       },
-      "CategoryListing": {
+      "ProductListing": {
         "type": "object",
         "properties": {
           "products": {
@@ -516,10 +516,27 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/FilterOption"
-            }
+            },
+            "description": "Every option value in scope, ignoring the price and option filters"
           },
           "price_range": {
-            "$ref": "#/components/schemas/PriceRange"
+            "type": "object",
+            "properties": {
+              "min_price": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "0 when nothing is in scope"
+              },
+              "max_price": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "min_price",
+              "max_price"
+            ],
+            "description": "Of everything in scope, ignoring the price and option filters"
           }
         },
         "required": [
@@ -527,7 +544,7 @@
           "filter_options",
           "price_range"
         ],
-        "description": "A page of a category's products with its filter options and price range."
+        "description": "A page of storefront products with the filter options and price range of their scope."
       },
       "ProductWithPrice": {
         "type": "object",
@@ -589,6 +606,11 @@
             "type": "string",
             "format": "date-time"
           },
+          "variant_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The default variant"
+          },
           "selling_price": {
             "type": "integer",
             "minimum": 0
@@ -598,7 +620,13 @@
               "integer",
               "null"
             ],
-            "minimum": 0
+            "minimum": 0,
+            "description": "The active offer, or null"
+          },
+          "price": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "What the customer pays: the active offer, else the selling price"
           }
         },
         "required": [
@@ -614,8 +642,10 @@
           "is_featured",
           "created_at",
           "updated_at",
+          "variant_id",
           "selling_price",
-          "offer_price"
+          "offer_price",
+          "price"
         ],
         "description": "A product priced by its default variant (storefront listings)."
       },
@@ -627,59 +657,24 @@
           },
           "option_value": {
             "type": "string"
+          },
+          "option_type": {
+            "$ref": "#/components/schemas/OptionType"
           }
         },
         "required": [
           "option_name",
-          "option_value"
+          "option_value",
+          "option_type"
         ]
       },
-      "PriceRange": {
-        "type": "object",
-        "properties": {
-          "min_price": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "0 when the category has no visible products"
-          },
-          "max_price": {
-            "type": "integer",
-            "minimum": 0
-          }
-        },
-        "required": [
-          "min_price",
-          "max_price"
-        ]
-      },
-      "ProductListResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "enum": [
-              true
-            ]
-          },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProductWithPrice"
-            }
-          },
-          "meta": {
-            "$ref": "#/components/schemas/PaginationMeta"
-          }
-        },
-        "required": [
-          "success",
-          "message",
-          "data",
-          "meta"
-        ]
+      "OptionType": {
+        "type": "string",
+        "enum": [
+          "text",
+          "color"
+        ],
+        "description": "color options render as swatches"
       },
       "ProductPageResponse": {
         "type": "object",
@@ -793,7 +788,25 @@
           },
           "variant_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "The default variant"
+          },
+          "selling_price": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offer_price": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "The active offer, or null"
+          },
+          "price": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "What the customer pays: the active offer, else the selling price"
           },
           "stock": {
             "type": "integer",
@@ -805,17 +818,6 @@
               "type": "string",
               "format": "uri"
             }
-          },
-          "selling_price": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "offer_price": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "minimum": 0
           }
         },
         "required": [
@@ -832,10 +834,11 @@
           "created_at",
           "updated_at",
           "variant_id",
-          "stock",
-          "variant_images",
           "selling_price",
-          "offer_price"
+          "offer_price",
+          "price",
+          "stock",
+          "variant_images"
         ],
         "description": "A product with its default variant's stock, images and price."
       },
@@ -867,12 +870,6 @@
               "format": "uri"
             }
           },
-          "image_public_ids": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "selling_price": {
             "type": "integer",
             "minimum": 0
@@ -882,31 +879,27 @@
               "integer",
               "null"
             ],
-            "minimum": 0
+            "minimum": 0,
+            "description": "The active offer, or null"
           },
-          "is_default": {
-            "type": "boolean"
-          },
-          "is_active": {
-            "type": "boolean"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "option_combination_key": {
-            "type": "string",
-            "description": "Sorted `name=value` pairs joined by `|`; \"\" without options."
+          "price": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "What the customer pays"
           },
           "offer_expires_at": {
             "type": [
               "string",
               "null"
             ],
+            "format": "date-time",
+            "description": "When the offer ends; null for an open-ended offer"
+          },
+          "is_default": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
             "format": "date-time"
           },
           "options": {
@@ -922,15 +915,12 @@
           "sku",
           "stock",
           "images",
-          "image_public_ids",
           "selling_price",
           "offer_price",
-          "is_default",
-          "is_active",
-          "created_at",
-          "updated_at",
-          "option_combination_key",
+          "price",
           "offer_expires_at",
+          "is_default",
+          "created_at",
           "options"
         ],
         "description": "A variant on the storefront, with its option values."
@@ -943,11 +933,15 @@
           },
           "value": {
             "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/OptionType"
           }
         },
         "required": [
           "name",
-          "value"
+          "value",
+          "type"
         ]
       },
       "AdminProductListResponse": {
@@ -2365,7 +2359,7 @@
           "Categories"
         ],
         "summary": "List a category's products",
-        "description": "Visible products of this category and all its subcategories, 40 per page, priced by their default variant. Also returns the category's filter options and price range.",
+        "description": "Visible products of this category and all its subcategories, 24 per page, priced by their default variant. Also returns the category's filter options and price range.",
         "parameters": [
           {
             "schema": {
@@ -2395,11 +2389,21 @@
                 "price_asc",
                 "price_desc"
               ],
-              "description": "Default `newest`"
+              "description": "Default `newest`; prices sort by what the customer pays"
             },
             "required": false,
-            "description": "Default `newest`",
+            "description": "Default `newest`; prices sort by what the customer pays",
             "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "boolean",
+              "description": "Only featured products (default false)"
+            },
+            "required": false,
+            "description": "Only featured products (default false)",
+            "name": "featured",
             "in": "query"
           },
           {
@@ -2425,6 +2429,24 @@
             "description": "Maximum price in cents; 0 means no bound",
             "name": "price_max",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 20,
+              "description": "Repeatable `name:value` filter. A product matches when one of its active variants has, for every named option, one of the given values (values of one option are ORed, options ANDed).",
+              "example": [
+                "size:M",
+                "color:Black"
+              ]
+            },
+            "required": false,
+            "description": "Repeatable `name:value` filter. A product matches when one of its active variants has, for every named option, one of the given values (values of one option are ORed, options ANDed).",
+            "name": "option",
+            "in": "query"
           }
         ],
         "responses": {
@@ -2433,13 +2455,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CategoryListingResponse"
+                  "$ref": "#/components/schemas/ProductListingResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid page, sort or price filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)",
+            "description": "Invalid page, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2478,7 +2500,7 @@
           "Products"
         ],
         "summary": "List products",
-        "description": "Visible products (active, with an active default variant), 20 per page, newest first, priced by their default variant.",
+        "description": "Visible products (active, with an active default variant), 24 per page, priced by their default variant. Also returns the filter options and price range of all visible (or featured) products.",
         "parameters": [
           {
             "schema": {
@@ -2491,6 +2513,73 @@
             "description": "1-based page number (default 1)",
             "name": "page",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "price_asc",
+                "price_desc"
+              ],
+              "description": "Default `newest`; prices sort by what the customer pays"
+            },
+            "required": false,
+            "description": "Default `newest`; prices sort by what the customer pays",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "boolean",
+              "description": "Only featured products (default false)"
+            },
+            "required": false,
+            "description": "Only featured products (default false)",
+            "name": "featured",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000000,
+              "description": "Minimum price in cents; 0 means no bound"
+            },
+            "required": false,
+            "description": "Minimum price in cents; 0 means no bound",
+            "name": "price_min",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000000,
+              "description": "Maximum price in cents; 0 means no bound"
+            },
+            "required": false,
+            "description": "Maximum price in cents; 0 means no bound",
+            "name": "price_max",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 20,
+              "description": "Repeatable `name:value` filter. A product matches when one of its active variants has, for every named option, one of the given values (values of one option are ORed, options ANDed).",
+              "example": [
+                "size:M",
+                "color:Black"
+              ]
+            },
+            "required": false,
+            "description": "Repeatable `name:value` filter. A product matches when one of its active variants has, for every named option, one of the given values (values of one option are ORed, options ANDed).",
+            "name": "option",
+            "in": "query"
           }
         ],
         "responses": {
@@ -2499,13 +2588,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProductListResponse"
+                  "$ref": "#/components/schemas/ProductListingResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid or out-of-range page (INVALID_PAGE_PARAMETER)",
+            "description": "Invalid page, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)",
             "content": {
               "application/json": {
                 "schema": {

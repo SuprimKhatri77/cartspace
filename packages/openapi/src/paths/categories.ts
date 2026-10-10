@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Uuid } from "@repo/types";
 import { schemas } from "../schemas.ts";
-import { body, operation } from "./shared.ts";
+import { body, listingErrors, listingQuery, operation } from "./shared.ts";
 
 const tag = "Categories";
 const idParam = z.object({ id: Uuid });
@@ -118,34 +118,18 @@ export function registerCategoryPaths() {
     tag,
     summary: "List a category's products",
     description:
-      "Visible products of this category and all its subcategories, 40 per page, priced by their default variant. Also returns the category's filter options and price range.",
+      "Visible products of this category and all its subcategories, 24 per page, priced by their default variant. Also returns the category's filter options and price range.",
     request: {
       params: z.object({ slug: z.string() }),
-      query: pageQuery.extend({
-        sort: schemas.SortOptionSchema.optional().openapi({
-          description: "Default `newest`",
-        }),
-        price_min: z
-          .int()
-          .min(0)
-          .max(100_000_000)
-          .optional()
-          .openapi({ description: "Minimum price in cents; 0 means no bound" }),
-        price_max: z
-          .int()
-          .min(0)
-          .max(100_000_000)
-          .optional()
-          .openapi({ description: "Maximum price in cents; 0 means no bound" }),
-      }),
+      query: listingQuery,
     },
     success: {
       status: 200,
       description: "Products fetched",
-      schema: schemas.CategoryListingResponseSchema,
+      schema: schemas.ProductListingResponseSchema,
     },
     errors: {
-      400: "Invalid page, sort or price filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)",
+      ...listingErrors,
       404: "Category not found (CATEGORY_NOT_FOUND)",
     },
   });

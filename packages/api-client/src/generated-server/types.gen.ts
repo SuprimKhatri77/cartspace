@@ -146,20 +146,32 @@ export type CategoryNode = {
     depth: number;
 };
 
-export type CategoryListingResponse = {
+export type ProductListingResponse = {
     success: true;
     message: string;
-    data: CategoryListing;
+    data: ProductListing;
     meta: PaginationMeta;
 };
 
 /**
- * A page of a category's products with its filter options and price range.
+ * A page of storefront products with the filter options and price range of their scope.
  */
-export type CategoryListing = {
+export type ProductListing = {
     products: Array<ProductWithPrice>;
+    /**
+     * Every option value in scope, ignoring the price and option filters
+     */
     filter_options: Array<FilterOption>;
-    price_range: PriceRange;
+    /**
+     * Of everything in scope, ignoring the price and option filters
+     */
+    price_range: {
+        /**
+         * 0 when nothing is in scope
+         */
+        min_price: number;
+        max_price: number;
+    };
 };
 
 /**
@@ -181,29 +193,31 @@ export type ProductWithPrice = {
     is_featured: boolean;
     created_at: string;
     updated_at: string;
+    /**
+     * The default variant
+     */
+    variant_id: string;
     selling_price: number;
+    /**
+     * The active offer, or null
+     */
     offer_price: number | null;
+    /**
+     * What the customer pays: the active offer, else the selling price
+     */
+    price: number;
 };
 
 export type FilterOption = {
     option_name: string;
     option_value: string;
+    option_type: OptionType;
 };
 
-export type PriceRange = {
-    /**
-     * 0 when the category has no visible products
-     */
-    min_price: number;
-    max_price: number;
-};
-
-export type ProductListResponse = {
-    success: true;
-    message: string;
-    data: Array<ProductWithPrice>;
-    meta: PaginationMeta;
-};
+/**
+ * color options render as swatches
+ */
+export type OptionType = 'text' | 'color';
 
 export type ProductPageResponse = {
     success: true;
@@ -245,11 +259,21 @@ export type ProductDetail = {
     is_featured: boolean;
     created_at: string;
     updated_at: string;
+    /**
+     * The default variant
+     */
     variant_id: string;
+    selling_price: number;
+    /**
+     * The active offer, or null
+     */
+    offer_price: number | null;
+    /**
+     * What the customer pays: the active offer, else the selling price
+     */
+    price: number;
     stock: number;
     variant_images: Array<string>;
-    selling_price: number;
-    offer_price: number | null;
 };
 
 /**
@@ -261,24 +285,28 @@ export type StorefrontVariant = {
     sku: string | null;
     stock: number;
     images: Array<string>;
-    image_public_ids: Array<string>;
     selling_price: number;
-    offer_price: number | null;
-    is_default: boolean;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
     /**
-     * Sorted `name=value` pairs joined by `|`; "" without options.
+     * The active offer, or null
      */
-    option_combination_key: string;
+    offer_price: number | null;
+    /**
+     * What the customer pays
+     */
+    price: number;
+    /**
+     * When the offer ends; null for an open-ended offer
+     */
     offer_expires_at: string | null;
+    is_default: boolean;
+    created_at: string;
     options: Array<VariantOption>;
 };
 
 export type VariantOption = {
     name: string;
     value: string;
+    type: OptionType;
 };
 
 export type AdminProductListResponse = {
@@ -883,9 +911,13 @@ export type ListCategoryProductsData = {
          */
         page?: number;
         /**
-         * Default `newest`
+         * Default `newest`; prices sort by what the customer pays
          */
         sort?: 'newest' | 'price_asc' | 'price_desc';
+        /**
+         * Only featured products (default false)
+         */
+        featured?: boolean;
         /**
          * Minimum price in cents; 0 means no bound
          */
@@ -894,13 +926,17 @@ export type ListCategoryProductsData = {
          * Maximum price in cents; 0 means no bound
          */
         price_max?: number;
+        /**
+         * Repeatable `name:value` filter. A product matches when one of its active variants has, for every named option, one of the given values (values of one option are ORed, options ANDed).
+         */
+        option?: Array<string>;
     };
     url: '/api/v1/categories/{slug}';
 };
 
 export type ListCategoryProductsErrors = {
     /**
-     * Invalid page, sort or price filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)
+     * Invalid page, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)
      */
     400: ApiError;
     /**
@@ -919,7 +955,7 @@ export type ListCategoryProductsResponses = {
     /**
      * Products fetched
      */
-    200: CategoryListingResponse;
+    200: ProductListingResponse;
 };
 
 export type ListCategoryProductsResponse = ListCategoryProductsResponses[keyof ListCategoryProductsResponses];
@@ -932,13 +968,33 @@ export type ListProductsData = {
          * 1-based page number (default 1)
          */
         page?: number;
+        /**
+         * Default `newest`; prices sort by what the customer pays
+         */
+        sort?: 'newest' | 'price_asc' | 'price_desc';
+        /**
+         * Only featured products (default false)
+         */
+        featured?: boolean;
+        /**
+         * Minimum price in cents; 0 means no bound
+         */
+        price_min?: number;
+        /**
+         * Maximum price in cents; 0 means no bound
+         */
+        price_max?: number;
+        /**
+         * Repeatable `name:value` filter. A product matches when one of its active variants has, for every named option, one of the given values (values of one option are ORed, options ANDed).
+         */
+        option?: Array<string>;
     };
     url: '/api/v1/products';
 };
 
 export type ListProductsErrors = {
     /**
-     * Invalid or out-of-range page (INVALID_PAGE_PARAMETER)
+     * Invalid page, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)
      */
     400: ApiError;
     /**
@@ -953,7 +1009,7 @@ export type ListProductsResponses = {
     /**
      * Products fetched
      */
-    200: ProductListResponse;
+    200: ProductListingResponse;
 };
 
 export type ListProductsResponse = ListProductsResponses[keyof ListProductsResponses];

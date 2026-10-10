@@ -174,14 +174,14 @@ export const listCategories = <ThrowOnError extends boolean = false>(options?: O
 /**
  * List a category's products
  *
- * Visible products of this category and all its subcategories, 40 per page, priced by their default variant. Also returns the category's filter options and price range.
+ * Visible products of this category and all its subcategories, 24 per page, priced by their default variant. Also returns the category's filter options and price range.
  */
 export const listCategoryProducts = <ThrowOnError extends boolean = false>(options: Options<ListCategoryProductsData, ThrowOnError>): RequestResult<ListCategoryProductsResponses, ListCategoryProductsErrors, ThrowOnError> => (options.client ?? client).get<ListCategoryProductsResponses, ListCategoryProductsErrors, ThrowOnError>({ url: '/api/v1/categories/{slug}', ...options });
 
 /**
  * List products
  *
- * Visible products (active, with an active default variant), 20 per page, newest first, priced by their default variant.
+ * Visible products (active, with an active default variant), 24 per page, priced by their default variant. Also returns the filter options and price range of all visible (or featured) products.
  */
 export const listProducts = <ThrowOnError extends boolean = false>(options?: Options<ListProductsData, ThrowOnError>): RequestResult<ListProductsResponses, ListProductsErrors, ThrowOnError> => (options?.client ?? client).get<ListProductsResponses, ListProductsErrors, ThrowOnError>({ url: '/api/v1/products', ...options });
 

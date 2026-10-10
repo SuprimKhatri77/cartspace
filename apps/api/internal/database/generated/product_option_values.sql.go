@@ -11,24 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createProductOptionValue = `-- name: CreateProductOptionValue :one
-INSERT INTO product_option_values (option_id, value)
-VALUES ($1, $2)
-RETURNING id, option_id, value
-`
-
-type CreateProductOptionValueParams struct {
-	OptionID pgtype.UUID `json:"option_id"`
-	Value    string      `json:"value"`
-}
-
-func (q *Queries) CreateProductOptionValue(ctx context.Context, arg CreateProductOptionValueParams) (ProductOptionValue, error) {
-	row := q.db.QueryRow(ctx, createProductOptionValue, arg.OptionID, arg.Value)
-	var i ProductOptionValue
-	err := row.Scan(&i.ID, &i.OptionID, &i.Value)
-	return i, err
-}
-
 const deleteProductOptionValue = `-- name: DeleteProductOptionValue :exec
 DELETE FROM product_option_values
 WHERE id = $1
@@ -90,4 +72,24 @@ func (q *Queries) GetOptionValuesByOption(ctx context.Context, optionID pgtype.U
 		return nil, err
 	}
 	return items, nil
+}
+
+const upsertProductOptionValue = `-- name: UpsertProductOptionValue :one
+INSERT INTO product_option_values (option_id, value)
+VALUES ($1, $2)
+ON CONFLICT (option_id, value) DO UPDATE SET value = EXCLUDED.value
+RETURNING id, option_id, value
+`
+
+type UpsertProductOptionValueParams struct {
+	OptionID pgtype.UUID `json:"option_id"`
+	Value    string      `json:"value"`
+}
+
+// The no-op update makes RETURNING yield the row when it already exists.
+func (q *Queries) UpsertProductOptionValue(ctx context.Context, arg UpsertProductOptionValueParams) (ProductOptionValue, error) {
+	row := q.db.QueryRow(ctx, upsertProductOptionValue, arg.OptionID, arg.Value)
+	var i ProductOptionValue
+	err := row.Scan(&i.ID, &i.OptionID, &i.Value)
+	return i, err
 }

@@ -14,22 +14,6 @@ SELECT EXISTS (
   SELECT 1 FROM products WHERE slug = $1
 ) AS exists;
 
--- name: ListActiveProducts :many
--- A product is publicly visible when it and its default variant are active.
-SELECT p.*, pv.selling_price, pv.offer_price
-FROM products p
-JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-WHERE p.is_active = TRUE
-ORDER BY p.created_at DESC, p.id DESC
-LIMIT $1 OFFSET $2;
-
--- name: ListFeaturedProducts :many
-SELECT p.*, pv.selling_price, pv.offer_price
-FROM products p
-JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-WHERE p.is_active = TRUE AND p.is_featured = TRUE
-ORDER BY p.created_at DESC, p.id DESC;
-
 -- name: UpdateProduct :one
 UPDATE products SET
     name = $2,
@@ -50,29 +34,6 @@ DELETE FROM products WHERE id = $1;
 -- name: GetProductsCount :one
 SELECT COUNT(*) FROM products;
 
--- name: CountActiveProducts :one
--- must match the joins and filters of ListActiveProducts
-SELECT COUNT(*)
-FROM products p
-JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-WHERE p.is_active = TRUE;
-
--- name: CountProductsByCategory :one
--- must match the joins and filters of ListProductsByCategory
-WITH RECURSIVE subtree AS (
-    SELECT root.id FROM categories root WHERE root.slug = sqlc.arg(slug)
-    UNION
-    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
-)
-SELECT COUNT(*)
-FROM products p
-JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-WHERE p.is_active = TRUE
-AND p.category_id IN (SELECT id FROM subtree)
-AND (sqlc.arg(price_min)::int = 0 OR pv.selling_price >= sqlc.arg(price_min)::int)
-AND (sqlc.arg(price_max)::int = 0 OR pv.selling_price <= sqlc.arg(price_max)::int);
-
-
 -- name: AdminProductsList :many
 SELECT 
     p.*,
@@ -82,71 +43,103 @@ LEFT JOIN categories c ON p.category_id = c.id
 ORDER BY p.created_at DESC, p.id DESC
 LIMIT $1 OFFSET $2;
 
+-- Storefront listings. The four queries below share one scope (an optional
+-- category with all its subcategories, and featured_only); count and list
+-- also share the price and option filters. Keep their WHERE clauses in sync.
+-- UNION (not UNION ALL) in the subtree CTE terminates even on a cycle.
 
--- name: GetCategoryFilterOptions :many
--- Option values of the active variants of visible products only.
+-- name: ListStorefrontProducts :many
 WITH RECURSIVE subtree AS (
-    SELECT root.id FROM categories root WHERE root.slug = sqlc.arg(slug)
+    SELECT root.id FROM categories root WHERE root.slug = sqlc.narg(category_slug)::text
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
+SELECT sp.*
+FROM storefront_products sp
+WHERE (sqlc.narg(category_slug)::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
+AND (NOT sqlc.arg(featured_only)::bool OR sp.is_featured)
+AND (sqlc.arg(price_min)::int = 0 OR sp.price >= sqlc.arg(price_min)::int)
+AND (sqlc.arg(price_max)::int = 0 OR sp.price <= sqlc.arg(price_max)::int)
+AND (
+    cardinality(sqlc.arg(option_names)::text[]) = 0
+    OR EXISTS (
+        SELECT 1 FROM product_variants v
+        WHERE v.product_id = sp.id AND v.is_active = TRUE
+        AND variant_matches_options(v.id, sqlc.arg(option_names)::text[], sqlc.arg(option_values)::text[])
+    )
+)
+ORDER BY
+    CASE WHEN sqlc.arg(sort)::text = 'price_asc' THEN sp.price END ASC,
+    CASE WHEN sqlc.arg(sort)::text = 'price_desc' THEN sp.price END DESC,
+    sp.created_at DESC,
+    sp.id DESC
+LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
+
+-- name: CountStorefrontProducts :one
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = sqlc.narg(category_slug)::text
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
+SELECT COUNT(*)
+FROM storefront_products sp
+WHERE (sqlc.narg(category_slug)::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
+AND (NOT sqlc.arg(featured_only)::bool OR sp.is_featured)
+AND (sqlc.arg(price_min)::int = 0 OR sp.price >= sqlc.arg(price_min)::int)
+AND (sqlc.arg(price_max)::int = 0 OR sp.price <= sqlc.arg(price_max)::int)
+AND (
+    cardinality(sqlc.arg(option_names)::text[]) = 0
+    OR EXISTS (
+        SELECT 1 FROM product_variants v
+        WHERE v.product_id = sp.id AND v.is_active = TRUE
+        AND variant_matches_options(v.id, sqlc.arg(option_names)::text[], sqlc.arg(option_values)::text[])
+    )
+);
+
+-- name: GetStorefrontFilterOptions :many
+-- Option values of the active variants of the products in scope. An option
+-- is a colour when any product declares it as one.
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = sqlc.narg(category_slug)::text
     UNION
     SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
 )
 SELECT
-    po.name as option_name,
-    pov.value as option_value
-FROM product_options po
+    po.name AS option_name,
+    pov.value AS option_value,
+    MIN(po.type)::text AS option_type
+FROM storefront_products sp
+JOIN product_options po ON po.product_id = sp.id
 JOIN product_option_values pov ON pov.option_id = po.id
 JOIN variant_option_values vov ON vov.option_value_id = pov.id
 JOIN product_variants v ON v.id = vov.variant_id AND v.is_active = TRUE
-JOIN products p ON p.id = po.product_id
-JOIN product_variants dv ON dv.product_id = p.id AND dv.is_default = TRUE AND dv.is_active = TRUE
-WHERE p.category_id IN (SELECT id FROM subtree)
-AND p.is_active = TRUE
+WHERE (sqlc.narg(category_slug)::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
+AND (NOT sqlc.arg(featured_only)::bool OR sp.is_featured)
 GROUP BY po.name, pov.value
 ORDER BY po.name, pov.value;
 
--- name: GetMinMaxSellingPrice :one
--- Over the same default-variant prices that price_min/price_max filter on.
--- COALESCE: MIN/MAX are NULL when the category has no visible products.
+-- name: GetStorefrontPriceRange :one
+-- Over the same prices that price_min/price_max filter on. COALESCE: MIN and
+-- MAX are NULL when nothing is in scope.
 WITH RECURSIVE subtree AS (
-    SELECT root.id FROM categories root WHERE root.slug = sqlc.arg(slug)
+    SELECT root.id FROM categories root WHERE root.slug = sqlc.narg(category_slug)::text
     UNION
     SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
 )
-SELECT COALESCE(MIN(pv.selling_price), 0)::int AS min_price, COALESCE(MAX(pv.selling_price), 0)::int AS max_price
-FROM product_variants pv
-JOIN products p ON p.id = pv.product_id
-WHERE p.category_id IN (SELECT id FROM subtree) AND p.is_active = TRUE AND pv.is_default = TRUE AND pv.is_active = TRUE;
-
-
--- name: ListProductsByCategory :many
--- The category and all its subcategories (UNION: terminates even on a cycle).
-WITH RECURSIVE subtree AS (
-    SELECT root.id FROM categories root WHERE root.slug = sqlc.arg(slug)
-    UNION
-    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
-)
-SELECT p.*, pv.selling_price, pv.offer_price
-FROM products p
-JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-WHERE p.is_active = TRUE
-AND p.category_id IN (SELECT id FROM subtree)
-AND (sqlc.arg(price_min)::int = 0 OR pv.selling_price >= sqlc.arg(price_min)::int)
-AND (sqlc.arg(price_max)::int = 0 OR pv.selling_price <= sqlc.arg(price_max)::int)
-ORDER BY
-    CASE WHEN sqlc.arg(sort)::text = 'price_asc' THEN pv.selling_price END ASC,
-    CASE WHEN sqlc.arg(sort)::text = 'price_desc' THEN pv.selling_price END DESC,
-    p.created_at DESC,
-    p.id DESC
-LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
-
+SELECT
+    COALESCE(MIN(sp.price), 0)::int AS min_price,
+    COALESCE(MAX(sp.price), 0)::int AS max_price
+FROM storefront_products sp
+WHERE (sqlc.narg(category_slug)::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
+AND (NOT sqlc.arg(featured_only)::bool OR sp.is_featured);
 
 -- name: GetVariantsByProductSlug :many
-SELECT 
-    pv.*,
+SELECT
+    sv.*,
     (
         SELECT COALESCE(
             json_agg(
-                jsonb_build_object('name', po.name, 'value', pov.value)
+                jsonb_build_object('name', po.name, 'value', pov.value, 'type', po.type)
                 ORDER BY po.name
             ),
             '[]'::json
@@ -154,36 +147,26 @@ SELECT
         FROM variant_option_values vov
         JOIN product_option_values pov ON pov.id = vov.option_value_id
         JOIN product_options po ON po.id = pov.option_id
-        WHERE vov.variant_id = pv.id
+        WHERE vov.variant_id = sv.id
     ) AS options
-FROM product_variants pv
-JOIN products p ON p.id = pv.product_id
-WHERE p.slug = $1 AND p.is_active = TRUE AND pv.is_active = TRUE
-ORDER BY pv.is_default DESC, pv.created_at ASC, pv.id ASC;
+FROM storefront_variants sv
+JOIN products p ON p.id = sv.product_id
+WHERE p.slug = $1
+ORDER BY sv.is_default DESC, sv.created_at ASC, sv.id ASC;
 
 -- name: GetProductWithDefaultVariantBySlug :one
-SELECT 
-    p.*,
-    pv.id AS variant_id,
+SELECT
+    sp.*,
     pv.stock,
-    pv.images AS variant_images,
-    pv.selling_price,
-    pv.offer_price
-FROM products p
-JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-WHERE p.slug = $1 AND p.is_active = TRUE;
-
+    pv.images AS variant_images
+FROM storefront_products sp
+JOIN product_variants pv ON pv.id = sp.variant_id
+WHERE sp.slug = $1;
 
 -- name: GetRelatedProducts :many
-SELECT 
-    p.*,
-    pv.selling_price,
-    pv.offer_price
-FROM products p
-JOIN categories c ON c.id = p.category_id
-JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-WHERE c.id = (SELECT pr.category_id FROM products pr WHERE pr.slug = $1)
-AND p.slug != $1
-AND p.is_active = TRUE
-ORDER BY p.created_at DESC, p.id DESC
+SELECT sp.*
+FROM storefront_products sp
+WHERE sp.category_id = (SELECT pr.category_id FROM products pr WHERE pr.slug = $1)
+AND sp.slug != $1
+ORDER BY sp.created_at DESC, sp.id DESC
 LIMIT 8;

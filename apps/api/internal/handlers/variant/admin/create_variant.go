@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -35,14 +34,8 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 		}
 
 		props := make([]string, len(req.Properties))
-		names := make([]string, len(req.Properties))
-		values := make([]string, len(req.Properties))
-
 		for i, prop := range req.Properties {
 			props[i] = prop.Name + "=" + prop.Value
-			names[i] = prop.Name
-			values[i] = prop.Value
-
 		}
 		sort.Strings(props)
 		combinationKey := strings.Join(props, "|")
@@ -92,78 +85,31 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 			return
 		}
 
-		existingOptions, err := qtx.FetchExistingProductOptions(ctx, db.FetchExistingProductOptionsParams{
-			ProductID: productID,
-			Column2:   names,
-		})
-		if err != nil {
-			httpx.Internal(c, "failed to fetch product options", err)
-			return
-		}
-
-		optionIDs := make([]pgtype.UUID, len(existingOptions))
-
-		for i, v := range existingOptions {
-			optionIDs[i] = v.ID
-		}
-		var existingValues []db.ProductOptionValue
-
-		if len(optionIDs) > 0 {
-
-			existingValues, err = qtx.FetchExistingProductOptionValues(ctx, db.FetchExistingProductOptionValuesParams{
-				Column1: optionIDs,
-				Column2: values,
+		// Upserts: options and values are shared by the product's variants.
+		for _, prop := range req.Properties {
+			option, err := qtx.UpsertProductOption(ctx, db.UpsertProductOptionParams{
+				ProductID: product.ID,
+				Name:      prop.Name,
+				Type:      prop.Type,
 			})
 			if err != nil {
-				httpx.Internal(c, "failed to fetch product option values", err)
+				httpx.Internal(c, "failed to save product option", err, "name", prop.Name)
 				return
 			}
-		}
 
-		optionsByName := map[string]db.ProductOption{}
-		for _, o := range existingOptions {
-			optionsByName[o.Name] = o
-		}
-
-		optionValuesByKey := map[string]db.ProductOptionValue{}
-		for _, o := range existingValues {
-			key := uuid.UUID(o.OptionID.Bytes).String() + ":" + o.Value
-			optionValuesByKey[key] = o
-		}
-
-		for _, prop := range req.Properties {
-			option, exists := optionsByName[prop.Name]
-			if !exists {
-				option, err = qtx.CreateProductOption(ctx, db.CreateProductOptionParams{
-					ProductID: product.ID,
-					Name:      prop.Name,
-				})
-
-				if err != nil {
-					httpx.Internal(c, "failed to create product option", err, "name", prop.Name)
-					return
-				}
-			}
-
-			key := uuid.UUID(option.ID.Bytes).String() + ":" + prop.Value
-			value, exists := optionValuesByKey[key]
-			if !exists {
-				value, err = qtx.CreateProductOptionValue(ctx, db.CreateProductOptionValueParams{
-					OptionID: option.ID,
-					Value:    prop.Value,
-				})
-
-				if err != nil {
-					httpx.Internal(c, "failed to create option value", err, "value", prop.Value)
-					return
-				}
+			value, err := qtx.UpsertProductOptionValue(ctx, db.UpsertProductOptionValueParams{
+				OptionID: option.ID,
+				Value:    prop.Value,
+			})
+			if err != nil {
+				httpx.Internal(c, "failed to save option value", err, "value", prop.Value)
+				return
 			}
 
 			err = qtx.CreateVariantOptionValue(ctx, db.CreateVariantOptionValueParams{
 				VariantID:     variant.ID,
 				OptionValueID: value.ID,
 			})
-
 			if err != nil {
 				httpx.Internal(c, "failed to create variant option value", err, "variantID", variant.ID, "optionValueID", value.ID)
 				return

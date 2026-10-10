@@ -27,7 +27,7 @@ func GetProduct(queries repository.ProductRepository) gin.HandlerFunc {
 
 		var productDetail db.GetProductWithDefaultVariantBySlugRow
 		var variants []db.GetVariantsByProductSlugRow
-		var related []db.GetRelatedProductsRow
+		var related []db.StorefrontProduct
 
 		// each goroutine owns its err; errgroup returns the first failure
 		g.Go(func() error {
