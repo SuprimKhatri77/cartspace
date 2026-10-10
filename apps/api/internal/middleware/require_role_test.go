@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 )
 
-func TestRequireAdmin(t *testing.T) {
+func TestRequireRoleAdmin(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	tests := []struct {
@@ -27,8 +29,12 @@ func TestRequireAdmin(t *testing.T) {
 
 			r := gin.New()
 			r.GET("/admin",
-				func(c *gin.Context) { c.Set("role", tt.role) },
-				RequireAdmin,
+				func(c *gin.Context) {
+					if tt.role != "" {
+						c.Set(constants.RoleKey, tt.role)
+					}
+				},
+				RequireRole(constants.RoleAdmin),
 				func(c *gin.Context) {
 					handlerRan = true
 					c.Status(http.StatusOK)

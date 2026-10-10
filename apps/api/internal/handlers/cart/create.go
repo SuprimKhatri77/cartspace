@@ -21,7 +21,7 @@ func CreateCart(queries repository.CartRepository, pool *pgxpool.Pool) gin.Handl
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		userIDFromContext := c.MustGet("userID")
+		userIDFromContext := c.MustGet(constants.UserIDKey)
 
 		userID, err := utils.ConvertToUUID(userIDFromContext.(string))
 		if err != nil {

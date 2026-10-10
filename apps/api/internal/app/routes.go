@@ -20,6 +20,7 @@ func buildRouter(
 	db *database.DB,
 ) *gin.Engine {
 	r := gin.New()
+	r.Use(middleware.RequestID())
 	r.Use(middleware.Recovery())
 	r.Use(gin.Logger())
 	r.Use(middleware.CORS(cfg))

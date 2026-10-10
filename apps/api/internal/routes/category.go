@@ -3,6 +3,7 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	adminCategory "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category/admin"
 	userProduct "github.com/suprimkhatri77/cartspace/backend/internal/handlers/product/user"
 	"github.com/suprimkhatri77/cartspace/backend/internal/middleware"
@@ -10,7 +11,7 @@ import (
 )
 
 func setupCategoryRoutes(router *gin.RouterGroup, cfg config.Config) {
-	admin := router.Group("/admin/categories", middleware.RequireAuth(cfg.Config), middleware.RequireAdmin)
+	admin := router.Group("/admin/categories", middleware.RequireAuth(cfg.Config), middleware.RequireRole(constants.RoleAdmin))
 	admin.POST("", adminCategory.CreateCategory(cfg.Queries))
 	admin.PUT("/:id", adminCategory.UpdateCategory(cfg.Queries))
 	admin.DELETE("/:id", adminCategory.DeleteCategory(cfg.Queries))
