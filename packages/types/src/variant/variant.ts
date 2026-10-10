@@ -141,6 +141,18 @@ export const SetStockBodySchema = z
   });
 export type SetStockBody = z.infer<typeof SetStockBodySchema>;
 
+export const AdminVariantSchema = ProductVariantSchema.extend({
+  options: z.array(VariantOptionSchema),
+}).meta({
+  id: "AdminVariant",
+  description: "A variant, active or not, with its options.",
+});
+export type AdminVariant = z.infer<typeof AdminVariantSchema>;
+
+export const AdminVariantListResponseSchema = successResponse(
+  z.array(AdminVariantSchema).describe("Default first, then oldest first"),
+).meta({ id: "AdminVariantListResponse" });
+
 export const VariantResponseSchema = successResponse(ProductVariantSchema).meta(
   { id: "VariantResponse" },
 );

@@ -1,3 +1,4 @@
+import { registerAdminPaths } from "./admin.ts";
 import { registerAuthPaths } from "./auth.ts";
 import { registerCartPaths } from "./carts.ts";
 import { registerCategoryPaths } from "./categories.ts";
@@ -18,4 +19,5 @@ export function registerPaths() {
   registerCheckoutPaths();
   registerWishlistPaths();
   registerReviewPaths();
+  registerAdminPaths();
 }

@@ -1087,6 +1087,23 @@
               "string",
               "null"
             ]
+          },
+          "default_price": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "The default variant's selling price; null without one"
+          },
+          "total_stock": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Across all variants"
+          },
+          "variant_count": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "required": [
@@ -1104,9 +1121,134 @@
           "updated_at",
           "rating_count",
           "rating_avg",
-          "category_name"
+          "category_name",
+          "default_price",
+          "total_stock",
+          "variant_count"
         ],
         "description": "A row of the admin products table."
+      },
+      "AdminVariantListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminVariant"
+            },
+            "description": "Default first, then oldest first"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "AdminVariant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "image_public_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "selling_price": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offer_price": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "is_default": {
+            "type": "boolean"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "option_combination_key": {
+            "type": "string",
+            "description": "Sorted `name=value` pairs joined by `|`; \"\" without options."
+          },
+          "offer_expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VariantOption"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "product_id",
+          "sku",
+          "stock",
+          "images",
+          "image_public_ids",
+          "selling_price",
+          "offer_price",
+          "is_default",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "option_combination_key",
+          "offer_expires_at",
+          "options"
+        ],
+        "description": "A variant, active or not, with its options."
       },
       "ProductResponse": {
         "type": "object",
@@ -2704,6 +2846,223 @@
           "title",
           "body"
         ]
+      },
+      "AdminStatsResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AdminStats"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "AdminStats": {
+        "type": "object",
+        "properties": {
+          "revenue": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Cents, over paid, shipped and delivered orders"
+          },
+          "orders": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "average_order_value": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "customers": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sales_by_day": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "day": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "revenue": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "orders": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "day",
+                "revenue",
+                "orders"
+              ]
+            },
+            "description": "The last 30 days (UTC), oldest first, every day present"
+          },
+          "low_stock": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "product_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "product_name": {
+                  "type": "string"
+                },
+                "variant_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sku": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "stock": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "product_id",
+                "product_name",
+                "variant_id",
+                "sku",
+                "stock"
+              ]
+            },
+            "description": "Active variants with 5 or fewer left, lowest first (10 at most)"
+          },
+          "recent_orders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "number": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "status": {
+                  "$ref": "#/components/schemas/OrderStatus"
+                },
+                "total": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "paid_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "number",
+                "status",
+                "total",
+                "currency",
+                "email",
+                "created_at",
+                "paid_at"
+              ]
+            }
+          }
+        },
+        "required": [
+          "revenue",
+          "orders",
+          "average_order_value",
+          "customers",
+          "sales_by_day",
+          "low_stock",
+          "recent_orders"
+        ]
+      },
+      "UploadSignatureResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/UploadSignature"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "UploadSignature": {
+        "type": "object",
+        "properties": {
+          "cloud_name": {
+            "type": "string"
+          },
+          "api_key": {
+            "type": "string"
+          },
+          "folder": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "integer",
+            "description": "Unix seconds; Cloudinary accepts it for an hour"
+          },
+          "signature": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cloud_name",
+          "api_key",
+          "folder",
+          "timestamp",
+          "signature"
+        ],
+        "description": "POST the file with these fields to https://api.cloudinary.com/v1_1/{cloud_name}/image/upload."
       }
     },
     "parameters": {}
@@ -3757,7 +4116,7 @@
           "Products"
         ],
         "summary": "List all products",
-        "description": "Every product, active or not, 20 per page, newest first.",
+        "description": "Every product, active or not, 20 per page, newest first, optionally filtered.",
         "security": [
           {
             "accessTokenCookie": []
@@ -3775,6 +4134,39 @@
             "description": "1-based page number (default 1)",
             "name": "page",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100,
+              "description": "Name contains (case-insensitive)"
+            },
+            "required": false,
+            "description": "Name contains (case-insensitive)",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "inactive"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Category slug; includes its subcategories"
+            },
+            "required": false,
+            "description": "Category slug; includes its subcategories",
+            "name": "category",
+            "in": "query"
           }
         ],
         "responses": {
@@ -3789,7 +4181,7 @@
             }
           },
           "400": {
-            "description": "Invalid or out-of-range page (INVALID_PAGE_PARAMETER)",
+            "description": "Invalid or out-of-range page, or invalid filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3895,6 +4287,200 @@
           },
           "404": {
             "description": "Category not found (CATEGORY_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/products/{productID}/variants": {
+      "get": {
+        "operationId": "adminListVariants",
+        "tags": [
+          "Products"
+        ],
+        "summary": "A product's variants",
+        "description": "Every variant, inactive ones too, with its options.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "productID",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Variants fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminVariantListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product id (INVALID_PRODUCT_ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such product (PRODUCT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "adminCreateVariant",
+        "tags": [
+          "Variants"
+        ],
+        "summary": "Create a variant",
+        "description": "Creates the variant with a generated SKU and links its option values (`properties`), creating missing options.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "productID",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVariantBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Variant created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VariantResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id or body (INVALID_PRODUCT_ID, VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found (PRODUCT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Same option combination, or a second default variant (VARIANT_ALREADY_EXISTS, DEFAULT_VARIANT_EXISTS)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4164,114 +4750,6 @@
           },
           "404": {
             "description": "Product not found (PRODUCT_NOT_FOUND)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/products/{productID}/variants": {
-      "post": {
-        "operationId": "adminCreateVariant",
-        "tags": [
-          "Variants"
-        ],
-        "summary": "Create a variant",
-        "description": "Creates the variant with a generated SKU and links its option values (`properties`), creating missing options.",
-        "security": [
-          {
-            "accessTokenCookie": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": true,
-            "name": "productID",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateVariantBody"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Variant created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VariantResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid id or body (INVALID_PRODUCT_ID, VALIDATION_FAILED)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not an admin (FORBIDDEN)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Product not found (PRODUCT_NOT_FOUND)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Same option combination, or a second default variant (VARIANT_ALREADY_EXISTS, DEFAULT_VARIANT_EXISTS)",
             "content": {
               "application/json": {
                 "schema": {
@@ -6133,6 +6611,120 @@
           },
           "404": {
             "description": "No such product on sale (PRODUCT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/stats": {
+      "get": {
+        "operationId": "adminGetStats",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Dashboard figures",
+        "description": "Sales (paid, shipped and delivered orders), the last 30 days by day, low stock and recent orders.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stats fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminStatsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/uploads/signature": {
+      "post": {
+        "operationId": "adminSignUpload",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Sign an image upload",
+        "description": "A signature for one direct browser upload to Cloudinary (folder cartspace/products), valid for an hour.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upload signed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadSignatureResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
             "content": {
               "application/json": {
                 "schema": {

@@ -55,15 +55,53 @@ export function registerProductPaths() {
     operationId: "adminListProducts",
     tag,
     summary: "List all products",
-    description: "Every product, active or not, 20 per page, newest first.",
+    description:
+      "Every product, active or not, 20 per page, newest first, optionally filtered.",
     auth: "admin",
-    request: { query: pageQuery },
+    request: {
+      query: pageQuery.extend({
+        q: z
+          .string()
+          .max(100)
+          .optional()
+          .openapi({ description: "Name contains (case-insensitive)" }),
+        status: z.enum(["active", "inactive"]).optional(),
+        category: z
+          .string()
+          .optional()
+          .openapi({
+            description: "Category slug; includes its subcategories",
+          }),
+      }),
+    },
     success: {
       status: 200,
       description: "Products fetched",
       schema: schemas.AdminProductListResponseSchema,
     },
-    errors: { 400: "Invalid or out-of-range page (INVALID_PAGE_PARAMETER)" },
+    errors: {
+      400: "Invalid or out-of-range page, or invalid filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)",
+    },
+  });
+
+  operation({
+    method: "get",
+    path: "/api/v1/admin/products/{productID}/variants",
+    operationId: "adminListVariants",
+    tag,
+    summary: "A product's variants",
+    description: "Every variant, inactive ones too, with its options.",
+    auth: "admin",
+    request: { params: z.object({ productID: Uuid }) },
+    success: {
+      status: 200,
+      description: "Variants fetched",
+      schema: schemas.AdminVariantListResponseSchema,
+    },
+    errors: {
+      400: "Invalid product id (INVALID_PRODUCT_ID)",
+      404: "No such product (PRODUCT_NOT_FOUND)",
+    },
   });
 
   operation({

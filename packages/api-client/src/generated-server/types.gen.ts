@@ -360,6 +360,48 @@ export type AdminProduct = {
      */
     rating_avg: number;
     category_name: string | null;
+    /**
+     * The default variant's selling price; null without one
+     */
+    default_price: number | null;
+    /**
+     * Across all variants
+     */
+    total_stock: number;
+    variant_count: number;
+};
+
+export type AdminVariantListResponse = {
+    success: true;
+    message: string;
+    /**
+     * Default first, then oldest first
+     */
+    data: Array<AdminVariant>;
+};
+
+/**
+ * A variant, active or not, with its options.
+ */
+export type AdminVariant = {
+    id: string;
+    product_id: string;
+    sku: string | null;
+    stock: number;
+    images: Array<string>;
+    image_public_ids: Array<string>;
+    selling_price: number;
+    offer_price: number | null;
+    is_default: boolean;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    /**
+     * Sorted `name=value` pairs joined by `|`; "" without options.
+     */
+    option_combination_key: string;
+    offer_expires_at: string | null;
+    options: Array<VariantOption>;
 };
 
 export type ProductResponse = {
@@ -869,6 +911,70 @@ export type ReviewBody = {
     rating: number;
     title: string;
     body: string;
+};
+
+export type AdminStatsResponse = {
+    success: true;
+    message: string;
+    data: AdminStats;
+};
+
+export type AdminStats = {
+    /**
+     * Cents, over paid, shipped and delivered orders
+     */
+    revenue: number;
+    orders: number;
+    average_order_value: number;
+    customers: number;
+    /**
+     * The last 30 days (UTC), oldest first, every day present
+     */
+    sales_by_day: Array<{
+        day: string;
+        revenue: number;
+        orders: number;
+    }>;
+    /**
+     * Active variants with 5 or fewer left, lowest first (10 at most)
+     */
+    low_stock: Array<{
+        product_id: string;
+        product_name: string;
+        variant_id: string;
+        sku: string | null;
+        stock: number;
+    }>;
+    recent_orders: Array<{
+        id: string;
+        number: number;
+        status: OrderStatus;
+        total: number;
+        currency: string;
+        email: string;
+        created_at: string;
+        paid_at: string | null;
+    }>;
+};
+
+export type UploadSignatureResponse = {
+    success: true;
+    message: string;
+    data: UploadSignature;
+};
+
+/**
+ * POST the file with these fields to https://api.cloudinary.com/v1_1/{cloud_name}/image/upload.
+ */
+export type UploadSignature = {
+    cloud_name: string;
+    api_key: string;
+    folder: string;
+    /**
+     * Unix seconds; Cloudinary accepts it for an hour
+     */
+    timestamp: number;
+    signature: string;
 };
 
 export type GetHealthData = {
@@ -1412,13 +1518,22 @@ export type AdminListProductsData = {
          * 1-based page number (default 1)
          */
         page?: number;
+        /**
+         * Name contains (case-insensitive)
+         */
+        q?: string;
+        status?: 'active' | 'inactive';
+        /**
+         * Category slug; includes its subcategories
+         */
+        category?: string;
     };
     url: '/api/v1/admin/products';
 };
 
 export type AdminListProductsErrors = {
     /**
-     * Invalid or out-of-range page (INVALID_PAGE_PARAMETER)
+     * Invalid or out-of-range page, or invalid filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)
      */
     400: ApiError;
     /**
@@ -1486,6 +1601,96 @@ export type AdminCreateProductResponses = {
 };
 
 export type AdminCreateProductResponse = AdminCreateProductResponses[keyof AdminCreateProductResponses];
+
+export type AdminListVariantsData = {
+    body?: never;
+    path: {
+        productID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/products/{productID}/variants';
+};
+
+export type AdminListVariantsErrors = {
+    /**
+     * Invalid product id (INVALID_PRODUCT_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such product (PRODUCT_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminListVariantsError = AdminListVariantsErrors[keyof AdminListVariantsErrors];
+
+export type AdminListVariantsResponses = {
+    /**
+     * Variants fetched
+     */
+    200: AdminVariantListResponse;
+};
+
+export type AdminListVariantsResponse = AdminListVariantsResponses[keyof AdminListVariantsResponses];
+
+export type AdminCreateVariantData = {
+    body: CreateVariantBody;
+    path: {
+        productID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/products/{productID}/variants';
+};
+
+export type AdminCreateVariantErrors = {
+    /**
+     * Invalid id or body (INVALID_PRODUCT_ID, VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Product not found (PRODUCT_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Same option combination, or a second default variant (VARIANT_ALREADY_EXISTS, DEFAULT_VARIANT_EXISTS)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminCreateVariantError = AdminCreateVariantErrors[keyof AdminCreateVariantErrors];
+
+export type AdminCreateVariantResponses = {
+    /**
+     * Variant created
+     */
+    201: VariantResponse;
+};
+
+export type AdminCreateVariantResponse = AdminCreateVariantResponses[keyof AdminCreateVariantResponses];
 
 export type AdminDeleteProductData = {
     body?: never;
@@ -1615,53 +1820,6 @@ export type AdminUpdateProductResponses = {
 };
 
 export type AdminUpdateProductResponse = AdminUpdateProductResponses[keyof AdminUpdateProductResponses];
-
-export type AdminCreateVariantData = {
-    body: CreateVariantBody;
-    path: {
-        productID: string;
-    };
-    query?: never;
-    url: '/api/v1/admin/products/{productID}/variants';
-};
-
-export type AdminCreateVariantErrors = {
-    /**
-     * Invalid id or body (INVALID_PRODUCT_ID, VALIDATION_FAILED)
-     */
-    400: ApiError;
-    /**
-     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
-     */
-    401: ApiError;
-    /**
-     * Not an admin (FORBIDDEN)
-     */
-    403: ApiError;
-    /**
-     * Product not found (PRODUCT_NOT_FOUND)
-     */
-    404: ApiError;
-    /**
-     * Same option combination, or a second default variant (VARIANT_ALREADY_EXISTS, DEFAULT_VARIANT_EXISTS)
-     */
-    409: ApiError;
-    /**
-     * Unexpected server error (INTERNAL_SERVER_ERROR)
-     */
-    500: ApiError;
-};
-
-export type AdminCreateVariantError = AdminCreateVariantErrors[keyof AdminCreateVariantErrors];
-
-export type AdminCreateVariantResponses = {
-    /**
-     * Variant created
-     */
-    201: VariantResponse;
-};
-
-export type AdminCreateVariantResponse = AdminCreateVariantResponses[keyof AdminCreateVariantResponses];
 
 export type AdminDeleteVariantData = {
     body?: never;
@@ -2588,3 +2746,69 @@ export type GetMyReviewResponses = {
 };
 
 export type GetMyReviewResponse = GetMyReviewResponses[keyof GetMyReviewResponses];
+
+export type AdminGetStatsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/stats';
+};
+
+export type AdminGetStatsErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminGetStatsError = AdminGetStatsErrors[keyof AdminGetStatsErrors];
+
+export type AdminGetStatsResponses = {
+    /**
+     * Stats fetched
+     */
+    200: AdminStatsResponse;
+};
+
+export type AdminGetStatsResponse = AdminGetStatsResponses[keyof AdminGetStatsResponses];
+
+export type AdminSignUploadData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/uploads/signature';
+};
+
+export type AdminSignUploadErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSignUploadError = AdminSignUploadErrors[keyof AdminSignUploadErrors];
+
+export type AdminSignUploadResponses = {
+    /**
+     * Upload signed
+     */
+    200: UploadSignatureResponse;
+};
+
+export type AdminSignUploadResponse = AdminSignUploadResponses[keyof AdminSignUploadResponses];

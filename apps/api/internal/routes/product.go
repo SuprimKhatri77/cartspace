@@ -15,9 +15,10 @@ func setupProductRoutes(router *gin.RouterGroup, cfg config.Config) {
 	admin := router.Group("/admin/products", middleware.RequireAuth(cfg.Config), middleware.RequireRole(constants.RoleAdmin))
 	admin.POST("", adminProduct.CreateProduct(cfg.Queries))
 	admin.PUT("/:productID", adminProduct.UpdateProduct(cfg.Queries))
-	admin.DELETE("/:productID", adminProduct.DeleteProduct(cfg.Queries))
+	admin.DELETE("/:productID", adminProduct.DeleteProduct(cfg.Queries, cfg.CldClient))
 	admin.GET("", adminProduct.GetPaginatedProducts(cfg.Queries))
 	admin.GET("/:productID", adminProduct.GetProductByID(cfg.Queries))
+	admin.GET("/:productID/variants", adminProduct.ListVariants(cfg.Queries))
 
 	public := router.Group("/products")
 	public.GET("", userProduct.ListProducts(cfg.Queries))

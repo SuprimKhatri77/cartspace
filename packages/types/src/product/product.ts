@@ -53,6 +53,11 @@ export type ProductWithPrice = z.infer<typeof ProductWithPriceSchema>;
 
 export const AdminProductSchema = ProductSchema.extend({
   category_name: z.string().nullable(),
+  default_price: Cents.nullable().describe(
+    "The default variant's selling price; null without one",
+  ),
+  total_stock: z.int().nonnegative().describe("Across all variants"),
+  variant_count: z.int().nonnegative(),
 }).meta({
   id: "AdminProduct",
   description: "A row of the admin products table.",

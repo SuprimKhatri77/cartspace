@@ -13,18 +13,38 @@ import (
 )
 
 const adminProductsList = `-- name: AdminProductsList :many
-SELECT 
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = $3::text
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
+SELECT
     p.id, p.name, p.slug, p.category_id, p.description, p.features, p.images, p.image_public_ids, p.is_active, p.is_featured, p.created_at, p.updated_at, p.rating_count, p.rating_avg,
-    c.name AS category_name
+    c.name AS category_name,
+    dv.selling_price AS default_price,
+    COALESCE(vs.total_stock, 0)::int AS total_stock,
+    COALESCE(vs.variant_count, 0)::int AS variant_count
 FROM products p
 LEFT JOIN categories c ON p.category_id = c.id
+LEFT JOIN product_variants dv ON dv.product_id = p.id AND dv.is_default
+LEFT JOIN LATERAL (
+    SELECT SUM(v.stock)::int AS total_stock, COUNT(*)::int AS variant_count
+    FROM product_variants v
+    WHERE v.product_id = p.id
+) vs ON TRUE
+WHERE ($1::text IS NULL OR p.name ILIKE $1::text)
+AND ($2::bool IS NULL OR p.is_active = $2::bool)
+AND ($3::text IS NULL OR p.category_id IN (SELECT id FROM subtree))
 ORDER BY p.created_at DESC, p.id DESC
-LIMIT $1 OFFSET $2
+LIMIT $5 OFFSET $4
 `
 
 type AdminProductsListParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+	NamePattern  pgtype.Text `json:"name_pattern"`
+	Active       pgtype.Bool `json:"active"`
+	CategorySlug pgtype.Text `json:"category_slug"`
+	PageOffset   int32       `json:"page_offset"`
+	PageLimit    int32       `json:"page_limit"`
 }
 
 type AdminProductsListRow struct {
@@ -43,10 +63,19 @@ type AdminProductsListRow struct {
 	RatingCount    int32              `json:"rating_count"`
 	RatingAvg      float32            `json:"rating_avg"`
 	CategoryName   pgtype.Text        `json:"category_name"`
+	DefaultPrice   pgtype.Int4        `json:"default_price"`
+	TotalStock     int32              `json:"total_stock"`
+	VariantCount   int32              `json:"variant_count"`
 }
 
 func (q *Queries) AdminProductsList(ctx context.Context, arg AdminProductsListParams) ([]AdminProductsListRow, error) {
-	rows, err := q.db.Query(ctx, adminProductsList, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, adminProductsList,
+		arg.NamePattern,
+		arg.Active,
+		arg.CategorySlug,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -70,6 +99,9 @@ func (q *Queries) AdminProductsList(ctx context.Context, arg AdminProductsListPa
 			&i.RatingCount,
 			&i.RatingAvg,
 			&i.CategoryName,
+			&i.DefaultPrice,
+			&i.TotalStock,
+			&i.VariantCount,
 		); err != nil {
 			return nil, err
 		}
@@ -79,6 +111,36 @@ func (q *Queries) AdminProductsList(ctx context.Context, arg AdminProductsListPa
 		return nil, err
 	}
 	return items, nil
+}
+
+const countAdminProducts = `-- name: CountAdminProducts :one
+
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = $3::text
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
+SELECT COUNT(*)
+FROM products p
+WHERE ($1::text IS NULL OR p.name ILIKE $1::text)
+AND ($2::bool IS NULL OR p.is_active = $2::bool)
+AND ($3::text IS NULL OR p.category_id IN (SELECT id FROM subtree))
+`
+
+type CountAdminProductsParams struct {
+	NamePattern  pgtype.Text `json:"name_pattern"`
+	Active       pgtype.Bool `json:"active"`
+	CategorySlug pgtype.Text `json:"category_slug"`
+}
+
+// Admin product table: every product, active or not. Count and list share
+// the filters: a name search (an ILIKE pattern the handler escapes), the
+// active flag and a category with its subcategories.
+func (q *Queries) CountAdminProducts(ctx context.Context, arg CountAdminProductsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAdminProducts, arg.NamePattern, arg.Active, arg.CategorySlug)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const countStorefrontProducts = `-- name: CountStorefrontProducts :one
@@ -302,17 +364,6 @@ func (q *Queries) GetProductWithDefaultVariantBySlug(ctx context.Context, slug s
 		&i.VariantImages,
 	)
 	return i, err
-}
-
-const getProductsCount = `-- name: GetProductsCount :one
-SELECT COUNT(*) FROM products
-`
-
-func (q *Queries) GetProductsCount(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, getProductsCount)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
 }
 
 const getRelatedProducts = `-- name: GetRelatedProducts :many
