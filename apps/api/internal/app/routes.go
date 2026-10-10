@@ -10,6 +10,7 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/cloudinary"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/routes"
+	routesconfig "github.com/suprimkhatri77/cartspace/backend/internal/routes/config"
 )
 
 func buildRouter(
@@ -23,12 +24,11 @@ func buildRouter(
 	r.Use(gin.Logger())
 	r.Use(middleware.CORS(cfg))
 
-	routes.Setup(r, routes.Config{
-		OpenAPIPath: cfg.OpenAPIPath,
-		Queries:     queries,
+	routes.Setup(r, routesconfig.Config{
 		Config:      cfg,
+		Queries:     queries,
 		CldClient:   cld,
-		Pool:        db.Pool,
+		PgxPool:     db.Pool,
 		VariantRepo: repository.NewVariantRepository(queries),
 		CartRepo:    repository.NewCartRepository(queries),
 	})
