@@ -295,3 +295,29 @@ func (q *Queries) ListProductImages(ctx context.Context, id pgtype.UUID) ([]List
 	}
 	return items, nil
 }
+
+const orderedImages = `-- name: OrderedImages :many
+SELECT DISTINCT image::text FROM order_items WHERE image = ANY($1::text[])
+`
+
+// Which of these image URLs past orders show (order items keep the URL, not
+// a copy of the image), so a product delete leaves them in place.
+func (q *Queries) OrderedImages(ctx context.Context, urls []string) ([]string, error) {
+	rows, err := q.db.Query(ctx, orderedImages, urls)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var image string
+		if err := rows.Scan(&image); err != nil {
+			return nil, err
+		}
+		items = append(items, image)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

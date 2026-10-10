@@ -77,3 +77,8 @@ FROM products p WHERE p.id = $1
 UNION ALL
 SELECT unnest(v.images)::text, unnest(v.image_public_ids)::text
 FROM product_variants v WHERE v.product_id = $1;
+
+-- name: OrderedImages :many
+-- Which of these image URLs past orders show (order items keep the URL, not
+-- a copy of the image), so a product delete leaves them in place.
+SELECT DISTINCT image::text FROM order_items WHERE image = ANY(@urls::text[]);

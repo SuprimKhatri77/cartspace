@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
@@ -14,10 +15,13 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 )
 
-// UpdateProductVariant replaces a variant's stock, images, prices and flags.
-// Its SKU and option combination are fixed at creation.
-func UpdateProductVariant(queries repository.VariantRepository) gin.HandlerFunc {
+// UpdateProductVariant replaces a variant's images, prices and flags. Its
+// SKU and option combination are fixed at creation, and its stock has its
+// own endpoint. Making it the default takes that from the current default
+// in the same transaction.
+func UpdateProductVariant(queries repository.VariantRepository, pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		ctx := c.Request.Context()
 		productID, variantID, ok := variantIDs(c)
 		if !ok {
 			return
@@ -28,10 +32,25 @@ func UpdateProductVariant(queries repository.VariantRepository) gin.HandlerFunc 
 			return
 		}
 
-		updated, err := queries.UpdateVariant(c.Request.Context(), db.UpdateVariantParams{
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			httpx.Internal(c, "failed to begin transaction", err)
+			return
+		}
+		defer func() { _ = tx.Rollback(ctx) }()
+		qtx := queries.WithTx(tx)
+
+		if *req.IsDefault {
+			err := qtx.ClearOtherDefaults(ctx, db.ClearOtherDefaultsParams{ProductID: productID, KeepID: variantID})
+			if err != nil {
+				httpx.Internal(c, "failed to clear the default variant", err, "product_id", productID)
+				return
+			}
+		}
+
+		updated, err := qtx.UpdateVariant(ctx, db.UpdateVariantParams{
 			ID:             variantID,
 			ProductID:      productID,
-			Stock:          int32(*req.Stock),
 			Images:         req.Images,
 			ImagePublicIds: req.ImagePublicIDs,
 			SellingPrice:   int32(req.SellingPrice),
@@ -46,6 +65,10 @@ func UpdateProductVariant(queries repository.VariantRepository) gin.HandlerFunc 
 				return
 			}
 			writeVariantError(c, err, "failed to update variant")
+			return
+		}
+		if err := tx.Commit(ctx); err != nil {
+			httpx.Internal(c, "failed to commit variant update", err)
 			return
 		}
 

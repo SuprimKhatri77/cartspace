@@ -16,9 +16,6 @@ import (
 // LowStockThreshold: active variants at or below it are flagged.
 const LowStockThreshold = 5
 
-// UploadFolder is where admin uploads land on Cloudinary.
-const UploadFolder = "cartspace/products"
-
 type Stats struct {
 	Revenue           int64                     `json:"revenue"`
 	Orders            int64                     `json:"orders"`
@@ -59,7 +56,7 @@ func GetStats(queries *db.Queries) gin.HandlerFunc {
 // Cloudinary (valid for an hour), so image bytes never pass through us.
 func SignUpload(cld *cloudinary.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		sig, err := cld.SignUpload(UploadFolder, time.Now().Unix())
+		sig, err := cld.SignUpload(cloudinary.ProductFolder, time.Now().Unix())
 		if err != nil {
 			httpx.Internal(c, "failed to sign upload", err)
 			return

@@ -1556,11 +1556,6 @@
             "maxItems": 5,
             "description": "Cloudinary public IDs, one per image, in the same order"
           },
-          "stock": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 10000
-          },
           "selling_price": {
             "type": "integer",
             "exclusiveMinimum": 0,
@@ -1578,10 +1573,15 @@
           },
           "is_default": {
             "type": "boolean",
-            "description": "A product has at most one default variant."
+            "description": "A product has at most one default: setting it takes it from the current one."
           },
           "is_active": {
             "type": "boolean"
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
           },
           "properties": {
             "type": "array",
@@ -1595,10 +1595,10 @@
         "required": [
           "images",
           "image_public_ids",
-          "stock",
           "selling_price",
           "is_default",
-          "is_active"
+          "is_active",
+          "stock"
         ],
         "description": "Prices are integer cents."
       },
@@ -1651,11 +1651,6 @@
             "maxItems": 5,
             "description": "Cloudinary public IDs, one per image, in the same order"
           },
-          "stock": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 10000
-          },
           "selling_price": {
             "type": "integer",
             "exclusiveMinimum": 0,
@@ -1673,7 +1668,7 @@
           },
           "is_default": {
             "type": "boolean",
-            "description": "A product has at most one default variant."
+            "description": "A product has at most one default: setting it takes it from the current one."
           },
           "is_active": {
             "type": "boolean"
@@ -1682,12 +1677,11 @@
         "required": [
           "images",
           "image_public_ids",
-          "stock",
           "selling_price",
           "is_default",
           "is_active"
         ],
-        "description": "The SKU and option combination are fixed at creation."
+        "description": "The SKU and option combination are fixed at creation; stock has its own endpoint."
       },
       "SetStockBody": {
         "type": "object",

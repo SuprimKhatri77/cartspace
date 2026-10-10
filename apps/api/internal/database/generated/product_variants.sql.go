@@ -12,6 +12,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const clearOtherDefaults = `-- name: ClearOtherDefaults :exec
+UPDATE product_variants SET is_default = FALSE
+WHERE product_id = $1 AND is_default
+  AND ($2::uuid IS NULL OR id <> $2::uuid)
+`
+
+type ClearOtherDefaultsParams struct {
+	ProductID pgtype.UUID `json:"product_id"`
+	KeepID    pgtype.UUID `json:"keep_id"`
+}
+
+// Makes room for a new default (a product has at most one): unsets the
+// current default, unless it is keep_id. Runs in the same transaction as
+// the write that sets the new one.
+func (q *Queries) ClearOtherDefaults(ctx context.Context, arg ClearOtherDefaultsParams) error {
+	_, err := q.db.Exec(ctx, clearOtherDefaults, arg.ProductID, arg.KeepID)
+	return err
+}
+
 const createProductVariant = `-- name: CreateProductVariant :one
 INSERT INTO product_variants (product_id, sku, stock, images, image_public_ids, selling_price, offer_price, offer_expires_at, is_default, is_active, option_combination_key)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -218,20 +237,18 @@ func (q *Queries) SetVariantStock(ctx context.Context, arg SetVariantStockParams
 
 const updateVariant = `-- name: UpdateVariant :one
 UPDATE product_variants SET
-    stock = $1,
-    images = $2,
-    image_public_ids = $3,
-    selling_price = $4,
-    offer_price = $5,
-    offer_expires_at = $6,
-    is_default = $7,
-    is_active = $8
-WHERE id = $9 AND product_id = $10
+    images = $1,
+    image_public_ids = $2,
+    selling_price = $3,
+    offer_price = $4,
+    offer_expires_at = $5,
+    is_default = $6,
+    is_active = $7
+WHERE id = $8 AND product_id = $9
 RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at
 `
 
 type UpdateVariantParams struct {
-	Stock          int32              `json:"stock"`
 	Images         []string           `json:"images"`
 	ImagePublicIds []string           `json:"image_public_ids"`
 	SellingPrice   int32              `json:"selling_price"`
@@ -243,10 +260,11 @@ type UpdateVariantParams struct {
 	ProductID      pgtype.UUID        `json:"product_id"`
 }
 
-// sku and option_combination_key are set at creation and never change here.
+// sku and option_combination_key are set at creation and never change here,
+// and stock has its own write (SetVariantStock): a form opened before an
+// order took stock would otherwise put the old count back.
 func (q *Queries) UpdateVariant(ctx context.Context, arg UpdateVariantParams) (ProductVariant, error) {
 	row := q.db.QueryRow(ctx, updateVariant,
-		arg.Stock,
 		arg.Images,
 		arg.ImagePublicIds,
 		arg.SellingPrice,

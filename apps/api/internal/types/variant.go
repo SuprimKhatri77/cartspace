@@ -21,10 +21,10 @@ type CreateProductVariant struct {
 	Properties     []VariantProperty `json:"properties" binding:"max=10,unique=Name,dive"`
 }
 
+// UpdateProductVariant has no stock: that is UpdateStock's own write.
 type UpdateProductVariant struct {
 	Images         []string   `json:"images" binding:"required,min=1,max=5,dive,url"`
 	ImagePublicIDs []string   `json:"image_public_ids" label:"Image public IDs" binding:"required,min=1,max=5,samelen=Images,dive,required" msg_samelen:"Provide one public ID per image"`
-	Stock          *int       `json:"stock" binding:"required,min=0,max=10000"`
 	SellingPrice   int        `json:"selling_price" binding:"required,gt=0,max=100000000"`
 	OfferPrice     *int       `json:"offer_price" binding:"omitempty,gt=0,ltfield=SellingPrice"`
 	OfferExpiresAt *time.Time `json:"offer_expires_at" binding:"omitempty"`

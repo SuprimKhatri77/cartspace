@@ -488,7 +488,6 @@ export type CreateVariantBody = {
      * Cloudinary public IDs, one per image, in the same order
      */
     image_public_ids: Array<string>;
-    stock: number;
     selling_price: number;
     /**
      * Must be below selling_price; omit for no offer.
@@ -499,10 +498,11 @@ export type CreateVariantBody = {
      */
     offer_expires_at?: string;
     /**
-     * A product has at most one default variant.
+     * A product has at most one default: setting it takes it from the current one.
      */
     is_default: boolean;
     is_active: boolean;
+    stock: number;
     /**
      * Option values that identify the variant; names must be unique.
      */
@@ -516,7 +516,7 @@ export type VariantProperty = {
 };
 
 /**
- * The SKU and option combination are fixed at creation.
+ * The SKU and option combination are fixed at creation; stock has its own endpoint.
  */
 export type UpdateVariantBody = {
     images: Array<string>;
@@ -524,7 +524,6 @@ export type UpdateVariantBody = {
      * Cloudinary public IDs, one per image, in the same order
      */
     image_public_ids: Array<string>;
-    stock: number;
     selling_price: number;
     /**
      * Must be below selling_price; omit for no offer.
@@ -535,7 +534,7 @@ export type UpdateVariantBody = {
      */
     offer_expires_at?: string;
     /**
-     * A product has at most one default variant.
+     * A product has at most one default: setting it takes it from the current one.
      */
     is_default: boolean;
     is_active: boolean;

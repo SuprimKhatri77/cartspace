@@ -30,9 +30,10 @@ WHERE id = @id AND product_id = @product_id
 RETURNING *;
 
 -- name: UpdateVariant :one
--- sku and option_combination_key are set at creation and never change here.
+-- sku and option_combination_key are set at creation and never change here,
+-- and stock has its own write (SetVariantStock): a form opened before an
+-- order took stock would otherwise put the old count back.
 UPDATE product_variants SET
-    stock = @stock,
     images = @images,
     image_public_ids = @image_public_ids,
     selling_price = @selling_price,
@@ -45,3 +46,11 @@ RETURNING *;
 
 -- name: DeleteVariant :execresult
 DELETE FROM product_variants WHERE id = @id AND product_id = @product_id;
+
+-- name: ClearOtherDefaults :exec
+-- Makes room for a new default (a product has at most one): unsets the
+-- current default, unless it is keep_id. Runs in the same transaction as
+-- the write that sets the new one.
+UPDATE product_variants SET is_default = FALSE
+WHERE product_id = @product_id AND is_default
+  AND (sqlc.narg(keep_id)::uuid IS NULL OR id <> sqlc.narg(keep_id)::uuid);

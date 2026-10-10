@@ -68,7 +68,6 @@ const variantFields = {
     .min(1)
     .max(5)
     .describe("Cloudinary public IDs, one per image, in the same order"),
-  stock: z.int().min(0).max(10000),
   selling_price: z.int().positive().max(100_000_000),
   offer_price: z
     .int()
@@ -80,7 +79,9 @@ const variantFields = {
   ),
   is_default: z
     .boolean()
-    .describe("A product has at most one default variant."),
+    .describe(
+      "A product has at most one default: setting it takes it from the current one.",
+    ),
   is_active: z.boolean(),
 };
 
@@ -111,6 +112,7 @@ const checkVariant = (b: VariantFields, ctx: z.RefinementCtx) => {
 export const CreateVariantBodySchema = z
   .object({
     ...variantFields,
+    stock: z.int().min(0).max(10000),
     properties: z
       .array(VariantPropertySchema)
       .max(10)
@@ -131,7 +133,8 @@ export const UpdateVariantBodySchema = z
   .superRefine(checkVariant)
   .meta({
     id: "UpdateVariantBody",
-    description: "The SKU and option combination are fixed at creation.",
+    description:
+      "The SKU and option combination are fixed at creation; stock has its own endpoint.",
   });
 export type UpdateVariantBody = z.infer<typeof UpdateVariantBodySchema>;
 

@@ -60,11 +60,19 @@ func (c *Client) SignUpload(folder string, timestamp int64) (UploadSignature, er
 	}, nil
 }
 
-// Owns reports whether an image URL is hosted on this cloud. Only those may
-// be deleted: other clouds' public ids (the demo catalog's "samples/...")
-// could name this cloud's own assets.
-func (c *Client) Owns(imageURL string) bool {
-	return strings.HasPrefix(imageURL, "https://res.cloudinary.com/"+c.cloudName+"/")
+// ProductFolder is where admin uploads land; only images in it are ever
+// deleted.
+const ProductFolder = "cartspace/products"
+
+// Owns reports whether an image is one of our product uploads: hosted on
+// this cloud, in ProductFolder, under the public id it was stored with. Only
+// those may be deleted. Other clouds' public ids (the demo catalog's
+// "samples/...") could name this cloud's own assets, and the public id
+// arrives separately from the URL, so it has to match it.
+func (c *Client) Owns(imageURL, publicID string) bool {
+	return strings.HasPrefix(imageURL, "https://res.cloudinary.com/"+c.cloudName+"/image/upload/") &&
+		strings.HasPrefix(publicID, ProductFolder+"/") &&
+		strings.Contains(imageURL, "/"+publicID+".")
 }
 
 func (c *Client) UploadImage(ctx context.Context, file interface{}, folder string) (string, string, error) {

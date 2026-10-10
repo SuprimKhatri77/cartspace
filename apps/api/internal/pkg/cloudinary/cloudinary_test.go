@@ -27,14 +27,24 @@ func TestSignUpload(t *testing.T) {
 
 func TestOwns(t *testing.T) {
 	c, _ := New("cartspace", "k", "s")
-	for url, want := range map[string]bool{
-		"https://res.cloudinary.com/cartspace/image/upload/v1/cartspace/products/a.jpg": true,
-		"https://res.cloudinary.com/demo/image/upload/samples/two-ladies.jpg":           false,
-		"https://res.cloudinary.com/cartspace-evil/image/upload/a.jpg":                  false,
-		"https://example.com/res.cloudinary.com/cartspace/a.jpg":                        false,
+	const own = "https://res.cloudinary.com/cartspace/image/upload/v1/cartspace/products/a1.jpg"
+	for _, tc := range []struct {
+		url, publicID string
+		want          bool
+	}{
+		{own, "cartspace/products/a1", true},
+		// another cloud, even with a public id that exists on ours
+		{"https://res.cloudinary.com/demo/image/upload/samples/two-ladies.jpg", "samples/two-ladies", false},
+		{"https://res.cloudinary.com/cartspace-evil/image/upload/cartspace/products/a1.jpg", "cartspace/products/a1", false},
+		{"https://example.com/res.cloudinary.com/cartspace/image/upload/cartspace/products/a1.jpg", "cartspace/products/a1", false},
+		// our URL, but a public id that isn't its own or isn't an upload of ours
+		{own, "cartspace/products/b2", false},
+		{own, "cartspace/products/a", false},
+		{"https://res.cloudinary.com/cartspace/image/upload/v1/brand/logo.png", "brand/logo", false},
+		{own, "", false},
 	} {
-		if got := c.Owns(url); got != want {
-			t.Errorf("Owns(%q) = %v, want %v", url, got, want)
+		if got := c.Owns(tc.url, tc.publicID); got != tc.want {
+			t.Errorf("Owns(%q, %q) = %v, want %v", tc.url, tc.publicID, got, tc.want)
 		}
 	}
 }

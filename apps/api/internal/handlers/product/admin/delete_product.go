@@ -16,7 +16,8 @@ import (
 
 // DeleteProduct deletes a product; its variants, options and cart items go
 // with it (ON DELETE CASCADE), and past orders keep their copy. Its images
-// on our Cloudinary cloud are then removed in the background.
+// are then removed from Cloudinary in the background, except those that
+// past orders still show.
 func DeleteProduct(queries *db.Queries, cld *cloudinary.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		productID, ok := httpx.PathUUID(c, "productID", constants.InvalidProductID, "product ID")
@@ -31,6 +32,16 @@ func DeleteProduct(queries *db.Queries, cld *cloudinary.Client) gin.HandlerFunc 
 			return
 		}
 
+		urls := make([]string, len(images))
+		for i, img := range images {
+			urls[i] = img.Url
+		}
+		ordered, err := queries.OrderedImages(ctx, urls)
+		if err != nil {
+			httpx.Internal(c, "failed to check ordered images", err, "product_id", productID)
+			return
+		}
+
 		result, err := queries.DeleteProduct(ctx, productID)
 		if err != nil {
 			httpx.Internal(c, "failed to delete product", err, "product_id", productID)
@@ -41,7 +52,9 @@ func DeleteProduct(queries *db.Queries, cld *cloudinary.Client) gin.HandlerFunc 
 			return
 		}
 
-		go deleteImages(cld, images)
+		if ids := deletableImages(cld, images, ordered); len(ids) > 0 {
+			go deleteImages(cld, ids)
+		}
 
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
@@ -50,24 +63,35 @@ func DeleteProduct(queries *db.Queries, cld *cloudinary.Client) gin.HandlerFunc 
 	}
 }
 
-// deleteImages removes images hosted on our cloud, best effort. Images
-// elsewhere (the demo catalog's, on Cloudinary's demo cloud) are skipped:
-// their public ids could name our own assets.
-func deleteImages(cld *cloudinary.Client, images []db.ListProductImagesRow) {
+// deletableImages picks the public ids safe to delete: our own uploads
+// (see Client.Owns), once each, and none that a past order shows.
+func deletableImages(cld *cloudinary.Client, images []db.ListProductImagesRow, ordered []string) []string {
 	if cld == nil {
-		return
+		return nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
+	keep := make(map[string]bool, len(ordered))
+	for _, url := range ordered {
+		keep[url] = true
+	}
 	seen := map[string]bool{}
+	var ids []string
 	for _, img := range images {
-		publicID := img.PublicID
-		if publicID == "" || seen[publicID] || !cld.Owns(img.Url) {
+		if keep[img.Url] || seen[img.PublicID] || !cld.Owns(img.Url, img.PublicID) {
 			continue
 		}
-		seen[publicID] = true
-		if err := cld.DeleteImage(ctx, publicID); err != nil {
-			slog.Warn("cloudinary: delete image", "public_id", publicID, "err", err)
+		seen[img.PublicID] = true
+		ids = append(ids, img.PublicID)
+	}
+	return ids
+}
+
+// deleteImages removes images from Cloudinary, best effort.
+func deleteImages(cld *cloudinary.Client, publicIDs []string) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	for _, id := range publicIDs {
+		if err := cld.DeleteImage(ctx, id); err != nil {
+			slog.Warn("cloudinary: delete image", "public_id", id, "err", err)
 		}
 	}
 }
