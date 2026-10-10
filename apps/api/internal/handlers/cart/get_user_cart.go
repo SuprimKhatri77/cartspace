@@ -5,7 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
-	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
@@ -26,9 +25,7 @@ func GetUserCart(queries repository.CartRepository) gin.HandlerFunc {
 			return
 		}
 
-		var userCart = []db.GetUserCartRow{}
-
-		userCart, err = queries.GetUserCart(ctx, userID)
+		userCart, err := queries.GetUserCart(ctx, userID)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, types.APIResponse{

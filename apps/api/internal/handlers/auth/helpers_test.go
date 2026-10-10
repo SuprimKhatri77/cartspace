@@ -19,35 +19,34 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
-	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type mockAuthRepo struct {
-	createUserFn         func(ctx context.Context, params dbgen.CreateUserParams) (dbgen.User, error)
-	createRefreshTokenFn func(ctx context.Context, params dbgen.CreateRefreshTokenParams) (dbgen.RefreshToken, error)
+	createUserFn         func(ctx context.Context, params db.CreateUserParams) (db.User, error)
+	createRefreshTokenFn func(ctx context.Context, params db.CreateRefreshTokenParams) (db.RefreshToken, error)
 
-	getUserByEmailFn func(ctx context.Context, email string) (dbgen.User, error)
-	getUserByID      func(ctx context.Context, id pgtype.UUID) (dbgen.User, error)
+	getUserByEmailFn func(ctx context.Context, email string) (db.User, error)
+	getUserByID      func(ctx context.Context, id pgtype.UUID) (db.User, error)
 
 	revokeRefreshTokenFn func(ctx context.Context, params db.RevokeRefreshTokenParams) (pgconn.CommandTag, error)
 
-	getRefreshTokenFn func(ctx context.Context, params db.GetRefreshTokenParams) (dbgen.RefreshToken, error)
+	getRefreshTokenFn func(ctx context.Context, params db.GetRefreshTokenParams) (db.RefreshToken, error)
 }
 
-func (m *mockAuthRepo) CreateUser(ctx context.Context, params dbgen.CreateUserParams) (dbgen.User, error) {
+func (m *mockAuthRepo) CreateUser(ctx context.Context, params db.CreateUserParams) (db.User, error) {
 	return m.createUserFn(ctx, params)
 }
 
-func (m *mockAuthRepo) CreateRefreshToken(ctx context.Context, params dbgen.CreateRefreshTokenParams) (dbgen.RefreshToken, error) {
+func (m *mockAuthRepo) CreateRefreshToken(ctx context.Context, params db.CreateRefreshTokenParams) (db.RefreshToken, error) {
 	return m.createRefreshTokenFn(ctx, params)
 }
 
-func (m *mockAuthRepo) GetUserByEmail(ctx context.Context, email string) (dbgen.User, error) {
+func (m *mockAuthRepo) GetUserByEmail(ctx context.Context, email string) (db.User, error) {
 	return m.getUserByEmailFn(ctx, email)
 }
-func (m *mockAuthRepo) GetUserByID(ctx context.Context, id pgtype.UUID) (dbgen.User, error) {
+func (m *mockAuthRepo) GetUserByID(ctx context.Context, id pgtype.UUID) (db.User, error) {
 	return m.getUserByID(ctx, id)
 }
 
@@ -55,7 +54,7 @@ func (m *mockAuthRepo) RevokeRefreshToken(ctx context.Context, params db.RevokeR
 	return m.revokeRefreshTokenFn(ctx, params)
 }
 
-func (m *mockAuthRepo) GetRefreshToken(ctx context.Context, params db.GetRefreshTokenParams) (dbgen.RefreshToken, error) {
+func (m *mockAuthRepo) GetRefreshToken(ctx context.Context, params db.GetRefreshTokenParams) (db.RefreshToken, error) {
 	return m.getRefreshTokenFn(ctx, params)
 }
 
@@ -68,8 +67,9 @@ func testConfig() *config.Config {
 
 func generateRefreshToken(userID string) string {
 	claims := jwt.MapClaims{
-		"user_id": userID,
-		"exp":     time.Now().Add(7 * 24 * time.Hour).Unix(),
+		"user_id":    userID,
+		"session_id": "660e8400-e29b-41d4-a716-446655440000",
+		"exp":        time.Now().Add(7 * 24 * time.Hour).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -78,7 +78,7 @@ func generateRefreshToken(userID string) string {
 	return signed
 }
 
-func fakeUser() dbgen.User {
+func fakeUser() db.User {
 	idStr := "550e8400-e29b-41d4-a716-446655440000"
 	hash, _ := bcrypt.GenerateFromPassword([]byte("secret123"), bcrypt.DefaultCost)
 
@@ -88,7 +88,7 @@ func fakeUser() dbgen.User {
 		slog.Error("Invalid user id format")
 	}
 
-	return dbgen.User{
+	return db.User{
 		ID:           userID,
 		Name:         "suprim",
 		Email:        "suprim@example.com",
@@ -97,7 +97,7 @@ func fakeUser() dbgen.User {
 	}
 }
 
-func fakeRefreshToken() dbgen.RefreshToken {
+func fakeRefreshToken() db.RefreshToken {
 	userIDStr := "550e8400-e29b-41d4-a716-446655440000"
 	idStr := "770e7700-e29b-41d4-a716-446655440000"
 	sessionID := uuid.New()
@@ -115,7 +115,7 @@ func fakeRefreshToken() dbgen.RefreshToken {
 	if err := id.Scan(idStr); err != nil {
 		slog.Error("invalid id format")
 	}
-	return dbgen.RefreshToken{
+	return db.RefreshToken{
 		ID:        id,
 		TokenHash: fmt.Sprintf("%x", tokenHash),
 		UserID:    userID,

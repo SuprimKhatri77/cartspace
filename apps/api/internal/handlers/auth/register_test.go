@@ -29,7 +29,7 @@ func TestRegisterUser_Success(t *testing.T) {
 		r.POST("/auth/register", authHandler.RegisterUser(repo, testConfig()))
 	})
 
-	w := makeRequest(t, router, "POST", "/auth/registers", map[string]string{
+	w := makeRequest(t, router, "POST", "/auth/register", map[string]string{
 		"name":     "Suprim",
 		"email":    "suprim@example.com",
 		"password": "secret123",
@@ -88,7 +88,9 @@ func TestRegisterUser_DuplicateEmail(t *testing.T) {
 	}
 
 	var resp types.APIResponse
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
 	if resp.Message != "User already exists." {
 		t.Errorf("unexpected message: %s", resp.Message)
 	}

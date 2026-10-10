@@ -15,8 +15,8 @@ type DB struct {
 	Pool *pgxpool.Pool
 }
 
-// New creates a new database connection pool.
-func new(ctx context.Context, connString string) (*DB, error) {
+// openPool creates a connection pool and verifies it with a ping.
+func openPool(ctx context.Context, connString string) (*DB, error) {
 	config, err := pgxpool.ParseConfig(connString)
 	if err != nil {
 		log.Printf("Unable to parse DATABASE_URL: %v", err)
@@ -49,7 +49,7 @@ func ConnectWithRetry(ctx context.Context, connString string, maxRetries int) (*
 		err      error
 	)
 	for i := range maxRetries {
-		database, err = new(ctx, connString)
+		database, err = openPool(ctx, connString)
 		if err == nil {
 			return database, nil
 		}

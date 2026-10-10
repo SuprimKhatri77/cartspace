@@ -11,7 +11,7 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
-const PAGE_LIMIT int64 = 20
+const pageLimit int64 = 20
 
 // this is for /admin/products route to display products on the table
 func GetPaginatedProducts(queries repository.ProductRepository) gin.HandlerFunc {
@@ -57,7 +57,7 @@ func GetPaginatedProducts(queries repository.ProductRepository) gin.HandlerFunc 
 			})
 			return
 		}
-		pageCount := (total + PAGE_LIMIT - 1) / PAGE_LIMIT
+		pageCount := (total + pageLimit - 1) / pageLimit
 
 		if int64(page) > pageCount {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
@@ -68,10 +68,10 @@ func GetPaginatedProducts(queries repository.ProductRepository) gin.HandlerFunc 
 			return
 		}
 
-		offset := PAGE_LIMIT * int64(page-1)
+		offset := pageLimit * int64(page-1)
 
 		products, err := queries.AdminProductsList(ctx, db.AdminProductsListParams{
-			Limit:  int32(PAGE_LIMIT),
+			Limit:  int32(pageLimit),
 			Offset: int32(offset),
 		})
 

@@ -16,7 +16,7 @@ import (
 func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
-		const PAGE_LIMIT = 40
+		const pageLimit = 40
 
 		slug := c.Param("slug")
 		if slug == "" {
@@ -81,7 +81,7 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 			return
 		}
 
-		totalPages := (total + PAGE_LIMIT - 1) / PAGE_LIMIT
+		totalPages := (total + pageLimit - 1) / pageLimit
 		if page > int(totalPages) {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
@@ -91,14 +91,14 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 			return
 		}
 
-		offset := PAGE_LIMIT * (page - 1)
+		offset := pageLimit * (page - 1)
 
 		slog.Debug("query params",
 			"slug", slug,
 			"priceMin", priceMin,
 			"priceMax", priceMax,
 			"offset", offset,
-			"limit", PAGE_LIMIT,
+			"limit", pageLimit,
 		)
 
 		g, ctx := errgroup.WithContext(ctx)
@@ -112,7 +112,7 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 			case "price_asc":
 				rows, err2 := queries.ListProductsByCategoryPriceAsc(ctx, db.ListProductsByCategoryPriceAscParams{
 					Slug:    slug,
-					Limit:   PAGE_LIMIT,
+					Limit:   pageLimit,
 					Offset:  int32(offset),
 					Column2: int32(priceMin * 100),
 					Column3: int32(priceMax * 100),
@@ -134,7 +134,7 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 			case "price_desc":
 				rows, err2 := queries.ListProductsByCategoryPriceDesc(ctx, db.ListProductsByCategoryPriceDescParams{
 					Slug:    slug,
-					Limit:   PAGE_LIMIT,
+					Limit:   pageLimit,
 					Offset:  int32(offset),
 					Column2: int32(priceMin * 100),
 					Column3: int32(priceMax * 100),
@@ -156,7 +156,7 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 				slog.Debug("i am being triggered")
 				products, err = queries.ListProductsByCategory(ctx, db.ListProductsByCategoryParams{
 					Slug:    slug,
-					Limit:   PAGE_LIMIT,
+					Limit:   pageLimit,
 					Offset:  int32(offset),
 					Column2: int32(priceMin * 100),
 					Column3: int32(priceMax * 100),

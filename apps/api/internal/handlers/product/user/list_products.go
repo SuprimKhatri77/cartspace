@@ -11,11 +11,11 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
-// this hanlder is to list products on the homepage with default variant's SP and OP
+// this handler is to list products on the homepage with default variant's SP and OP
 func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
-		const PAGE_LIMIT int64 = 20
+		const pageLimit int64 = 20
 
 		page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
 
@@ -56,7 +56,7 @@ func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 			})
 			return
 		}
-		pageCount := (total + PAGE_LIMIT - 1) / PAGE_LIMIT
+		pageCount := (total + pageLimit - 1) / pageLimit
 
 		if int64(page) > pageCount {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
@@ -67,10 +67,10 @@ func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 			return
 		}
 
-		offset := PAGE_LIMIT * int64(page-1)
+		offset := pageLimit * int64(page-1)
 
 		products, err := queries.ListActiveProducts(ctx, db.ListActiveProductsParams{
-			Limit:  int32(PAGE_LIMIT),
+			Limit:  int32(pageLimit),
 			Offset: int32(offset),
 		})
 

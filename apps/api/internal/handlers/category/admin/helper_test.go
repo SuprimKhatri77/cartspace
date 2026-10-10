@@ -28,7 +28,7 @@ type mockCategoryRepo struct {
 
 	getPaginatedCategoriesFn func(ctx context.Context, params db.GetPaginatedCategoriesParams) ([]db.Category, error)
 
-	getCategoryByIdFn func(ctx context.Context, id pgtype.UUID) (db.Category, error)
+	getCategoryByIDFn func(ctx context.Context, id pgtype.UUID) (db.Category, error)
 
 	getCategoryBySlugFn func(ctx context.Context, slug string) (db.Category, error)
 
@@ -60,7 +60,7 @@ func (m *mockCategoryRepo) GetPaginatedCategories(ctx context.Context, params db
 }
 
 func (m *mockCategoryRepo) GetCategoryByID(ctx context.Context, id pgtype.UUID) (db.Category, error) {
-	return m.getCategoryByIdFn(ctx, id)
+	return m.getCategoryByIDFn(ctx, id)
 
 }
 

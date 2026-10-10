@@ -134,7 +134,7 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 			})
 			return
 		}
-		defer tx.Rollback(ctx)
+		defer func() { _ = tx.Rollback(ctx) }()
 
 		qtx := queries.WithTx(tx)
 

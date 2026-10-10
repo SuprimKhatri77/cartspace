@@ -16,7 +16,7 @@ import (
 func TestLogout_Success(t *testing.T) {
 	repo := &mockAuthRepo{
 		revokeRefreshTokenFn: func(_ context.Context, _ db.RevokeRefreshTokenParams) (pgconn.CommandTag, error) {
-			return pgconn.NewCommandTag("token revoked"), nil
+			return pgconn.NewCommandTag("UPDATE 1"), nil
 		},
 	}
 	router := setupRouter(func(r *gin.Engine) {

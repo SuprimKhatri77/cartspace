@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	authHandler "github.com/suprimkhatri77/cartspace/backend/internal/handlers/auth"
 )
@@ -25,7 +26,10 @@ func TestRefreshToken_Success(t *testing.T) {
 		},
 
 		revokeRefreshTokenFn: func(_ context.Context, _ db.RevokeRefreshTokenParams) (pgconn.CommandTag, error) {
-			return pgconn.CommandTag{}, nil
+			return pgconn.NewCommandTag("UPDATE 1"), nil
+		},
+		getUserByID: func(_ context.Context, _ pgtype.UUID) (db.User, error) {
+			return fakeUser(), nil
 		},
 	}
 
