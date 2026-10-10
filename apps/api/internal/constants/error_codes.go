@@ -5,6 +5,7 @@ const (
 	InternalServerError = "INTERNAL_SERVER_ERROR"
 	ValidationFailed    = "VALIDATION_FAILED"
 	InvalidPageParam    = "INVALID_PAGE_PARAMETER"
+	InvalidPriceFilter  = "INVALID_PRICE_FILTER"
 	InvalidIDFormat     = "INVALID_ID_FORMAT"
 
 	// auth

@@ -15,6 +15,10 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// maxPriceFilter bounds price_min/price_max (whole currency units) so the
+// cents conversion fits in int32; it matches the max variant price.
+const maxPriceFilter = 1_000_000
+
 func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
@@ -46,21 +50,21 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 		}
 
 		priceMin, err := strconv.Atoi(priceMinStr)
-		if err != nil || priceMin < 0 {
+		if err != nil || priceMin < 0 || priceMin > maxPriceFilter {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
-				Message: "Invalid page parameter",
-				Code:    constants.InvalidPageParam,
+				Message: "Invalid price filter",
+				Code:    constants.InvalidPriceFilter,
 			})
 			return
 		}
 
 		priceMax, err := strconv.Atoi(priceMaxStr)
-		if err != nil || priceMax < 0 {
+		if err != nil || priceMax < 0 || priceMax > maxPriceFilter {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
-				Message: "Invalid page parameter",
-				Code:    constants.InvalidPageParam,
+				Message: "Invalid price filter",
+				Code:    constants.InvalidPriceFilter,
 			})
 			return
 		}
@@ -98,9 +102,9 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 			return
 		}
 
-		// an empty result still returns page 1 with filter options and price range
-		totalPages := (total + pageLimit - 1) / pageLimit
-		if total > 0 && page > int(totalPages) {
+		// an empty result still has page 1 (with filter options and price range)
+		totalPages := max((total+pageLimit-1)/pageLimit, 1)
+		if page > int(totalPages) {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
 				Message: "Invalid page parameter",
