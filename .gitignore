@@ -40,3 +40,6 @@ yarn-error.log*
 
 tmp/
 *.log
+# Claude (local only)
+CLAUDE.local.md
+.claude/
