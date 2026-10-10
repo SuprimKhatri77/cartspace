@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/suprimkhatri77/cartspace/backend/internal/checkout"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	"github.com/suprimkhatri77/cartspace/backend/internal/database"
 	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
@@ -18,6 +19,7 @@ type App struct {
 	Queries   *dbgen.Queries
 	DB        *database.DB
 	CldClient *cloudinary.Client
+	Checkout  *checkout.Service
 	Router    *gin.Engine
 }
 
@@ -47,7 +49,10 @@ func New(ctx context.Context) (*App, error) {
 	queries := dbgen.New(db.Pool)
 	validator.Init()
 
-	r, err := buildRouter(cfg, queries, cldClient, db)
+	provider := initPayments(cfg)
+	checkoutSvc := checkout.NewService(db.Pool, queries, provider, cfg.FrontendURL)
+
+	r, err := buildRouter(cfg, queries, cldClient, db, provider, checkoutSvc)
 	if err != nil {
 		db.Close()
 		return nil, err
@@ -58,6 +63,7 @@ func New(ctx context.Context) (*App, error) {
 		Queries:   queries,
 		DB:        db,
 		CldClient: cldClient,
+		Checkout:  checkoutSvc,
 		Router:    r,
 	}, nil
 }

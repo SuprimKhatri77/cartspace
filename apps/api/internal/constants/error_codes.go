@@ -46,4 +46,16 @@ const (
 	CartQuantityLimit  = "CART_QUANTITY_LIMIT"
 	CartFull           = "CART_FULL"
 	CartItemNotFound   = "CART_ITEM_NOT_FOUND"
+
+	// checkout and orders
+	CartEmpty               = "CART_EMPTY"
+	CartHasIssues           = "CART_HAS_ISSUES"
+	PaymentsUnavailable     = "PAYMENTS_UNAVAILABLE"
+	PaymentProviderError    = "PAYMENT_PROVIDER_ERROR"
+	InvalidWebhookSignature = "INVALID_WEBHOOK_SIGNATURE"
+	InvalidSessionID        = "INVALID_SESSION_ID"
+	OrderNotFound           = "ORDER_NOT_FOUND"
+	InvalidOrderNumber      = "INVALID_ORDER_NUMBER"
+	AddressNotFound         = "ADDRESS_NOT_FOUND"
+	InvalidAddressID        = "INVALID_ADDRESS_ID"
 )

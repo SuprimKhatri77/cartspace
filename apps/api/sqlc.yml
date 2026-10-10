@@ -22,3 +22,8 @@ sql:
             go_type: "github.com/jackc/pgx/v5/pgtype.Int4"
           - column: "variant_prices.offer_price"
             go_type: "github.com/jackc/pgx/v5/pgtype.Int4"
+          # JSONB snapshots go out as JSON, not base64 bytes.
+          - column: "orders.shipping_address"
+            go_type: "encoding/json.RawMessage"
+          - column: "order_items.options"
+            go_type: "encoding/json.RawMessage"

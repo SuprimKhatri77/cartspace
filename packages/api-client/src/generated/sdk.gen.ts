@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddCartItemData, AddCartItemErrors, AddCartItemResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminSetVariantStockData, AdminSetVariantStockErrors, AdminSetVariantStockResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ClearCartData, ClearCartErrors, ClearCartResponses, GetCartData, GetCartErrors, GetCartResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListProductsData, ListProductsErrors, ListProductsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveCartItemData, RemoveCartItemErrors, RemoveCartItemResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses } from './types.gen';
+import type { AddCartItemData, AddCartItemErrors, AddCartItemResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminSetVariantStockData, AdminSetVariantStockErrors, AdminSetVariantStockResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ClearCartData, ClearCartErrors, ClearCartResponses, DeleteAddressData, DeleteAddressErrors, DeleteAddressResponses, GetCartData, GetCartErrors, GetCartResponses, GetCheckoutSessionData, GetCheckoutSessionErrors, GetCheckoutSessionResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetOrderData, GetOrderErrors, GetOrderResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, ListAddressesData, ListAddressesErrors, ListAddressesResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListOrdersData, ListOrdersErrors, ListOrdersResponses, ListProductsData, ListProductsErrors, ListProductsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveCartItemData, RemoveCartItemErrors, RemoveCartItemResponses, StartCheckoutData, StartCheckoutErrors, StartCheckoutResponses, StripeWebhookData, StripeWebhookErrors, StripeWebhookResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -479,4 +479,113 @@ export const updateCartItem = <ThrowOnError extends boolean = false>(options: Op
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Start checkout
+ *
+ * Reserves the cart's stock in a pending order (replacing the user's unpaid checkouts) and opens a Stripe Checkout page for 31 minutes. Send the shopper to `checkout_url`; Stripe returns them to /checkout/success or /cart. The cart is emptied of the bought lines once payment lands.
+ */
+export const startCheckout = <ThrowOnError extends boolean = false>(options: Options<StartCheckoutData, ThrowOnError>): RequestResult<StartCheckoutResponses, StartCheckoutErrors, ThrowOnError> => (options.client ?? client).post<StartCheckoutResponses, StartCheckoutErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/checkout',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * The order behind a checkout
+ *
+ * For the success page. A pending order is first checked with Stripe, so it turns paid even before the webhook arrives.
+ */
+export const getCheckoutSession = <ThrowOnError extends boolean = false>(options: Options<GetCheckoutSessionData, ThrowOnError>): RequestResult<GetCheckoutSessionResponses, GetCheckoutSessionErrors, ThrowOnError> => (options.client ?? client).get<GetCheckoutSessionResponses, GetCheckoutSessionErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/checkout/sessions/{sessionID}',
+    ...options
+});
+
+/**
+ * Stripe webhook
+ *
+ * Called by Stripe, authenticated by the Stripe-Signature header. Handles checkout.session.completed, async_payment_succeeded, expired and async_payment_failed; each event id is applied once. A 500 makes Stripe retry.
+ */
+export const stripeWebhook = <ThrowOnError extends boolean = false>(options: Options<StripeWebhookData, ThrowOnError>): RequestResult<StripeWebhookResponses, StripeWebhookErrors, ThrowOnError> => (options.client ?? client).post<StripeWebhookResponses, StripeWebhookErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/webhooks/stripe',
+    ...options
+});
+
+/**
+ * My orders
+ *
+ * Placed orders, newest first, 10 per page. Abandoned checkouts are left out.
+ */
+export const listOrders = <ThrowOnError extends boolean = false>(options?: Options<ListOrdersData, ThrowOnError>): RequestResult<ListOrdersResponses, ListOrdersErrors, ThrowOnError> => (options?.client ?? client).get<ListOrdersResponses, ListOrdersErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/orders',
+    ...options
+});
+
+/**
+ * One of my orders
+ */
+export const getOrder = <ThrowOnError extends boolean = false>(options: Options<GetOrderData, ThrowOnError>): RequestResult<GetOrderResponses, GetOrderErrors, ThrowOnError> => (options.client ?? client).get<GetOrderResponses, GetOrderErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/orders/{number}',
+    ...options
+});
+
+/**
+ * My saved addresses
+ *
+ * Saved at checkout with save_address; at most 10.
+ */
+export const listAddresses = <ThrowOnError extends boolean = false>(options?: Options<ListAddressesData, ThrowOnError>): RequestResult<ListAddressesResponses, ListAddressesErrors, ThrowOnError> => (options?.client ?? client).get<ListAddressesResponses, ListAddressesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/addresses',
+    ...options
+});
+
+/**
+ * Delete a saved address
+ *
+ * Orders keep their own copy of the address.
+ */
+export const deleteAddress = <ThrowOnError extends boolean = false>(options: Options<DeleteAddressData, ThrowOnError>): RequestResult<DeleteAddressResponses, DeleteAddressErrors, ThrowOnError> => (options.client ?? client).delete<DeleteAddressResponses, DeleteAddressErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/addresses/{addressID}',
+    ...options
 });

@@ -9,6 +9,7 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	"github.com/suprimkhatri77/cartspace/backend/internal/database"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/cloudinary"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/payments"
 )
 
 func initDB(ctx context.Context, cfg *config.Config) (*database.DB, error) {
@@ -28,6 +29,25 @@ func initCloudinary(cfg *config.Config) (*cloudinary.Client, error) {
 		return nil, fmt.Errorf("cloudinary: %w", err)
 	}
 	return c, nil
+}
+
+// initPayments returns Stripe, or nil (checkout disabled) without a key so
+// the API still runs where payments aren't configured, such as CI.
+func initPayments(cfg *config.Config) payments.Provider {
+	if cfg.StripeSecretKey == "" {
+		slog.Warn("payments disabled: STRIPE_SECRET_KEY is not set")
+		return nil
+	}
+	if cfg.FrontendURL == "" {
+		slog.Warn("payments disabled: FRONTEND_URL is needed for the checkout return pages")
+		return nil
+	}
+	provider, err := payments.NewStripe(cfg.StripeSecretKey, cfg.StripeWebhookSecrets)
+	if err != nil {
+		slog.Warn("payments disabled", "err", err)
+		return nil
+	}
+	return provider
 }
 
 func initLogger() {

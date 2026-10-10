@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/suprimkhatri77/cartspace/backend/internal/checkout"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	"github.com/suprimkhatri77/cartspace/backend/internal/database"
@@ -13,6 +14,7 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/middleware"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/cloudinary"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/payments"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/routes"
 	routesconfig "github.com/suprimkhatri77/cartspace/backend/internal/routes/config"
@@ -23,6 +25,8 @@ func buildRouter(
 	queries *dbgen.Queries,
 	cld *cloudinary.Client,
 	db *database.DB,
+	provider payments.Provider,
+	checkoutSvc *checkout.Service,
 ) (*gin.Engine, error) {
 	r := gin.New()
 	// Only listed proxies may set X-Forwarded-For; otherwise ClientIP() is
@@ -52,6 +56,8 @@ func buildRouter(
 		PgxPool:     db.Pool,
 		VariantRepo: repository.NewVariantRepository(queries),
 		CartRepo:    repository.NewCartRepository(queries),
+		Payments:    provider,
+		Checkout:    checkoutSvc,
 	})
 	return r, nil
 }

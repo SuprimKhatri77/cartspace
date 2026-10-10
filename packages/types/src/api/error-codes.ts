@@ -45,6 +45,17 @@ export const ErrorCodeSchema = z
     "CART_QUANTITY_LIMIT",
     "CART_FULL",
     "CART_ITEM_NOT_FOUND",
+    // checkout and orders
+    "CART_EMPTY",
+    "CART_HAS_ISSUES",
+    "PAYMENTS_UNAVAILABLE",
+    "PAYMENT_PROVIDER_ERROR",
+    "INVALID_WEBHOOK_SIGNATURE",
+    "INVALID_SESSION_ID",
+    "ORDER_NOT_FOUND",
+    "INVALID_ORDER_NUMBER",
+    "ADDRESS_NOT_FOUND",
+    "INVALID_ADDRESS_ID",
   ])
   .meta({ id: "ErrorCode", description: "Machine-readable failure code." });
 

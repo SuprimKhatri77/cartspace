@@ -16,7 +16,7 @@ func TestClientIPIgnoresForwardedForUnlessProxyTrusted(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	clientIP := func(t *testing.T, trusted []string) string {
-		r, err := buildRouter(&config.Config{TrustedProxies: trusted}, nil, nil, &database.DB{})
+		r, err := buildRouter(&config.Config{TrustedProxies: trusted}, nil, nil, &database.DB{}, nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -35,7 +35,7 @@ func TestClientIPIgnoresForwardedForUnlessProxyTrusted(t *testing.T) {
 	if got := clientIP(t, []string{"10.0.0.0/8"}); got != "6.6.6.6" {
 		t.Fatalf("trusted proxy: ClientIP = %q, want the forwarded address", got)
 	}
-	if _, err := buildRouter(&config.Config{TrustedProxies: []string{"not-an-ip"}}, nil, nil, &database.DB{}); err == nil {
+	if _, err := buildRouter(&config.Config{TrustedProxies: []string{"not-an-ip"}}, nil, nil, &database.DB{}, nil, nil); err == nil {
 		t.Fatal("invalid TRUSTED_PROXIES must fail startup")
 	}
 }
@@ -43,7 +43,7 @@ func TestClientIPIgnoresForwardedForUnlessProxyTrusted(t *testing.T) {
 func TestUnknownRouteAndMethodReturnJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	r, err := buildRouter(&config.Config{}, nil, nil, &database.DB{})
+	r, err := buildRouter(&config.Config{}, nil, nil, &database.DB{}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
