@@ -206,6 +206,8 @@ export function OrderView({ number }: { number: number }) {
   }
 
   const step = timelineStep(order.status);
+  // Paid (or later) orders make their buyer a verified reviewer.
+  const reviewable = step >= 0;
   const a = order.shipping_address;
 
   return (
@@ -293,6 +295,14 @@ export function OrderView({ number }: { number: number }) {
                 <p className="mt-1 text-xs text-muted-foreground tabular-nums">
                   {item.quantity} × {formatPrice(item.unit_price)}
                 </p>
+                {reviewable && item.product_id && (
+                  <Link
+                    href={`/products/${item.product_slug}?review=1#reviews`}
+                    className="link-underline mt-2 inline-block text-xs"
+                  >
+                    Write a review
+                  </Link>
+                )}
               </div>
               <p className="text-sm tabular-nums">
                 {formatPrice(item.line_total)}
