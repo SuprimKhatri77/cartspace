@@ -18,6 +18,7 @@ func RequireAdmin(c *gin.Context) {
 			Message: "Forbidden",
 			Code:    constants.Forbidden,
 		})
+		c.Abort()
 		return
 	}
 
