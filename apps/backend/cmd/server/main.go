@@ -38,9 +38,10 @@ func main() {
 	}
 
 	ctx := context.Background()
-	db, err := database.New(ctx, cfg.DatabaseURL)
+	db, err := database.ConnectWithRetry(ctx, cfg.DatabaseURL, 10)
 	if err != nil {
-		log.Fatalf("database: %v", err)
+		slog.Error("error", "err", err)
+		os.Exit(1)
 	}
 
 	// automatically called when the program is exited

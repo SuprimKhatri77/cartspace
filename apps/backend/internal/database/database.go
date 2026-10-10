@@ -2,7 +2,10 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -13,7 +16,7 @@ type DB struct {
 }
 
 // New creates a new database connection pool.
-func New(ctx context.Context, connString string) (*DB, error) {
+func new(ctx context.Context, connString string) (*DB, error) {
 	config, err := pgxpool.ParseConfig(connString)
 	if err != nil {
 		log.Printf("Unable to parse DATABASE_URL: %v", err)
@@ -38,4 +41,20 @@ func (db *DB) Close() {
 	if db != nil && db.Pool != nil {
 		db.Pool.Close()
 	}
+}
+
+func ConnectWithRetry(ctx context.Context, connString string, maxRetries int) (*DB, error) {
+	var (
+		database *DB
+		err      error
+	)
+	for i := range maxRetries {
+		database, err = new(ctx, connString)
+		if err == nil {
+			return database, nil
+		}
+		slog.Warn("failed to connect to database, retrying...", "attempt", i+1, "max", maxRetries, "err", err)
+		time.Sleep(2 * time.Second)
+	}
+	return nil, fmt.Errorf("failed to open database after %d attempts: %w", maxRetries, err)
 }
