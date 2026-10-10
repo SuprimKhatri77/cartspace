@@ -106,6 +106,16 @@ func (s *Stripe) ExpireSession(ctx context.Context, id string) error {
 	return nil
 }
 
+func (s *Stripe) Refund(ctx context.Context, paymentIntentID, idempotencyKey string) (string, error) {
+	params := &stripe.RefundCreateParams{PaymentIntent: stripe.String(paymentIntentID)}
+	params.SetIdempotencyKey(idempotencyKey)
+	refund, err := s.client.V1Refunds.Create(ctx, params)
+	if err != nil {
+		return "", fmt.Errorf("stripe: refund: %w", err)
+	}
+	return refund.ID, nil
+}
+
 func (s *Stripe) ParseEvent(payload []byte, signature string) (Event, error) {
 	var (
 		event stripe.Event

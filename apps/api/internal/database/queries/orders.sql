@@ -134,3 +134,51 @@ FROM orders o
 WHERE o.user_id = $1 AND o.status <> 'pending' AND NOT (o.status = 'cancelled' AND o.paid_at IS NULL)
 ORDER BY o.created_at DESC, o.id DESC
 LIMIT $2 OFFSET $3;
+
+-- Admin: every order, filtered by status and either an order number or a
+-- piece of the email (both optional).
+
+-- name: CountAdminOrders :one
+SELECT COUNT(*) FROM orders o
+WHERE (sqlc.narg(status)::text IS NULL OR o.status = sqlc.narg(status)::text)
+  AND (sqlc.narg(number)::bigint IS NULL OR o.number = sqlc.narg(number)::bigint)
+  AND (sqlc.narg(email_pattern)::text IS NULL OR o.email ILIKE sqlc.narg(email_pattern)::text);
+
+-- name: AdminListOrders :many
+SELECT
+    o.id, o.number, o.status, o.total, o.currency, o.email, u.name AS customer_name,
+    (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.order_id = o.id)::int AS item_count,
+    o.created_at, o.paid_at
+FROM orders o
+JOIN users u ON u.id = o.user_id
+WHERE (sqlc.narg(status)::text IS NULL OR o.status = sqlc.narg(status)::text)
+  AND (sqlc.narg(number)::bigint IS NULL OR o.number = sqlc.narg(number)::bigint)
+  AND (sqlc.narg(email_pattern)::text IS NULL OR o.email ILIKE sqlc.narg(email_pattern)::text)
+ORDER BY o.created_at DESC, o.id DESC
+LIMIT @page_limit OFFSET @page_offset;
+
+-- name: AdminGetOrder :one
+SELECT * FROM orders WHERE number = $1;
+
+-- name: AdminGetOrderForUpdate :one
+-- Fulfilment changes lock the order first, like checkout's settling does.
+SELECT * FROM orders WHERE number = $1 FOR UPDATE;
+
+-- name: GetOrderPayment :one
+SELECT * FROM payments WHERE order_id = $1 ORDER BY created_at DESC LIMIT 1;
+
+-- name: ShipOrder :one
+UPDATE orders SET status = 'shipped', shipped_at = now(), tracking_number = sqlc.narg(tracking_number)
+WHERE id = @id RETURNING *;
+
+-- name: DeliverOrder :one
+UPDATE orders SET status = 'delivered', delivered_at = now()
+WHERE id = @id RETURNING *;
+
+-- name: RefundOrder :one
+UPDATE orders SET status = 'refunded', refunded_at = now()
+WHERE id = @id RETURNING *;
+
+-- name: RecordRefund :exec
+UPDATE payments SET stripe_refund_id = @stripe_refund_id, refunded_at = now()
+WHERE id = @id;

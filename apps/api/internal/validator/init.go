@@ -16,6 +16,10 @@ var (
 
 	// only letters (upper+lower) and spaces allowed
 	alphaSpaceRe = regexp.MustCompile(`^[a-zA-Z\s]+$`)
+
+	// A UUID in its canonical 8-4-4-4-12 form, in either case (RFC 9562:
+	// the hex digits are case-insensitive on input).
+	uuidRe = regexp.MustCompile(`^(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 )
 
 func Init() {
@@ -27,6 +31,13 @@ func Init() {
 
 		_ = v.RegisterValidation("alphaspace", func(fl validator.FieldLevel) bool {
 			return alphaSpaceRe.MatchString(fl.Field().String())
+		})
+
+		// Replaces the built-in "uuid", whose pattern is lowercase only: an
+		// uppercase id from a client was refused although the path
+		// parameters (uuid.Parse) accept it.
+		_ = v.RegisterValidation("uuid", func(fl validator.FieldLevel) bool {
+			return uuidRe.MatchString(fl.Field().String())
 		})
 
 		_ = v.RegisterValidation("date_format", func(fl validator.FieldLevel) bool {

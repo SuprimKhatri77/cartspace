@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddCartItemData, AddCartItemErrors, AddCartItemResponses, AddToWishlistData, AddToWishlistErrors, AddToWishlistResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetStatsData, AdminGetStatsErrors, AdminGetStatsResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminListVariantsData, AdminListVariantsErrors, AdminListVariantsResponses, AdminSetVariantStockData, AdminSetVariantStockErrors, AdminSetVariantStockResponses, AdminSignUploadData, AdminSignUploadErrors, AdminSignUploadResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ClearCartData, ClearCartErrors, ClearCartResponses, DeleteAddressData, DeleteAddressErrors, DeleteAddressResponses, DeleteReviewData, DeleteReviewErrors, DeleteReviewResponses, GetCartData, GetCartErrors, GetCartResponses, GetCheckoutSessionData, GetCheckoutSessionErrors, GetCheckoutSessionResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetMyReviewData, GetMyReviewErrors, GetMyReviewResponses, GetOrderData, GetOrderErrors, GetOrderResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, ListAddressesData, ListAddressesErrors, ListAddressesResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListOrdersData, ListOrdersErrors, ListOrdersResponses, ListProductsData, ListProductsErrors, ListProductsResponses, ListReviewsData, ListReviewsErrors, ListReviewsResponses, ListWishlistData, ListWishlistErrors, ListWishlistIdsData, ListWishlistIdsErrors, ListWishlistIdsResponses, ListWishlistResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveCartItemData, RemoveCartItemErrors, RemoveCartItemResponses, RemoveFromWishlistData, RemoveFromWishlistErrors, RemoveFromWishlistResponses, StartCheckoutData, StartCheckoutErrors, StartCheckoutResponses, StripeWebhookData, StripeWebhookErrors, StripeWebhookResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses, WriteReviewData, WriteReviewErrors, WriteReviewResponses } from './types.gen';
+import type { AddCartItemData, AddCartItemErrors, AddCartItemResponses, AddToWishlistData, AddToWishlistErrors, AddToWishlistResponses, AdminCancelOrderData, AdminCancelOrderErrors, AdminCancelOrderResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminDeliverOrderData, AdminDeliverOrderErrors, AdminDeliverOrderResponses, AdminGetOrderData, AdminGetOrderErrors, AdminGetOrderResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetStatsData, AdminGetStatsErrors, AdminGetStatsResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListOrdersData, AdminListOrdersErrors, AdminListOrdersResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminListReviewsData, AdminListReviewsErrors, AdminListReviewsResponses, AdminListVariantsData, AdminListVariantsErrors, AdminListVariantsResponses, AdminRefundOrderData, AdminRefundOrderErrors, AdminRefundOrderResponses, AdminSetReviewStatusData, AdminSetReviewStatusErrors, AdminSetReviewStatusResponses, AdminSetVariantStockData, AdminSetVariantStockErrors, AdminSetVariantStockResponses, AdminShipOrderData, AdminShipOrderErrors, AdminShipOrderResponses, AdminSignUploadData, AdminSignUploadErrors, AdminSignUploadResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ClearCartData, ClearCartErrors, ClearCartResponses, DeleteAddressData, DeleteAddressErrors, DeleteAddressResponses, DeleteReviewData, DeleteReviewErrors, DeleteReviewResponses, GetCartData, GetCartErrors, GetCartResponses, GetCheckoutSessionData, GetCheckoutSessionErrors, GetCheckoutSessionResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetMyReviewData, GetMyReviewErrors, GetMyReviewResponses, GetOrderData, GetOrderErrors, GetOrderResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, ListAddressesData, ListAddressesErrors, ListAddressesResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListOrdersData, ListOrdersErrors, ListOrdersResponses, ListProductsData, ListProductsErrors, ListProductsResponses, ListReviewsData, ListReviewsErrors, ListReviewsResponses, ListWishlistData, ListWishlistErrors, ListWishlistIdsData, ListWishlistIdsErrors, ListWishlistIdsResponses, ListWishlistResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveCartItemData, RemoveCartItemErrors, RemoveCartItemResponses, RemoveFromWishlistData, RemoveFromWishlistErrors, RemoveFromWishlistResponses, StartCheckoutData, StartCheckoutErrors, StartCheckoutResponses, StripeWebhookData, StripeWebhookErrors, StripeWebhookResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses, WriteReviewData, WriteReviewErrors, WriteReviewResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -761,4 +761,144 @@ export const adminSignUpload = <ThrowOnError extends boolean = false>(options?: 
         }],
     url: '/api/v1/admin/uploads/signature',
     ...options
+});
+
+/**
+ * All orders
+ *
+ * Newest first, 20 per page. q is an order number (1042, CS-1042 or #1042) or a piece of the customer's email.
+ */
+export const adminListOrders = <ThrowOnError extends boolean = false>(options?: Options<AdminListOrdersData, ThrowOnError>): RequestResult<AdminListOrdersResponses, AdminListOrdersErrors, ThrowOnError> => (options?.client ?? client).get<AdminListOrdersResponses, AdminListOrdersErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/orders',
+    ...options
+});
+
+/**
+ * One order
+ *
+ * With its items, customer and payment.
+ */
+export const adminGetOrder = <ThrowOnError extends boolean = false>(options: Options<AdminGetOrderData, ThrowOnError>): RequestResult<AdminGetOrderResponses, AdminGetOrderErrors, ThrowOnError> => (options.client ?? client).get<AdminGetOrderResponses, AdminGetOrderErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/orders/{number}',
+    ...options
+});
+
+/**
+ * Mark an order shipped
+ *
+ * A paid order becomes shipped, with its tracking number if given.
+ */
+export const adminShipOrder = <ThrowOnError extends boolean = false>(options: Options<AdminShipOrderData, ThrowOnError>): RequestResult<AdminShipOrderResponses, AdminShipOrderErrors, ThrowOnError> => (options.client ?? client).post<AdminShipOrderResponses, AdminShipOrderErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/orders/{number}/ship',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Mark an order delivered
+ *
+ * A shipped order becomes delivered.
+ */
+export const adminDeliverOrder = <ThrowOnError extends boolean = false>(options: Options<AdminDeliverOrderData, ThrowOnError>): RequestResult<AdminDeliverOrderResponses, AdminDeliverOrderErrors, ThrowOnError> => (options.client ?? client).post<AdminDeliverOrderResponses, AdminDeliverOrderErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/orders/{number}/deliver',
+    ...options
+});
+
+/**
+ * Cancel an unpaid order
+ *
+ * A pending order is cancelled and its stock returned. Its Stripe page is expired first; if it was paid meanwhile, the order is settled as paid and the answer is 409 ORDER_ALREADY_PAID.
+ */
+export const adminCancelOrder = <ThrowOnError extends boolean = false>(options: Options<AdminCancelOrderData, ThrowOnError>): RequestResult<AdminCancelOrderResponses, AdminCancelOrderErrors, ThrowOnError> => (options.client ?? client).post<AdminCancelOrderResponses, AdminCancelOrderErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/orders/{number}/cancel',
+    ...options
+});
+
+/**
+ * Refund an order
+ *
+ * A paid, shipped or delivered order is refunded in full through Stripe (once: the refund is keyed by the order) and becomes refunded.
+ */
+export const adminRefundOrder = <ThrowOnError extends boolean = false>(options: Options<AdminRefundOrderData, ThrowOnError>): RequestResult<AdminRefundOrderResponses, AdminRefundOrderErrors, ThrowOnError> => (options.client ?? client).post<AdminRefundOrderResponses, AdminRefundOrderErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/orders/{number}/refund',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * All reviews
+ *
+ * Newest first, 20 per page, for moderation.
+ */
+export const adminListReviews = <ThrowOnError extends boolean = false>(options?: Options<AdminListReviewsData, ThrowOnError>): RequestResult<AdminListReviewsResponses, AdminListReviewsErrors, ThrowOnError> => (options?.client ?? client).get<AdminListReviewsResponses, AdminListReviewsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/reviews',
+    ...options
+});
+
+/**
+ * Publish or hide a review
+ *
+ * The product's rating counts published reviews only.
+ */
+export const adminSetReviewStatus = <ThrowOnError extends boolean = false>(options: Options<AdminSetReviewStatusData, ThrowOnError>): RequestResult<AdminSetReviewStatusResponses, AdminSetReviewStatusErrors, ThrowOnError> => (options.client ?? client).put<AdminSetReviewStatusResponses, AdminSetReviewStatusErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/reviews/{id}/status',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });

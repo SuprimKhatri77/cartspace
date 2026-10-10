@@ -66,6 +66,10 @@ type Order struct {
 	CancelledAt     pgtype.Timestamptz `json:"cancelled_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ShippedAt       pgtype.Timestamptz `json:"shipped_at"`
+	DeliveredAt     pgtype.Timestamptz `json:"delivered_at"`
+	RefundedAt      pgtype.Timestamptz `json:"refunded_at"`
+	TrackingNumber  pgtype.Text        `json:"tracking_number"`
 }
 
 type OrderItem struct {
@@ -91,6 +95,8 @@ type Payment struct {
 	Amount                int32              `json:"amount"`
 	Currency              string             `json:"currency"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	StripeRefundID        pgtype.Text        `json:"stripe_refund_id"`
+	RefundedAt            pgtype.Timestamptz `json:"refunded_at"`
 }
 
 type Product struct {

@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -696,6 +696,13 @@ export type OrderDetail = {
     cancelled_at: string | null;
     created_at: string;
     updated_at: string;
+    shipped_at: string | null;
+    delivered_at: string | null;
+    refunded_at: string | null;
+    /**
+     * The carrier's, when the order shipped with one
+     */
+    tracking_number: string | null;
     items: Array<OrderItem>;
 };
 
@@ -982,6 +989,132 @@ export type UploadSignature = {
      */
     timestamp: number;
     signature: string;
+};
+
+export type AdminOrderListResponse = {
+    success: true;
+    message: string;
+    data: Array<AdminOrderRow>;
+    meta: PaginationMeta;
+};
+
+/**
+ * A row of the admin orders table.
+ */
+export type AdminOrderRow = {
+    id: string;
+    number: number;
+    status: OrderStatus;
+    total: number;
+    currency: string;
+    email: string;
+    customer_name: string;
+    item_count: number;
+    created_at: string;
+    paid_at: string | null;
+};
+
+export type AdminOrderDetailResponse = {
+    success: true;
+    message: string;
+    data: AdminOrderDetail;
+};
+
+export type AdminOrderDetail = {
+    id: string;
+    number: number;
+    user_id: string;
+    status: OrderStatus;
+    subtotal: number;
+    shipping: number;
+    total: number;
+    currency: string;
+    email: string;
+    shipping_address: AddressSnapshot;
+    stripe_session_id: string | null;
+    /**
+     * A pending order holds its stock until then
+     */
+    expires_at: string;
+    paid_at: string | null;
+    cancelled_at: string | null;
+    created_at: string;
+    updated_at: string;
+    shipped_at: string | null;
+    delivered_at: string | null;
+    refunded_at: string | null;
+    /**
+     * The carrier's, when the order shipped with one
+     */
+    tracking_number: string | null;
+    items: Array<OrderItem>;
+    customer: {
+        id: string;
+        name: string;
+        email: string;
+    };
+    /**
+     * null until the order is paid
+     */
+    payment: {
+        id: string;
+        order_id: string;
+        stripe_session_id: string;
+        stripe_payment_intent_id: string | null;
+        amount: number;
+        currency: string;
+        created_at: string;
+        stripe_refund_id: string | null;
+        refunded_at: string | null;
+    } | null;
+};
+
+export type ShipOrderBody = {
+    tracking_number?: string;
+};
+
+export type RefundOrderBody = {
+    /**
+     * Return the items to stock: yes for an order that never shipped, or came back
+     */
+    restock: boolean;
+};
+
+export type AdminReviewListResponse = {
+    success: true;
+    message: string;
+    data: Array<AdminReview>;
+    meta: PaginationMeta;
+};
+
+/**
+ * A review with its product and author.
+ */
+export type AdminReview = {
+    id: string;
+    rating: number;
+    title: string;
+    body: string;
+    status: ReviewStatus;
+    created_at: string;
+    updated_at: string;
+    product_id: string;
+    product_name: string;
+    product_slug: string;
+    author_name: string;
+    author_email: string;
+};
+
+export type ReviewStatus = 'published' | 'hidden';
+
+export type AdminReviewResponse = {
+    success: true;
+    message: string;
+    data: AdminReview;
+};
+
+export type ReviewStatusBody = {
+    status: ReviewStatus;
 };
 
 export type GetHealthData = {
@@ -2819,3 +2952,371 @@ export type AdminSignUploadResponses = {
 };
 
 export type AdminSignUploadResponse = AdminSignUploadResponses[keyof AdminSignUploadResponses];
+
+export type AdminListOrdersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        page?: number;
+        status?: OrderStatus;
+        q?: string;
+    };
+    url: '/api/v1/admin/orders';
+};
+
+export type AdminListOrdersErrors = {
+    /**
+     * Invalid page or filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminListOrdersError = AdminListOrdersErrors[keyof AdminListOrdersErrors];
+
+export type AdminListOrdersResponses = {
+    /**
+     * Orders fetched
+     */
+    200: AdminOrderListResponse;
+};
+
+export type AdminListOrdersResponse = AdminListOrdersResponses[keyof AdminListOrdersResponses];
+
+export type AdminGetOrderData = {
+    body?: never;
+    path: {
+        number: number;
+    };
+    query?: never;
+    url: '/api/v1/admin/orders/{number}';
+};
+
+export type AdminGetOrderErrors = {
+    /**
+     * Invalid order number (INVALID_ORDER_NUMBER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No order with that number (ORDER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminGetOrderError = AdminGetOrderErrors[keyof AdminGetOrderErrors];
+
+export type AdminGetOrderResponses = {
+    /**
+     * Order fetched
+     */
+    200: AdminOrderDetailResponse;
+};
+
+export type AdminGetOrderResponse = AdminGetOrderResponses[keyof AdminGetOrderResponses];
+
+export type AdminShipOrderData = {
+    body: ShipOrderBody;
+    path: {
+        number: number;
+    };
+    query?: never;
+    url: '/api/v1/admin/orders/{number}/ship';
+};
+
+export type AdminShipOrderErrors = {
+    /**
+     * Invalid order number or body (INVALID_ORDER_NUMBER, VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No order with that number (ORDER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Not allowed in the order's status (INVALID_ORDER_TRANSITION)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminShipOrderError = AdminShipOrderErrors[keyof AdminShipOrderErrors];
+
+export type AdminShipOrderResponses = {
+    /**
+     * Order shipped
+     */
+    200: AdminOrderDetailResponse;
+};
+
+export type AdminShipOrderResponse = AdminShipOrderResponses[keyof AdminShipOrderResponses];
+
+export type AdminDeliverOrderData = {
+    body?: never;
+    path: {
+        number: number;
+    };
+    query?: never;
+    url: '/api/v1/admin/orders/{number}/deliver';
+};
+
+export type AdminDeliverOrderErrors = {
+    /**
+     * Invalid order number (INVALID_ORDER_NUMBER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No order with that number (ORDER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Not allowed in the order's status (INVALID_ORDER_TRANSITION)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminDeliverOrderError = AdminDeliverOrderErrors[keyof AdminDeliverOrderErrors];
+
+export type AdminDeliverOrderResponses = {
+    /**
+     * Order delivered
+     */
+    200: AdminOrderDetailResponse;
+};
+
+export type AdminDeliverOrderResponse = AdminDeliverOrderResponses[keyof AdminDeliverOrderResponses];
+
+export type AdminCancelOrderData = {
+    body?: never;
+    path: {
+        number: number;
+    };
+    query?: never;
+    url: '/api/v1/admin/orders/{number}/cancel';
+};
+
+export type AdminCancelOrderErrors = {
+    /**
+     * Invalid order number (INVALID_ORDER_NUMBER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No order with that number (ORDER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Not pending, or just paid (INVALID_ORDER_TRANSITION, ORDER_ALREADY_PAID)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+    /**
+     * Stripe didn't answer; nothing changed (PAYMENT_PROVIDER_ERROR)
+     */
+    502: ApiError;
+};
+
+export type AdminCancelOrderError = AdminCancelOrderErrors[keyof AdminCancelOrderErrors];
+
+export type AdminCancelOrderResponses = {
+    /**
+     * Order cancelled
+     */
+    200: AdminOrderDetailResponse;
+};
+
+export type AdminCancelOrderResponse = AdminCancelOrderResponses[keyof AdminCancelOrderResponses];
+
+export type AdminRefundOrderData = {
+    body: RefundOrderBody;
+    path: {
+        number: number;
+    };
+    query?: never;
+    url: '/api/v1/admin/orders/{number}/refund';
+};
+
+export type AdminRefundOrderErrors = {
+    /**
+     * Invalid order number or body (INVALID_ORDER_NUMBER, VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No order with that number (ORDER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Not refundable in its status, or no payment recorded (INVALID_ORDER_TRANSITION)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+    /**
+     * Stripe didn't answer; nothing changed (PAYMENT_PROVIDER_ERROR)
+     */
+    502: ApiError;
+    /**
+     * Payments aren't set up (PAYMENTS_UNAVAILABLE)
+     */
+    503: ApiError;
+};
+
+export type AdminRefundOrderError = AdminRefundOrderErrors[keyof AdminRefundOrderErrors];
+
+export type AdminRefundOrderResponses = {
+    /**
+     * Order refunded
+     */
+    200: AdminOrderDetailResponse;
+};
+
+export type AdminRefundOrderResponse = AdminRefundOrderResponses[keyof AdminRefundOrderResponses];
+
+export type AdminListReviewsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        page?: number;
+        status?: ReviewStatus;
+        rating?: number;
+    };
+    url: '/api/v1/admin/reviews';
+};
+
+export type AdminListReviewsErrors = {
+    /**
+     * Invalid page or filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminListReviewsError = AdminListReviewsErrors[keyof AdminListReviewsErrors];
+
+export type AdminListReviewsResponses = {
+    /**
+     * Reviews fetched
+     */
+    200: AdminReviewListResponse;
+};
+
+export type AdminListReviewsResponse = AdminListReviewsResponses[keyof AdminListReviewsResponses];
+
+export type AdminSetReviewStatusData = {
+    body: ReviewStatusBody;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/reviews/{id}/status';
+};
+
+export type AdminSetReviewStatusErrors = {
+    /**
+     * Invalid id or body (INVALID_REVIEW_ID, VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such review (REVIEW_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSetReviewStatusError = AdminSetReviewStatusErrors[keyof AdminSetReviewStatusErrors];
+
+export type AdminSetReviewStatusResponses = {
+    /**
+     * Review updated
+     */
+    200: AdminReviewResponse;
+};
+
+export type AdminSetReviewStatusResponse = AdminSetReviewStatusResponses[keyof AdminSetReviewStatusResponses];

@@ -74,5 +74,8 @@ type Provider interface {
 	CreateSession(ctx context.Context, req SessionRequest) (Session, error)
 	GetSession(ctx context.Context, id string) (Session, error)
 	ExpireSession(ctx context.Context, id string) error
+	// Refund returns a payment in full and gives the refund's id. The
+	// idempotency key makes a retry return the same refund, not a second one.
+	Refund(ctx context.Context, paymentIntentID, idempotencyKey string) (string, error)
 	ParseEvent(payload []byte, signature string) (Event, error)
 }

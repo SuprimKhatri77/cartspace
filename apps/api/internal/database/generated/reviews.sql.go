@@ -11,6 +11,100 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const adminListReviews = `-- name: AdminListReviews :many
+SELECT
+    r.id, r.rating, r.title, r.body, r.status, r.created_at, r.updated_at,
+    p.id AS product_id, p.name AS product_name, p.slug AS product_slug,
+    u.name AS author_name, u.email AS author_email
+FROM reviews r
+JOIN products p ON p.id = r.product_id
+JOIN users u ON u.id = r.user_id
+WHERE ($1::text IS NULL OR r.status = $1::text)
+  AND ($2::int IS NULL OR r.rating = $2::int)
+ORDER BY r.created_at DESC, r.id DESC
+LIMIT $4 OFFSET $3
+`
+
+type AdminListReviewsParams struct {
+	Status     pgtype.Text `json:"status"`
+	Rating     pgtype.Int4 `json:"rating"`
+	PageOffset int32       `json:"page_offset"`
+	PageLimit  int32       `json:"page_limit"`
+}
+
+type AdminListReviewsRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	Rating      int16              `json:"rating"`
+	Title       string             `json:"title"`
+	Body        string             `json:"body"`
+	Status      string             `json:"status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	ProductID   pgtype.UUID        `json:"product_id"`
+	ProductName string             `json:"product_name"`
+	ProductSlug string             `json:"product_slug"`
+	AuthorName  string             `json:"author_name"`
+	AuthorEmail string             `json:"author_email"`
+}
+
+func (q *Queries) AdminListReviews(ctx context.Context, arg AdminListReviewsParams) ([]AdminListReviewsRow, error) {
+	rows, err := q.db.Query(ctx, adminListReviews,
+		arg.Status,
+		arg.Rating,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AdminListReviewsRow{}
+	for rows.Next() {
+		var i AdminListReviewsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Rating,
+			&i.Title,
+			&i.Body,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProductID,
+			&i.ProductName,
+			&i.ProductSlug,
+			&i.AuthorName,
+			&i.AuthorEmail,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countAdminReviews = `-- name: CountAdminReviews :one
+
+SELECT COUNT(*) FROM reviews r
+WHERE ($1::text IS NULL OR r.status = $1::text)
+  AND ($2::int IS NULL OR r.rating = $2::int)
+`
+
+type CountAdminReviewsParams struct {
+	Status pgtype.Text `json:"status"`
+	Rating pgtype.Int4 `json:"rating"`
+}
+
+// Admin moderation: every review, filtered by status and rating.
+func (q *Queries) CountAdminReviews(ctx context.Context, arg CountAdminReviewsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAdminReviews, arg.Status, arg.Rating)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countPublishedReviews = `-- name: CountPublishedReviews :one
 SELECT COUNT(*) FROM reviews WHERE product_id = $1 AND status = 'published'
 `
@@ -184,6 +278,60 @@ func (q *Queries) ReviewDistribution(ctx context.Context, productID pgtype.UUID)
 		return nil, err
 	}
 	return items, nil
+}
+
+const setReviewStatus = `-- name: SetReviewStatus :one
+WITH updated AS (
+    UPDATE reviews SET status = $1 WHERE reviews.id = $2 RETURNING id, product_id, user_id, rating, title, body, status, created_at, updated_at
+)
+SELECT
+    r.id, r.rating, r.title, r.body, r.status, r.created_at, r.updated_at,
+    p.id AS product_id, p.name AS product_name, p.slug AS product_slug,
+    u.name AS author_name, u.email AS author_email
+FROM updated r
+JOIN products p ON p.id = r.product_id
+JOIN users u ON u.id = r.user_id
+`
+
+type SetReviewStatusParams struct {
+	Status string      `json:"status"`
+	ID     pgtype.UUID `json:"id"`
+}
+
+type SetReviewStatusRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	Rating      int16              `json:"rating"`
+	Title       string             `json:"title"`
+	Body        string             `json:"body"`
+	Status      string             `json:"status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	ProductID   pgtype.UUID        `json:"product_id"`
+	ProductName string             `json:"product_name"`
+	ProductSlug string             `json:"product_slug"`
+	AuthorName  string             `json:"author_name"`
+	AuthorEmail string             `json:"author_email"`
+}
+
+// The rating trigger refreshes the product's average and count.
+func (q *Queries) SetReviewStatus(ctx context.Context, arg SetReviewStatusParams) (SetReviewStatusRow, error) {
+	row := q.db.QueryRow(ctx, setReviewStatus, arg.Status, arg.ID)
+	var i SetReviewStatusRow
+	err := row.Scan(
+		&i.ID,
+		&i.Rating,
+		&i.Title,
+		&i.Body,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ProductID,
+		&i.ProductName,
+		&i.ProductSlug,
+		&i.AuthorName,
+		&i.AuthorEmail,
+	)
+	return i, err
 }
 
 const upsertReview = `-- name: UpsertReview :one

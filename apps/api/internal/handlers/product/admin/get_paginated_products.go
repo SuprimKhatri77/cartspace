@@ -12,6 +12,7 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
+	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 )
 
 // maxAdminSearch bounds the q parameter.
@@ -76,7 +77,7 @@ func parseAdminFilters(c *gin.Context) (db.AdminProductsListParams, bool) {
 		return f, false
 	}
 	if q != "" {
-		f.NamePattern = pgtype.Text{String: "%" + escapeLike(q) + "%", Valid: true}
+		f.NamePattern = pgtype.Text{String: utils.ContainsPattern(q), Valid: true}
 	}
 
 	switch c.Query("status") {
@@ -94,10 +95,4 @@ func parseAdminFilters(c *gin.Context) (db.AdminProductsListParams, bool) {
 		f.CategorySlug = pgtype.Text{String: slug, Valid: true}
 	}
 	return f, true
-}
-
-// escapeLike makes s match literally inside an ILIKE pattern (backslash is
-// Postgres' default LIKE escape).
-func escapeLike(s string) string {
-	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
 }

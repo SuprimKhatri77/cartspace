@@ -12,6 +12,143 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const adminGetOrder = `-- name: AdminGetOrder :one
+SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number FROM orders WHERE number = $1
+`
+
+func (q *Queries) AdminGetOrder(ctx context.Context, number int64) (Order, error) {
+	row := q.db.QueryRow(ctx, adminGetOrder, number)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Number,
+		&i.UserID,
+		&i.Status,
+		&i.Subtotal,
+		&i.Shipping,
+		&i.Total,
+		&i.Currency,
+		&i.Email,
+		&i.ShippingAddress,
+		&i.StripeSessionID,
+		&i.ExpiresAt,
+		&i.PaidAt,
+		&i.CancelledAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ShippedAt,
+		&i.DeliveredAt,
+		&i.RefundedAt,
+		&i.TrackingNumber,
+	)
+	return i, err
+}
+
+const adminGetOrderForUpdate = `-- name: AdminGetOrderForUpdate :one
+SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number FROM orders WHERE number = $1 FOR UPDATE
+`
+
+// Fulfilment changes lock the order first, like checkout's settling does.
+func (q *Queries) AdminGetOrderForUpdate(ctx context.Context, number int64) (Order, error) {
+	row := q.db.QueryRow(ctx, adminGetOrderForUpdate, number)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Number,
+		&i.UserID,
+		&i.Status,
+		&i.Subtotal,
+		&i.Shipping,
+		&i.Total,
+		&i.Currency,
+		&i.Email,
+		&i.ShippingAddress,
+		&i.StripeSessionID,
+		&i.ExpiresAt,
+		&i.PaidAt,
+		&i.CancelledAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ShippedAt,
+		&i.DeliveredAt,
+		&i.RefundedAt,
+		&i.TrackingNumber,
+	)
+	return i, err
+}
+
+const adminListOrders = `-- name: AdminListOrders :many
+SELECT
+    o.id, o.number, o.status, o.total, o.currency, o.email, u.name AS customer_name,
+    (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.order_id = o.id)::int AS item_count,
+    o.created_at, o.paid_at
+FROM orders o
+JOIN users u ON u.id = o.user_id
+WHERE ($1::text IS NULL OR o.status = $1::text)
+  AND ($2::bigint IS NULL OR o.number = $2::bigint)
+  AND ($3::text IS NULL OR o.email ILIKE $3::text)
+ORDER BY o.created_at DESC, o.id DESC
+LIMIT $5 OFFSET $4
+`
+
+type AdminListOrdersParams struct {
+	Status       pgtype.Text `json:"status"`
+	Number       pgtype.Int8 `json:"number"`
+	EmailPattern pgtype.Text `json:"email_pattern"`
+	PageOffset   int32       `json:"page_offset"`
+	PageLimit    int32       `json:"page_limit"`
+}
+
+type AdminListOrdersRow struct {
+	ID           pgtype.UUID        `json:"id"`
+	Number       int64              `json:"number"`
+	Status       string             `json:"status"`
+	Total        int32              `json:"total"`
+	Currency     string             `json:"currency"`
+	Email        string             `json:"email"`
+	CustomerName string             `json:"customer_name"`
+	ItemCount    int32              `json:"item_count"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	PaidAt       pgtype.Timestamptz `json:"paid_at"`
+}
+
+func (q *Queries) AdminListOrders(ctx context.Context, arg AdminListOrdersParams) ([]AdminListOrdersRow, error) {
+	rows, err := q.db.Query(ctx, adminListOrders,
+		arg.Status,
+		arg.Number,
+		arg.EmailPattern,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AdminListOrdersRow{}
+	for rows.Next() {
+		var i AdminListOrdersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.Status,
+			&i.Total,
+			&i.Currency,
+			&i.Email,
+			&i.CustomerName,
+			&i.ItemCount,
+			&i.CreatedAt,
+			&i.PaidAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const cancelPendingOrder = `-- name: CancelPendingOrder :execrows
 UPDATE orders
 SET status = 'cancelled', cancelled_at = now()
@@ -25,6 +162,29 @@ func (q *Queries) CancelPendingOrder(ctx context.Context, id pgtype.UUID) (int64
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const countAdminOrders = `-- name: CountAdminOrders :one
+
+SELECT COUNT(*) FROM orders o
+WHERE ($1::text IS NULL OR o.status = $1::text)
+  AND ($2::bigint IS NULL OR o.number = $2::bigint)
+  AND ($3::text IS NULL OR o.email ILIKE $3::text)
+`
+
+type CountAdminOrdersParams struct {
+	Status       pgtype.Text `json:"status"`
+	Number       pgtype.Int8 `json:"number"`
+	EmailPattern pgtype.Text `json:"email_pattern"`
+}
+
+// Admin: every order, filtered by status and either an order number or a
+// piece of the email (both optional).
+func (q *Queries) CountAdminOrders(ctx context.Context, arg CountAdminOrdersParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAdminOrders, arg.Status, arg.Number, arg.EmailPattern)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const countOrders = `-- name: CountOrders :one
@@ -43,7 +203,7 @@ func (q *Queries) CountOrders(ctx context.Context, userID pgtype.UUID) (int64, e
 const createOrder = `-- name: CreateOrder :one
 INSERT INTO orders (user_id, subtotal, shipping, total, currency, email, shipping_address, expires_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at
+RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number
 `
 
 type CreateOrderParams struct {
@@ -86,6 +246,10 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		&i.CancelledAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ShippedAt,
+		&i.DeliveredAt,
+		&i.RefundedAt,
+		&i.TrackingNumber,
 	)
 	return i, err
 }
@@ -154,8 +318,41 @@ func (q *Queries) CreatePayment(ctx context.Context, arg CreatePaymentParams) er
 	return err
 }
 
+const deliverOrder = `-- name: DeliverOrder :one
+UPDATE orders SET status = 'delivered', delivered_at = now()
+WHERE id = $1 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number
+`
+
+func (q *Queries) DeliverOrder(ctx context.Context, id pgtype.UUID) (Order, error) {
+	row := q.db.QueryRow(ctx, deliverOrder, id)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Number,
+		&i.UserID,
+		&i.Status,
+		&i.Subtotal,
+		&i.Shipping,
+		&i.Total,
+		&i.Currency,
+		&i.Email,
+		&i.ShippingAddress,
+		&i.StripeSessionID,
+		&i.ExpiresAt,
+		&i.PaidAt,
+		&i.CancelledAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ShippedAt,
+		&i.DeliveredAt,
+		&i.RefundedAt,
+		&i.TrackingNumber,
+	)
+	return i, err
+}
+
 const getOrderByNumber = `-- name: GetOrderByNumber :one
-SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at FROM orders WHERE number = $1 AND user_id = $2
+SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number FROM orders WHERE number = $1 AND user_id = $2
 `
 
 type GetOrderByNumberParams struct {
@@ -183,12 +380,16 @@ func (q *Queries) GetOrderByNumber(ctx context.Context, arg GetOrderByNumberPara
 		&i.CancelledAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ShippedAt,
+		&i.DeliveredAt,
+		&i.RefundedAt,
+		&i.TrackingNumber,
 	)
 	return i, err
 }
 
 const getOrderBySession = `-- name: GetOrderBySession :one
-SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at FROM orders WHERE stripe_session_id = $1 AND user_id = $2
+SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number FROM orders WHERE stripe_session_id = $1 AND user_id = $2
 `
 
 type GetOrderBySessionParams struct {
@@ -216,12 +417,16 @@ func (q *Queries) GetOrderBySession(ctx context.Context, arg GetOrderBySessionPa
 		&i.CancelledAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ShippedAt,
+		&i.DeliveredAt,
+		&i.RefundedAt,
+		&i.TrackingNumber,
 	)
 	return i, err
 }
 
 const getOrderForUpdate = `-- name: GetOrderForUpdate :one
-SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at FROM orders WHERE id = $1 FOR UPDATE
+SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number FROM orders WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) GetOrderForUpdate(ctx context.Context, id pgtype.UUID) (Order, error) {
@@ -244,6 +449,10 @@ func (q *Queries) GetOrderForUpdate(ctx context.Context, id pgtype.UUID) (Order,
 		&i.CancelledAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ShippedAt,
+		&i.DeliveredAt,
+		&i.RefundedAt,
+		&i.TrackingNumber,
 	)
 	return i, err
 }
@@ -283,6 +492,27 @@ func (q *Queries) GetOrderItems(ctx context.Context, orderID pgtype.UUID) ([]Ord
 		return nil, err
 	}
 	return items, nil
+}
+
+const getOrderPayment = `-- name: GetOrderPayment :one
+SELECT id, order_id, stripe_session_id, stripe_payment_intent_id, amount, currency, created_at, stripe_refund_id, refunded_at FROM payments WHERE order_id = $1 ORDER BY created_at DESC LIMIT 1
+`
+
+func (q *Queries) GetOrderPayment(ctx context.Context, orderID pgtype.UUID) (Payment, error) {
+	row := q.db.QueryRow(ctx, getOrderPayment, orderID)
+	var i Payment
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.StripeSessionID,
+		&i.StripePaymentIntentID,
+		&i.Amount,
+		&i.Currency,
+		&i.CreatedAt,
+		&i.StripeRefundID,
+		&i.RefundedAt,
+	)
+	return i, err
 }
 
 const listExpiredPendingOrders = `-- name: ListExpiredPendingOrders :many
@@ -465,6 +695,21 @@ func (q *Queries) MarkOrderPaid(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const recordRefund = `-- name: RecordRefund :exec
+UPDATE payments SET stripe_refund_id = $1, refunded_at = now()
+WHERE id = $2
+`
+
+type RecordRefundParams struct {
+	StripeRefundID pgtype.Text `json:"stripe_refund_id"`
+	ID             pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) RecordRefund(ctx context.Context, arg RecordRefundParams) error {
+	_, err := q.db.Exec(ctx, recordRefund, arg.StripeRefundID, arg.ID)
+	return err
+}
+
 const recordStripeEvent = `-- name: RecordStripeEvent :execrows
 INSERT INTO stripe_events (id, type) VALUES ($1, $2)
 ON CONFLICT (id) DO NOTHING
@@ -481,6 +726,39 @@ func (q *Queries) RecordStripeEvent(ctx context.Context, arg RecordStripeEventPa
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const refundOrder = `-- name: RefundOrder :one
+UPDATE orders SET status = 'refunded', refunded_at = now()
+WHERE id = $1 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number
+`
+
+func (q *Queries) RefundOrder(ctx context.Context, id pgtype.UUID) (Order, error) {
+	row := q.db.QueryRow(ctx, refundOrder, id)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Number,
+		&i.UserID,
+		&i.Status,
+		&i.Subtotal,
+		&i.Shipping,
+		&i.Total,
+		&i.Currency,
+		&i.Email,
+		&i.ShippingAddress,
+		&i.StripeSessionID,
+		&i.ExpiresAt,
+		&i.PaidAt,
+		&i.CancelledAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ShippedAt,
+		&i.DeliveredAt,
+		&i.RefundedAt,
+		&i.TrackingNumber,
+	)
+	return i, err
 }
 
 const removeOrderedCartLines = `-- name: RemoveOrderedCartLines :exec
@@ -569,6 +847,44 @@ type SetOrderSessionParams struct {
 func (q *Queries) SetOrderSession(ctx context.Context, arg SetOrderSessionParams) error {
 	_, err := q.db.Exec(ctx, setOrderSession, arg.ID, arg.StripeSessionID)
 	return err
+}
+
+const shipOrder = `-- name: ShipOrder :one
+UPDATE orders SET status = 'shipped', shipped_at = now(), tracking_number = $1
+WHERE id = $2 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number
+`
+
+type ShipOrderParams struct {
+	TrackingNumber pgtype.Text `json:"tracking_number"`
+	ID             pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) ShipOrder(ctx context.Context, arg ShipOrderParams) (Order, error) {
+	row := q.db.QueryRow(ctx, shipOrder, arg.TrackingNumber, arg.ID)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Number,
+		&i.UserID,
+		&i.Status,
+		&i.Subtotal,
+		&i.Shipping,
+		&i.Total,
+		&i.Currency,
+		&i.Email,
+		&i.ShippingAddress,
+		&i.StripeSessionID,
+		&i.ExpiresAt,
+		&i.PaidAt,
+		&i.CancelledAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ShippedAt,
+		&i.DeliveredAt,
+		&i.RefundedAt,
+		&i.TrackingNumber,
+	)
+	return i, err
 }
 
 const takeStock = `-- name: TakeStock :exec

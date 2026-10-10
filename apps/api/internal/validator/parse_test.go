@@ -2,6 +2,7 @@ package validator
 
 import (
 	"bytes"
+	"github.com/gin-gonic/gin/binding"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -192,6 +193,26 @@ func TestToSnake(t *testing.T) {
 	} {
 		if got := toSnake(in); got != want {
 			t.Errorf("toSnake(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestUUIDAcceptsEitherCase(t *testing.T) {
+	Init()
+	type body struct {
+		ID string `binding:"uuid"`
+	}
+	for id, want := range map[string]bool{
+		"7c9e6679-7425-40de-944b-e07fc1f90ae7":          true,
+		"7C9E6679-7425-40DE-944B-E07FC1F90AE7":          true,
+		"7c9e6679742540de944be07fc1f90ae7":              false,
+		"{7c9e6679-7425-40de-944b-e07fc1f90ae7}":        false,
+		"urn:uuid:7c9e6679-7425-40de-944b-e07fc1f90ae7": false,
+		"not-a-uuid": false,
+	} {
+		err := binding.Validator.ValidateStruct(body{ID: id})
+		if (err == nil) != want {
+			t.Errorf("uuid %q: err = %v, want valid %v", id, err, want)
 		}
 	}
 }
