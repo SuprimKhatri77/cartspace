@@ -15,7 +15,7 @@ import (
 const createProductVariant = `-- name: CreateProductVariant :one
 INSERT INTO product_variants (product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, option_combination_key)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, offer_expires_at, is_default, is_active, option_combination_key, created_at, updated_at
+RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at
 `
 
 type CreateProductVariantParams struct {
@@ -54,12 +54,12 @@ func (q *Queries) CreateProductVariant(ctx context.Context, arg CreateProductVar
 		&i.ImagePublicIds,
 		&i.SellingPrice,
 		&i.OfferPrice,
-		&i.OfferExpiresAt,
 		&i.IsDefault,
 		&i.IsActive,
-		&i.OptionCombinationKey,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OptionCombinationKey,
+		&i.OfferExpiresAt,
 	)
 	return i, err
 }
@@ -138,7 +138,7 @@ func (q *Queries) FetchExistingProductOptions(ctx context.Context, arg FetchExis
 }
 
 const getDefaultVariant = `-- name: GetDefaultVariant :one
-SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, offer_expires_at, is_default, is_active, option_combination_key, created_at, updated_at FROM product_variants
+SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at FROM product_variants
 WHERE product_id = $1 AND is_default = TRUE
 `
 
@@ -154,18 +154,18 @@ func (q *Queries) GetDefaultVariant(ctx context.Context, productID pgtype.UUID) 
 		&i.ImagePublicIds,
 		&i.SellingPrice,
 		&i.OfferPrice,
-		&i.OfferExpiresAt,
 		&i.IsDefault,
 		&i.IsActive,
-		&i.OptionCombinationKey,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OptionCombinationKey,
+		&i.OfferExpiresAt,
 	)
 	return i, err
 }
 
 const getVariantByID = `-- name: GetVariantByID :one
-SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, offer_expires_at, is_default, is_active, option_combination_key, created_at, updated_at FROM product_variants
+SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at FROM product_variants
 WHERE id = $1
 `
 
@@ -181,18 +181,18 @@ func (q *Queries) GetVariantByID(ctx context.Context, id pgtype.UUID) (ProductVa
 		&i.ImagePublicIds,
 		&i.SellingPrice,
 		&i.OfferPrice,
-		&i.OfferExpiresAt,
 		&i.IsDefault,
 		&i.IsActive,
-		&i.OptionCombinationKey,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OptionCombinationKey,
+		&i.OfferExpiresAt,
 	)
 	return i, err
 }
 
 const getVariantsByProduct = `-- name: GetVariantsByProduct :many
-SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, offer_expires_at, is_default, is_active, option_combination_key, created_at, updated_at FROM product_variants
+SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at FROM product_variants
 WHERE product_id = $1 AND is_active = TRUE
 ORDER BY is_default DESC, created_at ASC
 `
@@ -215,12 +215,12 @@ func (q *Queries) GetVariantsByProduct(ctx context.Context, productID pgtype.UUI
 			&i.ImagePublicIds,
 			&i.SellingPrice,
 			&i.OfferPrice,
-			&i.OfferExpiresAt,
 			&i.IsDefault,
 			&i.IsActive,
-			&i.OptionCombinationKey,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OptionCombinationKey,
+			&i.OfferExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -244,7 +244,7 @@ UPDATE product_variants SET
     is_active = $9,
     option_combination_key = $10
 WHERE id = $1
-RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, offer_expires_at, is_default, is_active, option_combination_key, created_at, updated_at
+RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at
 `
 
 type UpdateVariantParams struct {
@@ -283,12 +283,12 @@ func (q *Queries) UpdateVariant(ctx context.Context, arg UpdateVariantParams) (P
 		&i.ImagePublicIds,
 		&i.SellingPrice,
 		&i.OfferPrice,
-		&i.OfferExpiresAt,
 		&i.IsDefault,
 		&i.IsActive,
-		&i.OptionCombinationKey,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OptionCombinationKey,
+		&i.OfferExpiresAt,
 	)
 	return i, err
 }
@@ -296,7 +296,7 @@ func (q *Queries) UpdateVariant(ctx context.Context, arg UpdateVariantParams) (P
 const updateVariantStock = `-- name: UpdateVariantStock :one
 UPDATE product_variants SET stock = stock + $1
 WHERE id = $2
-RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, offer_expires_at, is_default, is_active, option_combination_key, created_at, updated_at
+RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at
 `
 
 type UpdateVariantStockParams struct {
@@ -316,12 +316,12 @@ func (q *Queries) UpdateVariantStock(ctx context.Context, arg UpdateVariantStock
 		&i.ImagePublicIds,
 		&i.SellingPrice,
 		&i.OfferPrice,
-		&i.OfferExpiresAt,
 		&i.IsDefault,
 		&i.IsActive,
-		&i.OptionCombinationKey,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OptionCombinationKey,
+		&i.OfferExpiresAt,
 	)
 	return i, err
 }

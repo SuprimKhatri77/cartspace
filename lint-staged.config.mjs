@@ -9,7 +9,7 @@ export default {
     `bunx prettier --write ${filenames.join(" ")}`,
   ],
   // Keep sqlc Go output in sync when queries/schema change.
-  "apps/api/{sqlc.yml,internal/database/queries/**/*.sql,internal/database/schema/**/*.sql,migrations/**/*.sql}":
+  "apps/api/{sqlc.yml,internal/database/queries/**/*.sql,migrations/**/*.sql}":
     () => ["bun run db:sqlc", "git add apps/api/internal/database/generated"],
   "*.{js,jsx,ts,tsx,mjs,cjs,json,yml,yaml,css}": ["bunx prettier --write"],
   "*.go": ["gofmt -w"],

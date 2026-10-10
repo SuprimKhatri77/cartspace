@@ -71,22 +71,22 @@ type ProductVariant struct {
 	ImagePublicIds       []string           `json:"imagePublicIds"`
 	SellingPrice         int32              `json:"sellingPrice"`
 	OfferPrice           pgtype.Int4        `json:"offerPrice"`
-	OfferExpiresAt       pgtype.Timestamptz `json:"offerExpiresAt"`
 	IsDefault            bool               `json:"isDefault"`
 	IsActive             bool               `json:"isActive"`
-	OptionCombinationKey string             `json:"optionCombinationKey"`
 	CreatedAt            pgtype.Timestamptz `json:"createdAt"`
 	UpdatedAt            pgtype.Timestamptz `json:"updatedAt"`
+	OptionCombinationKey string             `json:"optionCombinationKey"`
+	OfferExpiresAt       pgtype.Timestamptz `json:"offerExpiresAt"`
 }
 
 type RefreshToken struct {
 	ID        pgtype.UUID        `json:"id"`
 	UserID    pgtype.UUID        `json:"userId"`
 	TokenHash string             `json:"tokenHash"`
-	SessionID pgtype.UUID        `json:"sessionId"`
-	RevokedAt pgtype.Timestamptz `json:"revokedAt"`
 	ExpiresAt pgtype.Timestamptz `json:"expiresAt"`
 	CreatedAt pgtype.Timestamptz `json:"createdAt"`
+	SessionID pgtype.UUID        `json:"sessionId"`
+	RevokedAt pgtype.Timestamptz `json:"revokedAt"`
 }
 
 type User struct {

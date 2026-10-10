@@ -418,7 +418,7 @@ func (q *Queries) GetRelatedProducts(ctx context.Context, slug string) ([]GetRel
 
 const getVariantsByProductSlug = `-- name: GetVariantsByProductSlug :many
 SELECT 
-    pv.id, pv.product_id, pv.sku, pv.stock, pv.images, pv.image_public_ids, pv.selling_price, pv.offer_price, pv.offer_expires_at, pv.is_default, pv.is_active, pv.option_combination_key, pv.created_at, pv.updated_at,
+    pv.id, pv.product_id, pv.sku, pv.stock, pv.images, pv.image_public_ids, pv.selling_price, pv.offer_price, pv.is_default, pv.is_active, pv.created_at, pv.updated_at, pv.option_combination_key, pv.offer_expires_at,
     (
         SELECT COALESCE(
             json_agg(
@@ -446,12 +446,12 @@ type GetVariantsByProductSlugRow struct {
 	ImagePublicIds       []string           `json:"imagePublicIds"`
 	SellingPrice         int32              `json:"sellingPrice"`
 	OfferPrice           pgtype.Int4        `json:"offerPrice"`
-	OfferExpiresAt       pgtype.Timestamptz `json:"offerExpiresAt"`
 	IsDefault            bool               `json:"isDefault"`
 	IsActive             bool               `json:"isActive"`
-	OptionCombinationKey string             `json:"optionCombinationKey"`
 	CreatedAt            pgtype.Timestamptz `json:"createdAt"`
 	UpdatedAt            pgtype.Timestamptz `json:"updatedAt"`
+	OptionCombinationKey string             `json:"optionCombinationKey"`
+	OfferExpiresAt       pgtype.Timestamptz `json:"offerExpiresAt"`
 	Options              interface{}        `json:"options"`
 }
 
@@ -473,12 +473,12 @@ func (q *Queries) GetVariantsByProductSlug(ctx context.Context, slug string) ([]
 			&i.ImagePublicIds,
 			&i.SellingPrice,
 			&i.OfferPrice,
-			&i.OfferExpiresAt,
 			&i.IsDefault,
 			&i.IsActive,
-			&i.OptionCombinationKey,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.OptionCombinationKey,
+			&i.OfferExpiresAt,
 			&i.Options,
 		); err != nil {
 			return nil, err
