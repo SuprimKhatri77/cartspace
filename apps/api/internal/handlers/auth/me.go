@@ -40,6 +40,6 @@ func Me(queries repository.AuthRepository) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, types.APIResponse{Success: true, Data: session.NewPublicUser(user)})
+		c.JSON(http.StatusOK, types.APIResponse{Success: true, Message: "User fetched", Data: session.NewPublicUser(user)})
 	}
 }

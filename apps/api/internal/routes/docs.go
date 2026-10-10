@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/routes/config"
-	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
 // setupDocsRoutes serves openapi.json and the Scalar UI under /api/v1,
@@ -19,10 +19,9 @@ func setupDocsRoutes(r *gin.Engine, router *gin.RouterGroup, cfg config.Config) 
 	router.GET("/openapi.json", func(c *gin.Context) {
 		data, err := os.ReadFile(cfg.Config.OpenAPIPath)
 		if err != nil {
-			c.JSON(http.StatusNotFound, types.APIResponse{
-				Success: false,
-				Message: "openapi spec not found, run bun run generate",
-			})
+			// the spec is committed (apps/api/openapi.json), so this is a
+			// deployment problem such as a wrong OPENAPI_PATH
+			httpx.Internal(c, "failed to read openapi spec", err, "path", cfg.Config.OpenAPIPath)
 			return
 		}
 		c.Data(http.StatusOK, "application/json", data)
@@ -39,19 +38,23 @@ func setupDocsRoutes(r *gin.Engine, router *gin.RouterGroup, cfg config.Config) 
 	r.GET("/docs", redirect)
 }
 
-// scalarHTML is the Scalar API docs page that loads /openapi.json.
+// scalarHTML is the Scalar API docs page that loads /openapi.json. The
+// script is pinned to an exact version with Subresource Integrity, so a
+// compromised or changed CDN file is refused by the browser.
 const scalarHTML = `<!DOCTYPE html>
 <html>
 <head>
-  <title>API Docs</title>
+  <title>Cartspace API Docs</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon" href="https://cdn.jsdelivr.net/npm/@scalar/api-reference/favicon.ico" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@scalar/api-reference/style.css" />
+  <link rel="icon" href="data:," />
 </head>
 <body>
   <script id="api-reference" data-url="/openapi.json"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.69.2/dist/browser/standalone.js"
+    integrity="sha384-WIChsUVC1uJ+G1lFA6lPYzOUgXAe8dVxUFIZ7lcENNtV34Esuo81NIxsj8EAQeHB"
+    crossorigin="anonymous"></script>
 </body>
 </html>
 `

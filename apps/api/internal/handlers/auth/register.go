@@ -33,7 +33,7 @@ func Register(queries repository.AuthRepository, cfg *config.Config) gin.Handler
 				Success: false,
 				Message: "Invalid request body",
 				Code:    constants.ValidationFailed,
-				Errors:  []types.AppError{{Code: "TOO_LONG", Field: "password", Message: "Password is too long"}},
+				Errors:  []types.AppError{{Code: constants.FieldTooLong, Field: "password", Message: "Password is too long"}},
 			})
 			return
 		}
@@ -67,7 +67,7 @@ func Register(queries repository.AuthRepository, cfg *config.Config) gin.Handler
 						Success: false,
 						Message: "Enter a valid email address",
 						Code:    constants.ValidationFailed,
-						Errors:  []types.AppError{{Code: "INVALID_EMAIL", Field: "email", Message: "Enter a valid email address"}},
+						Errors:  []types.AppError{{Code: constants.FieldInvalidEmail, Field: "email", Message: "Enter a valid email address"}},
 					})
 					return
 				}
