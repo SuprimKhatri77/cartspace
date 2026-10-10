@@ -106,6 +106,8 @@ type Product struct {
 	IsFeatured     bool               `json:"is_featured"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	RatingCount    int32              `json:"rating_count"`
+	RatingAvg      float32            `json:"rating_avg"`
 }
 
 type ProductOption struct {
@@ -138,6 +140,18 @@ type ProductVariant struct {
 	OfferExpiresAt       pgtype.Timestamptz `json:"offer_expires_at"`
 }
 
+type Review struct {
+	ID        pgtype.UUID        `json:"id"`
+	ProductID pgtype.UUID        `json:"product_id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Rating    int16              `json:"rating"`
+	Title     string             `json:"title"`
+	Body      string             `json:"body"`
+	Status    string             `json:"status"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Session struct {
 	ID                pgtype.UUID        `json:"id"`
 	UserID            pgtype.UUID        `json:"user_id"`
@@ -165,6 +179,8 @@ type StorefrontProduct struct {
 	IsFeatured     bool               `json:"is_featured"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	RatingCount    int32              `json:"rating_count"`
+	RatingAvg      float32            `json:"rating_avg"`
 	VariantID      pgtype.UUID        `json:"variant_id"`
 	SellingPrice   int32              `json:"selling_price"`
 	OfferPrice     pgtype.Int4        `json:"offer_price"`

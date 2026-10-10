@@ -22,6 +22,12 @@ export const ProductSchema = z
     is_featured: z.boolean(),
     created_at: Timestamp,
     updated_at: Timestamp,
+    rating_count: z.int().nonnegative().describe("Published reviews"),
+    rating_avg: z
+      .number()
+      .min(0)
+      .max(5)
+      .describe("Their average, to one decimal; 0 without reviews"),
   })
   .meta({ id: "Product" });
 export type Product = z.infer<typeof ProductSchema>;

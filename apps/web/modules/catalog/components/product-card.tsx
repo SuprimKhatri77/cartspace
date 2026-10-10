@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ProductWithPrice } from "@repo/types";
 import { percentOff } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { Stars } from "@/modules/reviews/components/stars";
 import { WishlistButton } from "@/modules/wishlist/components/wishlist-button";
 import { Price } from "./price";
 
@@ -80,9 +81,17 @@ export function ProductCard({
           )}
         </div>
         <div className="flex items-start justify-between gap-3 text-[0.8125rem] leading-snug">
-          <h3 className="link-underline line-clamp-2 self-start">
-            {product.name}
-          </h3>
+          <div className="min-w-0 space-y-1.5">
+            <h3 className="link-underline line-clamp-2 self-start">
+              {product.name}
+            </h3>
+            {product.rating_count > 0 && (
+              <p className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground tabular-nums">
+                <Stars value={product.rating_avg} size="size-3" />
+                <span>({product.rating_count})</span>
+              </p>
+            )}
+          </div>
           <Price
             price={product.price}
             selling={product.selling_price}

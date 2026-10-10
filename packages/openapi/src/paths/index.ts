@@ -4,6 +4,7 @@ import { registerCategoryPaths } from "./categories.ts";
 import { registerCheckoutPaths } from "./checkout.ts";
 import { registerHealthPaths } from "./health.ts";
 import { registerProductPaths } from "./products.ts";
+import { registerReviewPaths } from "./reviews.ts";
 import { registerVariantPaths } from "./variants.ts";
 import { registerWishlistPaths } from "./wishlist.ts";
 
@@ -16,4 +17,5 @@ export function registerPaths() {
   registerCartPaths();
   registerCheckoutPaths();
   registerWishlistPaths();
+  registerReviewPaths();
 }

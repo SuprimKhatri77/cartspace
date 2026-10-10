@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { startCheckout } from "@/lib/api/client";
 import { getApiError, mapFieldErrors } from "@/lib/api/errors";
+import { friendlyFieldErrors } from "@/lib/forms";
 import { formatPrice } from "@/lib/money";
 import { shippingFor } from "@/lib/shipping";
 import { cn } from "@/lib/utils";
@@ -198,12 +199,14 @@ function CheckoutForm({
     });
     if (!parsed.success) {
       setErrors(
-        mapFieldErrors(
-          parsed.error.issues.map((issue) => ({
-            field: issue.path.join("."),
-            message: issue.message,
-          })),
-        ),
+        friendlyFieldErrors(parsed.error, {
+          full_name: "your full name",
+          phone: "a phone number",
+          line1: "your street address",
+          city: "a city",
+          postal_code: "a postal code",
+          country: "a country",
+        }),
       );
       return;
     }

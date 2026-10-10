@@ -9,3 +9,4 @@ export * from "./variant/variant";
 export * from "./cart/cart";
 export * from "./order/order";
 export * from "./wishlist/wishlist";
+export * from "./review/review";

@@ -18,6 +18,7 @@ import { EASE_OUT } from "@/lib/motion";
 import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { AddToBag } from "@/modules/cart/components/add-to-bag";
+import { Stars } from "@/modules/reviews/components/stars";
 import { WishlistButton } from "@/modules/wishlist/components/wishlist-button";
 import { optionGroups, pickOption, selectionOf } from "../lib/variants";
 import { Price } from "./price";
@@ -111,6 +112,18 @@ export function ProductView({
                 </m.div>
               </AnimatePresence>
             </div>
+            {product.rating_count > 0 && (
+              <a
+                href="#reviews"
+                className="flex w-fit items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Stars value={product.rating_avg} />
+                <span className="tabular-nums">
+                  {product.rating_avg.toFixed(1)} · {product.rating_count}{" "}
+                  {product.rating_count === 1 ? "review" : "reviews"}
+                </span>
+              </a>
+            )}
             {offer !== null && variant?.offer_expires_at && (
               <p className="text-xs text-clay">
                 Offer ends{" "}

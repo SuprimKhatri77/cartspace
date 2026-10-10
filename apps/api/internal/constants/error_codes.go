@@ -61,4 +61,8 @@ const (
 
 	// wishlist
 	WishlistFull = "WISHLIST_FULL"
+
+	// reviews
+	NotVerifiedBuyer = "NOT_VERIFIED_BUYER"
+	ReviewNotFound   = "REVIEW_NOT_FOUND"
 )

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ReviewsSection } from "@/modules/reviews/components/reviews-section";
 import { notFound } from "next/navigation";
 import { CURRENCY } from "@/lib/money";
 import { getCategories, getProductPage } from "@/modules/catalog/api";
@@ -68,6 +69,13 @@ export default async function ProductPage({ params, searchParams }: Props) {
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
     },
+    ...(product.rating_count > 0 && {
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: product.rating_avg,
+        reviewCount: product.rating_count,
+      },
+    }),
   };
 
   return (
@@ -91,6 +99,10 @@ export default async function ProductPage({ params, searchParams }: Props) {
             path.length > 0 ? <Breadcrumbs path={path} /> : undefined
           }
         />
+      </div>
+
+      <div className="container-page">
+        <ReviewsSection slug={product.slug} productName={product.name} />
       </div>
 
       {related_products.length > 0 && (
