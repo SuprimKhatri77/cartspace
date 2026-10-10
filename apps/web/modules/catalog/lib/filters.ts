@@ -2,21 +2,25 @@ import type { SortOption } from "@repo/types";
 import { fromCents, toCents } from "@/lib/money";
 
 // Storefront listing filters live in the URL so they are shareable:
-//   /categories/shoes?sort=price_asc&min=20&max=80&size=42&color=Purple
+//   /categories/shoes?q=black&sort=price_asc&min=20&max=80&size=42&color=Purple
 // Prices are in currency units there and cents everywhere else. Every query
 // parameter that isn't reserved is an option filter (name=value, repeatable).
+// A search (q) sorts by relevance unless another sort is chosen.
 // The server page and the client grid parse the same URL into the same
 // filters, so they build the same query key.
 
 export type SearchParams = Record<string, string | string[] | undefined>;
 
 export const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "relevance", label: "Best match" },
   { value: "newest", label: "Newest" },
   { value: "price_asc", label: "Price: low to high" },
   { value: "price_desc", label: "Price: high to low" },
 ];
 
 export type ListingFilters = {
+  /** The search, trimmed with single spaces; "" for none. */
+  q: string;
   sort: SortOption;
   /** Cents; 0 means no bound (as the API reads it). */
   priceMin: number;
@@ -27,6 +31,7 @@ export type ListingFilters = {
 };
 
 export const DEFAULT_FILTERS: ListingFilters = {
+  q: "",
   sort: "newest",
   priceMin: 0,
   priceMax: 0,
@@ -34,7 +39,9 @@ export const DEFAULT_FILTERS: ListingFilters = {
   options: [],
 };
 
-// The API's bounds (listing.go): price in cents, option count and length.
+// The API's bounds (listing.go): search length, price in cents, option
+// count and length.
+export const MAX_SEARCH = 100;
 const MAX_CENTS = 100_000_000;
 const MAX_OPTIONS = 20;
 const MAX_OPTION_PART = 20;
@@ -61,6 +68,35 @@ function pairs(source: SearchParams | URLSearchParams): [string, string][] {
 }
 
 /**
+ * Trims a search, collapses its whitespace and caps it at MAX_SEARCH
+ * characters (code points, as the API counts them).
+ */
+export function normalizeSearch(raw: string): string {
+  const collapsed = raw.trim().replace(/\s+/g, " ");
+  return Array.from(collapsed).slice(0, MAX_SEARCH).join("").trim();
+}
+
+/**
+ * Whether a search has something to match on. The API searches by words of
+ * letters (with combining marks) and digits and ignores a q without any.
+ */
+export function isSearching(q: string): boolean {
+  return /[\p{L}\p{M}\p{N}]/u.test(q);
+}
+
+/** The sort a listing uses when none is chosen (the API's default too). */
+export function defaultSort(q: string): SortOption {
+  return isSearching(q) ? "relevance" : "newest";
+}
+
+/** The sorts that make sense for a search (relevance needs one). */
+export function sortOptionsFor(q: string) {
+  return isSearching(q)
+    ? SORT_OPTIONS
+    : SORT_OPTIONS.filter((o) => o.value !== "relevance");
+}
+
+/**
  * Reads the filters from a URL. Values the API would reject fall back to
  * their defaults and a reversed price range is swapped, so a hand-edited
  * URL still shows products.
@@ -71,9 +107,11 @@ export function parseFilters(
   const all = pairs(source);
   const get = (key: string) => all.find(([k]) => k === key)?.[1];
 
+  const q = normalizeSearch(get("q") ?? "");
   const sortParam = get("sort");
   const sort =
-    SORT_OPTIONS.find((o) => o.value === sortParam)?.value ?? "newest";
+    sortOptionsFor(q).find((o) => o.value === sortParam)?.value ??
+    defaultSort(q);
 
   const cents = (raw: string | undefined) => {
     const value = raw === undefined ? null : toCents(raw);
@@ -103,6 +141,7 @@ export function parseFilters(
   }
 
   return {
+    q,
     sort,
     priceMin,
     priceMax,
@@ -114,7 +153,8 @@ export function parseFilters(
 /** The URL query string for filters (no "?"); defaults are left out. */
 export function filtersToSearch(filters: ListingFilters): string {
   const query = new URLSearchParams();
-  if (filters.sort !== "newest") query.set("sort", filters.sort);
+  if (filters.q) query.set("q", filters.q);
+  if (filters.sort !== defaultSort(filters.q)) query.set("sort", filters.sort);
   if (filters.priceMin > 0) query.set("min", fromCents(filters.priceMin));
   if (filters.priceMax > 0) query.set("max", fromCents(filters.priceMax));
   if (filters.featured) query.set("featured", "true");
@@ -129,7 +169,8 @@ export function filtersToSearch(filters: ListingFilters): string {
 export function listingQuery(filters: ListingFilters, page: number) {
   return {
     page,
-    ...(filters.sort !== "newest" && { sort: filters.sort }),
+    ...(filters.q && { q: filters.q }),
+    ...(filters.sort !== defaultSort(filters.q) && { sort: filters.sort }),
     ...(filters.featured && { featured: true }),
     ...(filters.priceMin > 0 && { price_min: filters.priceMin }),
     ...(filters.priceMax > 0 && { price_max: filters.priceMax }),
@@ -157,7 +198,24 @@ export function toggleOption(
   return { ...filters, options };
 }
 
-/** Filters that narrow the results (sorting doesn't count). */
+/**
+ * Replaces the search. A sort left at its default follows the new search
+ * (relevance with one, newest without); a chosen sort stays.
+ */
+export function withSearch(
+  filters: ListingFilters,
+  raw: string,
+): ListingFilters {
+  const q = normalizeSearch(raw);
+  const sort =
+    filters.sort === defaultSort(filters.q) ||
+    (filters.sort === "relevance" && !isSearching(q))
+      ? defaultSort(q)
+      : filters.sort;
+  return { ...filters, q, sort };
+}
+
+/** Filters that narrow the results (sorting and the search don't count). */
 export function activeFilterCount(filters: ListingFilters): number {
   return (
     filters.options.length +
@@ -166,6 +224,13 @@ export function activeFilterCount(filters: ListingFilters): number {
   );
 }
 
+/** Removes the filters but keeps the search and the sort. */
 export function clearFilters(filters: ListingFilters): ListingFilters {
-  return { ...DEFAULT_FILTERS, sort: filters.sort };
+  return { ...DEFAULT_FILTERS, q: filters.q, sort: filters.sort };
+}
+
+/** The /shop page title (generateMetadata and the client header share it). */
+export function shopTitle(q: string, featured: boolean): string {
+  if (q) return `Search: ${q}`;
+  return featured ? "Editor's picks" : "Shop all";
 }

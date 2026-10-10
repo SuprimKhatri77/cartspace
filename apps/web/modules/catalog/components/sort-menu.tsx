@@ -10,18 +10,22 @@ import {
 } from "@/components/ui/select";
 import { SORT_OPTIONS } from "../lib/filters";
 
+type Option = (typeof SORT_OPTIONS)[number];
+
 export function SortMenu({
   value,
+  options,
   onChange,
 }: {
   value: SortOption;
+  options: Option[];
   onChange: (sort: SortOption) => void;
 }) {
   return (
     <Select
       value={value}
       onValueChange={(next) => next && onChange(next as SortOption)}
-      items={SORT_OPTIONS}
+      items={options}
     >
       <SelectTrigger
         aria-label="Sort products"
@@ -35,7 +39,7 @@ export function SortMenu({
         alignItemWithTrigger={false}
         className="min-w-48"
       >
-        {SORT_OPTIONS.map((option) => (
+        {options.map((option) => (
           <SelectItem
             key={option.value}
             value={option.value}

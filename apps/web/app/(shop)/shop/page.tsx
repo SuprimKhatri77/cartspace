@@ -1,13 +1,31 @@
 import type { Metadata } from "next";
 import { ListingPage } from "@/modules/catalog/components/listing-page";
-import { CollectionHeader } from "@/modules/catalog/components/collection-header";
+import { ShopHeader } from "@/modules/catalog/components/shop-header";
 import { getCollections } from "@/modules/catalog/api";
-import type { SearchParams } from "@/modules/catalog/lib/filters";
+import {
+  parseFilters,
+  shopTitle,
+  type SearchParams,
+} from "@/modules/catalog/lib/filters";
 
-export const metadata: Metadata = {
-  title: "Shop all",
-  description: "Every piece in the cartspace collection.",
-};
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}): Promise<Metadata> {
+  const filters = parseFilters(await searchParams);
+  const title = shopTitle(filters.q, filters.featured);
+  if (filters.q) {
+    // Result pages are endless and thin; keep them out of the index.
+    return { title, robots: { index: false } };
+  }
+  return {
+    title,
+    description: filters.featured
+      ? "The pieces we reach for most."
+      : "Every piece in the cartspace collection.",
+  };
+}
 
 export default async function ShopPage({
   searchParams,
@@ -18,18 +36,10 @@ export default async function ShopPage({
     searchParams,
     getCollections(),
   ]);
-  const featured = query.featured === "true";
 
   return (
     <div className="container-page">
-      <CollectionHeader
-        eyebrow={featured ? "Curated" : "The collection"}
-        title={featured ? "Editor's picks." : "Shop all."}
-        description={
-          featured
-            ? "The pieces we reach for most, chosen by the people who choose everything."
-            : "Clothing, accessories and homewares in natural materials. Filter by size, colour and price."
-        }
+      <ShopHeader
         links={collections.map((c) => ({
           label: c.name,
           href: `/categories/${c.slug}`,
