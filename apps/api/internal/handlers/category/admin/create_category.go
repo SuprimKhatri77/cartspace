@@ -121,7 +121,7 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 				return
 			}
 
-			c.JSON(http.StatusOK, types.APIResponse{
+			c.JSON(http.StatusCreated, types.APIResponse{
 				Success: true,
 				Message: "Subcategory created",
 				Data:    category,

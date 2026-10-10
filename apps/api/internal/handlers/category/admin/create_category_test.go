@@ -32,8 +32,8 @@ func TestCreateCategory_Success(t *testing.T) {
 		"name": "fake category",
 	})
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", w.Code)
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d", w.Code)
 	}
 }
 
@@ -72,8 +72,8 @@ func TestCreateCategory_SlugExists(t *testing.T) {
 		"name": "fake category",
 	})
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", w.Code)
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d", w.Code)
 	}
 }
 
@@ -102,7 +102,7 @@ func TestCreateCategory_DBError(t *testing.T) {
 
 func TestCreateCategory_ParentNotFound(t *testing.T) {
 	repo := &mockCategoryRepo{
-		getCategoryByIdFn: func(_ context.Context, _ pgtype.UUID) (db.Category, error) {
+		getCategoryByIDFn: func(_ context.Context, _ pgtype.UUID) (db.Category, error) {
 			return db.Category{}, pgx.ErrNoRows
 		},
 		categorySlugExistsFn: func(_ context.Context, _ string) (bool, error) {
@@ -148,7 +148,7 @@ func TestCreateCategory_WithParentID(t *testing.T) {
 		createSubCategoryFn: func(_ context.Context, _ db.CreateSubCategoryParams) (db.Category, error) {
 			return FakeSubCategory(), nil
 		},
-		getCategoryByIdFn: func(_ context.Context, _ pgtype.UUID) (db.Category, error) {
+		getCategoryByIDFn: func(_ context.Context, _ pgtype.UUID) (db.Category, error) {
 			return FakeCategory(), nil
 		},
 		categorySlugExistsFn: func(_ context.Context, _ string) (bool, error) {
@@ -166,7 +166,7 @@ func TestCreateCategory_WithParentID(t *testing.T) {
 		"parentID": str,
 	})
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", w.Code)
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected 201, got %d", w.Code)
 	}
 }

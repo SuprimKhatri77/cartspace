@@ -11,7 +11,7 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
-const PAGE_LIMIT int64 = 20
+const pageLimit int64 = 20
 
 func GetPaginatedCategories(queries repository.CategoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -57,16 +57,16 @@ func GetPaginatedCategories(queries repository.CategoryRepository) gin.HandlerFu
 			return
 		}
 
-		totalPages := (total + PAGE_LIMIT - 1) / 20
+		totalPages := (total + pageLimit - 1) / pageLimit
 
 		if page > int(totalPages) {
 			page = int(totalPages)
 		}
 
-		offset := (page - 1) * int(PAGE_LIMIT)
+		offset := (page - 1) * int(pageLimit)
 
 		categories, err := queries.GetPaginatedCategories(ctx, db.GetPaginatedCategoriesParams{
-			Limit:  int32(PAGE_LIMIT),
+			Limit:  int32(pageLimit),
 			Offset: int32(offset),
 		})
 		if err != nil {
