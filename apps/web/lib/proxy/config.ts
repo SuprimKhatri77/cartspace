@@ -10,6 +10,7 @@ export const ROLE_RULES: ReadonlyArray<{
   { prefix: "/admin", roles: ["admin"] },
   { prefix: "/account", roles: ["admin", "customer"] },
   { prefix: "/cart", roles: ["admin", "customer"] },
+  { prefix: "/checkout", roles: ["admin", "customer"] },
 ];
 
 // Pages only for signed-out users; signed-in users are sent home.

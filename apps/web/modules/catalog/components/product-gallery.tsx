@@ -111,6 +111,10 @@ function ZoomImage({ src, alt }: { src: string; alt: string }) {
             alt={alt}
             fill
             sizes={SIZES}
+            // The page's largest image on desktop: no lazy loading (the
+            // mobile strip's preload already fetched this same file).
+            loading="eager"
+            fetchPriority="high"
             className="object-cover transition-transform duration-500 ease-out-expo"
             style={{
               transformOrigin: "var(--zoom-origin, 50% 50%)",
@@ -157,6 +161,7 @@ function MobileStrip({ images, alt }: { images: string[]; alt: string }) {
               // Same sizes as the desktop image, so both resolve to one
               // download; preloaded once here.
               preload={i === 0}
+              loading={i === 0 ? "eager" : "lazy"}
               sizes={SIZES}
               className="object-cover"
             />

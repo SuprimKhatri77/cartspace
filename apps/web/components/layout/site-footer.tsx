@@ -1,21 +1,25 @@
 import Link from "next/link";
+import { getSessionUser } from "@/lib/auth/session";
 import { site } from "@/lib/site";
 import { getCollections } from "@/modules/catalog/api";
 
-const staticColumns = [
-  {
-    title: "Account",
-    links: [
-      { label: "Sign in", href: "/auth/login" },
-      { label: "Create account", href: "/auth/register" },
-      { label: "Your account", href: "/account" },
-    ],
-  },
+const signedOutLinks = [
+  { label: "Sign in", href: "/auth/login" },
+  { label: "Create account", href: "/auth/register" },
+];
+
+const signedInLinks = [
+  { label: "Your account", href: "/account" },
+  { label: "Orders", href: "/account/orders" },
+  { label: "Your bag", href: "/cart" },
 ];
 
 export async function SiteFooter() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const roots = await getCollections().catch(() => []);
+  const [roots, user] = await Promise.all([
+    getCollections().catch(() => []),
+    getSessionUser(),
+  ]);
   const columns = [
     {
       title: "Shop",
@@ -25,7 +29,7 @@ export async function SiteFooter() {
         { label: "Editor's picks", href: "/shop?featured=true" },
       ],
     },
-    ...staticColumns,
+    { title: "Account", links: user ? signedInLinks : signedOutLinks },
   ];
 
   return (

@@ -6,8 +6,11 @@ import { SignOutIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useLogout } from "@/modules/auth/hooks/mutations/use-logout";
 
-// Orders and the wishlist join this list as their phases land.
-const links = [{ label: "Overview", href: "/account" }];
+// The wishlist joins this list when it lands.
+const links = [
+  { label: "Overview", href: "/account" },
+  { label: "Orders", href: "/account/orders" },
+];
 
 export function AccountNav() {
   const pathname = usePathname();
@@ -22,7 +25,12 @@ export function AccountNav() {
         <Link
           key={link.href}
           href={link.href}
-          aria-current={pathname === link.href ? "page" : undefined}
+          aria-current={
+            pathname === link.href ||
+            (link.href !== "/account" && pathname.startsWith(`${link.href}/`))
+              ? "page"
+              : undefined
+          }
           className={cn(
             "flex h-10 shrink-0 items-center border-l-2 border-transparent px-4 text-[0.8125rem] text-muted-foreground transition-colors hover:text-foreground",
             "aria-[current=page]:border-foreground aria-[current=page]:text-foreground",

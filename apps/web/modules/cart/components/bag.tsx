@@ -191,13 +191,32 @@ function BagContents({ close }: { close: () => void }) {
             Some items need your attention before checkout.
           </p>
         )}
-        <Link
-          href="/cart"
-          onClick={close}
-          className={cn(buttonVariants({ size: "lg" }), "w-full")}
-        >
-          View bag
-        </Link>
+        <div className="grid gap-2">
+          {cart!.has_issues ? (
+            <Link
+              href="/cart"
+              onClick={close}
+              className={cn(buttonVariants({ size: "lg" }), "w-full")}
+            >
+              Review bag
+            </Link>
+          ) : (
+            <Link
+              href="/checkout"
+              onClick={close}
+              className={cn(buttonVariants({ size: "lg" }), "w-full")}
+            >
+              Checkout
+            </Link>
+          )}
+          <Link
+            href="/cart"
+            onClick={close}
+            className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+          >
+            View bag
+          </Link>
+        </div>
       </SheetFooter>
     </>
   );

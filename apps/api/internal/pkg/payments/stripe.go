@@ -55,7 +55,10 @@ func (s *Stripe) CreateSession(ctx context.Context, req SessionRequest) (Session
 	}
 	number := strconv.FormatInt(req.OrderNumber, 10)
 	params := &stripe.CheckoutSessionCreateParams{
-		Mode:              stripe.String(string(stripe.CheckoutSessionModePayment)),
+		Mode: stripe.String(string(stripe.CheckoutSessionModePayment)),
+		// Charge exactly the order total in its currency: with Adaptive
+		// Pricing on, Stripe may present (and report) a converted amount.
+		AdaptivePricing:   &stripe.CheckoutSessionCreateAdaptivePricingParams{Enabled: stripe.Bool(false)},
 		LineItems:         items,
 		CustomerEmail:     stripe.String(req.Email),
 		ClientReferenceID: stripe.String(req.OrderID),
