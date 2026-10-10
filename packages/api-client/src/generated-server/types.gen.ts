@@ -118,6 +118,34 @@ export type CategoryBody = {
     parent_id?: string;
 };
 
+export type CategoryTreeResponse = {
+    success: true;
+    message: string;
+    /**
+     * Parents before children
+     */
+    data: Array<CategoryNode>;
+};
+
+/**
+ * A category with its depth in the category tree.
+ */
+export type CategoryNode = {
+    id: string;
+    name: string;
+    slug: string;
+    /**
+     * null for a root category
+     */
+    parent_id: string | null;
+    created_at: string;
+    updated_at: string;
+    /**
+     * 0 for a root category
+     */
+    depth: number;
+};
+
 export type CategoryListingResponse = {
     success: true;
     message: string;
@@ -189,7 +217,7 @@ export type ProductPageResponse = {
 export type ProductPage = {
     product_detail: ProductDetail;
     /**
-     * Active variants, default first
+     * Active variants, default first; options sorted by name
      */
     variants: Array<StorefrontVariant>;
     /**
@@ -818,6 +846,31 @@ export type AdminUpdateCategoryResponses = {
 };
 
 export type AdminUpdateCategoryResponse = AdminUpdateCategoryResponses[keyof AdminUpdateCategoryResponses];
+
+export type ListCategoriesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/categories';
+};
+
+export type ListCategoriesErrors = {
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type ListCategoriesError = ListCategoriesErrors[keyof ListCategoriesErrors];
+
+export type ListCategoriesResponses = {
+    /**
+     * Categories fetched
+     */
+    200: CategoryTreeResponse;
+};
+
+export type ListCategoriesResponse = ListCategoriesResponses[keyof ListCategoriesResponses];
 
 export type ListCategoryProductsData = {
     body?: never;

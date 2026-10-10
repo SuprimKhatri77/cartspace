@@ -228,31 +228,20 @@ func (q *Queries) GetCategoryBySlug(ctx context.Context, slug string) (Category,
 
 const getCategoryTree = `-- name: GetCategoryTree :many
 WITH RECURSIVE category_tree AS (
-  SELECT 
-    id,
-    name,
-    slug,
-    parent_id,
-    created_at,
-    updated_at,
-    0 AS depth
+  SELECT id, name, slug, parent_id, created_at, updated_at, 0 AS depth
   FROM categories
   WHERE parent_id IS NULL
 
-  UNION ALL
+  UNION
 
-  SELECT 
-    c.id,
-    c.name,
-    c.slug,
-    c.parent_id,
-    c.created_at,
-    c.updated_at,
-    ct.depth + 1
+  SELECT c.id, c.name, c.slug, c.parent_id, c.created_at, c.updated_at, ct.depth + 1
   FROM categories c
   JOIN category_tree ct ON c.parent_id = ct.id
+  WHERE ct.depth < 32
 )
-SELECT id, name, slug, parent_id, created_at, updated_at, depth FROM category_tree ORDER BY depth, name
+SELECT id, name, slug, parent_id, created_at, updated_at, depth::int AS depth
+FROM category_tree
+ORDER BY depth, name
 `
 
 type GetCategoryTreeRow struct {
@@ -265,6 +254,9 @@ type GetCategoryTreeRow struct {
 	Depth     int32              `json:"depth"`
 }
 
+// Every category with its depth (0 = root), parents before children.
+// The categories_no_cycle trigger prevents cycles; the depth bound makes
+// the recursion stop even if one slipped in.
 func (q *Queries) GetCategoryTree(ctx context.Context) ([]GetCategoryTreeRow, error) {
 	rows, err := q.db.Query(ctx, getCategoryTree)
 	if err != nil {

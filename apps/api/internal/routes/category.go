@@ -5,6 +5,7 @@ import (
 
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	adminCategory "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category/admin"
+	userCategory "github.com/suprimkhatri77/cartspace/backend/internal/handlers/category/user"
 	userProduct "github.com/suprimkhatri77/cartspace/backend/internal/handlers/product/user"
 	"github.com/suprimkhatri77/cartspace/backend/internal/middleware"
 	"github.com/suprimkhatri77/cartspace/backend/internal/routes/config"
@@ -18,5 +19,6 @@ func setupCategoryRoutes(router *gin.RouterGroup, cfg config.Config) {
 	admin.GET("", adminCategory.GetPaginatedCategories(cfg.Queries))
 
 	public := router.Group("/categories")
+	public.GET("", userCategory.ListCategories(cfg.Queries))
 	public.GET("/:slug", userProduct.ListProductByCategory(cfg.Queries))
 }

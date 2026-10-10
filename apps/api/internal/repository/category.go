@@ -25,4 +25,6 @@ type CategoryRepository interface {
 	GetPaginatedCategories(ctx context.Context, params dbgen.GetPaginatedCategoriesParams) ([]dbgen.Category, error)
 
 	GetCategoriesCount(ctx context.Context) (int64, error)
+
+	GetCategoryTree(ctx context.Context) ([]dbgen.GetCategoryTreeRow, error)
 }

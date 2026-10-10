@@ -32,6 +32,7 @@ func TestSetupRegistersAllRoutes(t *testing.T) {
 		"PUT /api/v1/admin/categories/:id",
 		"DELETE /api/v1/admin/categories/:id",
 		"GET /api/v1/admin/categories",
+		"GET /api/v1/categories",
 		"GET /api/v1/categories/:slug",
 
 		"POST /api/v1/admin/products",

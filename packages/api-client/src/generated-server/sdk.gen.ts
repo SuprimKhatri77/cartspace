@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddToCartData, AddToCartErrors, AddToCartResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ClearCartData, ClearCartErrors, ClearCartResponses, GetCartData, GetCartErrors, GetCartResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListProductsData, ListProductsErrors, ListProductsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses } from './types.gen';
+import type { AddToCartData, AddToCartErrors, AddToCartResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ClearCartData, ClearCartErrors, ClearCartResponses, GetCartData, GetCartErrors, GetCartResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListProductsData, ListProductsErrors, ListProductsResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -165,9 +165,16 @@ export const adminUpdateCategory = <ThrowOnError extends boolean = false>(option
 });
 
 /**
+ * List all categories
+ *
+ * Every category with its depth, parents before children, for building the navigation tree. Not paginated.
+ */
+export const listCategories = <ThrowOnError extends boolean = false>(options?: Options<ListCategoriesData, ThrowOnError>): RequestResult<ListCategoriesResponses, ListCategoriesErrors, ThrowOnError> => (options?.client ?? client).get<ListCategoriesResponses, ListCategoriesErrors, ThrowOnError>({ url: '/api/v1/categories', ...options });
+
+/**
  * List a category's products
  *
- * Visible products of exactly this category, 40 per page, priced by their default variant. Also returns the category's filter options and price range.
+ * Visible products of this category and all its subcategories, 40 per page, priced by their default variant. Also returns the category's filter options and price range.
  */
 export const listCategoryProducts = <ThrowOnError extends boolean = false>(options: Options<ListCategoryProductsData, ThrowOnError>): RequestResult<ListCategoryProductsResponses, ListCategoryProductsErrors, ThrowOnError> => (options.client ?? client).get<ListCategoryProductsResponses, ListCategoryProductsErrors, ThrowOnError>({ url: '/api/v1/categories/{slug}', ...options });
 

@@ -127,7 +127,7 @@ export const ProductPageSchema = z
     product_detail: ProductDetailSchema,
     variants: z
       .array(StorefrontVariantSchema)
-      .describe("Active variants, default first"),
+      .describe("Active variants, default first; options sorted by name"),
     related_products: z
       .array(ProductWithPriceSchema)
       .describe("Up to 8 visible products from the same category"),

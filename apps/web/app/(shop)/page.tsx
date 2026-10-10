@@ -1,45 +1,72 @@
-import { getHealth } from "@repo/api-client/server";
-import { serverClient } from "@/lib/api/server";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getCategories, getProducts } from "@/modules/catalog/api";
+import { PaginationNav } from "@/modules/catalog/components/pagination-nav";
+import { ProductGrid } from "@/modules/catalog/components/product-grid";
+import {
+  parsePage,
+  type SearchParams,
+} from "@/modules/catalog/lib/search-params";
 
-async function apiStatus(): Promise<{ online: boolean; message: string }> {
-  try {
-    const { data, response } = await getHealth({
-      client: await serverClient(),
-      cache: "no-store",
-      signal: AbortSignal.timeout(5_000),
-    });
-    return response?.ok
-      ? { online: true, message: data?.message ?? "OK" }
-      : {
-          online: false,
-          message: response
-            ? `API responded ${response.status}`
-            : "API unreachable",
-        };
-  } catch {
-    return { online: false, message: "API unreachable" };
-  }
-}
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const page = parsePage(await searchParams);
+  const [categories, products] = await Promise.all([
+    getCategories(),
+    getProducts(page),
+  ]);
+  if (!products) notFound();
 
-export default async function HomePage() {
-  const status = await apiStatus();
+  const roots = categories.filter((c) => c.parent_id === null);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span
-          aria-hidden
-          className={`size-2 rounded-full ${
-            status.online ? "bg-emerald-500" : "bg-destructive"
-          }`}
+    <div className="space-y-12">
+      {page === 1 && (
+        <section className="space-y-6">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Shop cartspace
+            </h1>
+            <p className="max-w-xl text-sm text-muted-foreground">
+              Everyday clothing, accessories and things for home.
+            </p>
+          </div>
+          {roots.length > 0 && (
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {roots.map((category) => (
+                <li key={category.id}>
+                  <Link
+                    href={`/categories/${category.slug}`}
+                    className="flex h-20 items-end border border-border p-4 text-sm font-medium transition-colors hover:bg-muted"
+                  >
+                    {category.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      <section className="space-y-6">
+        <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
+          Latest products
+        </h2>
+        {products.data.length > 0 ? (
+          <ProductGrid products={products.data} />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No products yet. Check back soon.
+          </p>
+        )}
+        <PaginationNav
+          meta={products.meta}
+          href={(p) => (p === 1 ? "/" : `/?page=${p}`)}
         />
-        API {status.online ? "online" : "offline"}: {status.message}
-      </div>
-      <h1 className="text-3xl font-semibold tracking-tight">cartspace</h1>
-      <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-        The storefront is on its way. Sign in or create an account in the
-        meantime.
-      </p>
+      </section>
     </div>
   );
 }
