@@ -1,118 +1,98 @@
-import {
-  baseResponseSchema,
-  loginSchema,
-  signupSchema,
-  validationErrorResponseSchema,
-} from "@repo/types";
-import type { ZodOpenApiPathsObject } from "zod-openapi";
+import { schemas } from "../schemas.ts";
+import { body, operation } from "./shared.ts";
 
-export const authPaths: ZodOpenApiPathsObject = {
-  "/api/auth/register": {
-    post: {
-      summary: "Register a new user",
-      tags: ["Auth"],
-      requestBody: {
-        content: { "application/json": { schema: signupSchema } },
-        required: true,
-      },
-      responses: {
-        200: {
-          description: "User registered successfully",
-          content: { "application/json": { schema: baseResponseSchema } },
-        },
-        400: {
-          description: "Validation error",
-          content: {
-            "application/json": { schema: validationErrorResponseSchema },
-          },
-        },
+const tag = "Auth";
+const sessionCookies =
+  "Sets the `access_token` and `refresh_token` (HTTP-only) cookies and the readable `is_logged_in` cookie.";
 
-        409: {
-          description: "User already exists",
-          content: { "application/json": { schema: baseResponseSchema } },
-        },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: baseResponseSchema } },
-        },
-      },
+export function registerAuthPaths() {
+  operation({
+    method: "post",
+    path: "/api/v1/auth/register",
+    operationId: "register",
+    tag,
+    summary: "Register",
+    description: `Creates a customer account and starts a session. ${sessionCookies} The email is trimmed and lowercased.`,
+    request: body(schemas.RegisterBodySchema),
+    success: {
+      status: 201,
+      description: "Registration successful",
+      schema: schemas.UserResponseSchema,
     },
-  },
-  "/api/auth/login": {
-    post: {
-      summary: "Login user",
-      tags: ["Auth"],
-      requestBody: {
-        content: { "application/json": { schema: loginSchema } },
-        required: true,
-      },
+    errors: {
+      400: "Invalid body (VALIDATION_FAILED)",
+      409: "Email already registered (USER_ALREADY_EXISTS)",
+    },
+  });
 
-      responses: {
-        200: {
-          description: "Login successful",
-          content: {
-            "application/json": { schema: baseResponseSchema },
-          },
-        },
-        400: {
-          description: "Invalid request body",
-          content: {
-            "application/json": { schema: validationErrorResponseSchema },
-          },
-        },
-        401: {
-          description: "Invalid credentials",
-          content: { "application/json": { schema: baseResponseSchema } },
-        },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: baseResponseSchema } },
-        },
-      },
+  operation({
+    method: "post",
+    path: "/api/v1/auth/login",
+    operationId: "login",
+    tag,
+    summary: "Log in",
+    description: `Starts a new session. ${sessionCookies}`,
+    request: body(schemas.LoginBodySchema),
+    success: {
+      status: 200,
+      description: "Logged in successfully",
+      schema: schemas.UserResponseSchema,
     },
-  },
-  "/api/auth/logout": {
-    post: {
-      summary: "Logout user",
-      description:
-        "Reads refresh_token from httpOnly cookie. No request body needed.",
-      tags: ["Auth"],
-      responses: {
-        200: {
-          description: "Logged out successfully",
-          content: { "application/json": { schema: baseResponseSchema } },
-        },
-        401: {
-          description: "Invalid or missing refresh token cookie",
-          content: { "application/json": { schema: baseResponseSchema } },
-        },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: baseResponseSchema } },
-        },
-      },
+    errors: {
+      400: "Invalid body (VALIDATION_FAILED)",
+      401: "Unknown email or wrong password (INVALID_CREDENTIALS)",
     },
-  },
-  "/api/auth/refresh": {
-    post: {
-      summary: "Refresh access token",
-      description:
-        "Reads refresh_token from httpOnly cookie. No request body needed.",
-      tags: ["Auth"],
-      responses: {
-        200: {
-          description: "New access token issued",
-          content: { "application/json": { schema: baseResponseSchema } },
-        },
-        401: {
-          description: "Invalid or expired refresh token",
-          content: { "application/json": { schema: baseResponseSchema } },
-        },
-        500: {
-          description: "Internal server error",
-          content: { "application/json": { schema: baseResponseSchema } },
-        },
-      },
+  });
+
+  operation({
+    method: "post",
+    path: "/api/v1/auth/logout",
+    operationId: "logout",
+    tag,
+    summary: "Log out",
+    description:
+      "Revokes the session of the refresh token cookie, if any, and always clears the auth cookies.",
+    auth: "refresh-optional",
+    success: {
+      status: 200,
+      description: "Logged out successfully",
+      schema: schemas.MessageResponseSchema,
     },
-  },
-};
+  });
+
+  operation({
+    method: "post",
+    path: "/api/v1/auth/refresh",
+    operationId: "refreshSession",
+    tag,
+    summary: "Refresh the session",
+    description:
+      "Rotates the refresh token and issues a new access token. A request that lost a concurrent rotation within 30 seconds gets a new access token only. Reusing an older refresh token revokes the session. Every 401 clears the auth cookies.",
+    auth: "refresh",
+    success: {
+      status: 200,
+      description: "Tokens refreshed",
+      schema: schemas.MessageResponseSchema,
+    },
+    errors: {
+      401: "Missing, invalid, expired or reused refresh token (MISSING_REFRESH_TOKEN, INVALID_REFRESH_TOKEN)",
+    },
+  });
+
+  operation({
+    method: "get",
+    path: "/api/v1/auth/me",
+    operationId: "getMe",
+    tag,
+    summary: "Get the current user",
+    description:
+      "Reads the user fresh from the database, not from the token claims.",
+    auth: "user",
+    success: {
+      status: 200,
+      description: "User fetched",
+      schema: schemas.UserResponseSchema,
+    },
+    errors: { 404: "The user no longer exists (USER_NOT_FOUND)" },
+  });
+}

@@ -1,29 +1,27 @@
-import { createDocument } from "zod-openapi";
-import { authPaths } from "./paths/auth";
-import { categoryPaths } from "./paths/category";
+import "./zod-extend.ts";
+import { OpenApiGeneratorV31 } from "@asteasolutions/zod-to-openapi";
+import { registerPaths } from "./paths/index.ts";
+import { registry } from "./registry.ts";
+
+registerPaths();
 
 export function generateOpenAPIDocument() {
-  return createDocument({
-    openapi: "3.0.3",
+  const generator = new OpenApiGeneratorV31(registry.definitions);
+  return generator.generateDocument({
+    openapi: "3.1.0",
     info: {
       title: "Cartspace API",
       version: "1.0.0",
-      description:
-        "The Cartspace API provides secure, RESTful endpoints for storefront operations including user authentication, product discovery, shopping cart, and order management.",
+      description: [
+        "REST API of the Cartspace storefront (Go + Gin).",
+        "",
+        "- Auth uses HTTP-only cookies; browsers must send credentials.",
+        "- Request and response bodies are snake_case JSON.",
+        "- Money is always an integer amount in cents.",
+        "- Every response has `success` and `message`. Failures add a machine-readable `code`, and validation failures list `errors` with a react-hook-form style `field` path.",
+        "- Every response carries an `X-Request-ID` header (a valid incoming one is reused).",
+      ].join("\n"),
     },
     servers: [{ url: "/", description: "Current host" }],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: "http",
-          scheme: "bearer",
-          bearerFormat: "JWT",
-        },
-      },
-    },
-    paths: {
-      ...authPaths,
-      ...categoryPaths,
-    },
   });
 }

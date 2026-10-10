@@ -1,0 +1,150 @@
+import { z } from "zod";
+import {
+  Cents,
+  PaginationMetaSchema,
+  paginatedResponse,
+  successResponse,
+  Timestamp,
+  Uuid,
+} from "../api/response";
+
+export const ProductSchema = z
+  .object({
+    id: Uuid,
+    name: z.string(),
+    slug: z.string(),
+    category_id: Uuid.nullable().describe("null once its category is deleted"),
+    description: z.string().nullable(),
+    features: z.array(z.string()),
+    images: z.array(z.url()),
+    image_public_ids: z.array(z.string()),
+    is_active: z.boolean(),
+    is_featured: z.boolean(),
+    created_at: Timestamp,
+    updated_at: Timestamp,
+  })
+  .meta({ id: "Product" });
+export type Product = z.infer<typeof ProductSchema>;
+
+export const ProductWithPriceSchema = ProductSchema.extend({
+  selling_price: Cents,
+  offer_price: Cents.nullable(),
+}).meta({
+  id: "ProductWithPrice",
+  description: "A product priced by its default variant (storefront listings).",
+});
+export type ProductWithPrice = z.infer<typeof ProductWithPriceSchema>;
+
+export const AdminProductSchema = ProductSchema.extend({
+  category_name: z.string().nullable(),
+}).meta({
+  id: "AdminProduct",
+  description: "A row of the admin products table.",
+});
+export type AdminProduct = z.infer<typeof AdminProductSchema>;
+
+export const ProductDetailSchema = ProductSchema.extend({
+  variant_id: Uuid,
+  stock: z.int().nonnegative(),
+  variant_images: z.array(z.url()),
+  selling_price: Cents,
+  offer_price: Cents.nullable(),
+}).meta({
+  id: "ProductDetail",
+  description: "A product with its default variant's stock, images and price.",
+});
+export type ProductDetail = z.infer<typeof ProductDetailSchema>;
+
+export const VariantOptionSchema = z
+  .object({
+    name: z.string(),
+    value: z.string(),
+  })
+  .meta({ id: "VariantOption" });
+export type VariantOption = z.infer<typeof VariantOptionSchema>;
+
+export const FilterOptionSchema = z
+  .object({
+    option_name: z.string(),
+    option_value: z.string(),
+  })
+  .meta({ id: "FilterOption" });
+export type FilterOption = z.infer<typeof FilterOptionSchema>;
+
+export const PriceRangeSchema = z
+  .object({
+    min_price: Cents.describe("0 when the category has no visible products"),
+    max_price: Cents,
+  })
+  .meta({ id: "PriceRange" });
+export type PriceRange = z.infer<typeof PriceRangeSchema>;
+
+// Mirrors apps/api/internal/types/product.go. Update replaces every field.
+export const ProductBodySchema = z
+  .object({
+    name: z.string().trim().min(2).max(50),
+    images: z.array(z.url()).min(1).max(5),
+    image_public_ids: z
+      .array(z.string().trim().min(1))
+      .min(1)
+      .max(5)
+      .describe("Cloudinary public IDs, one per image, in the same order"),
+    description: z.string().trim().min(1).max(5000),
+    features: z.array(z.string().trim().min(1).max(100)).max(7).optional(),
+    category_id: Uuid,
+    is_active: z.boolean(),
+    is_featured: z.boolean(),
+  })
+  .refine((b) => b.image_public_ids.length === b.images.length, {
+    path: ["image_public_ids"],
+    message: "Provide one public ID per image",
+  })
+  .meta({
+    id: "ProductBody",
+    description: "Create or fully replace a product.",
+  });
+export type ProductBody = z.infer<typeof ProductBodySchema>;
+
+export const SortOptionSchema = z
+  .enum(["newest", "price_asc", "price_desc"])
+  .meta({ id: "SortOption" });
+export type SortOption = z.infer<typeof SortOptionSchema>;
+
+export const ProductResponseSchema = successResponse(ProductSchema).meta({
+  id: "ProductResponse",
+});
+export type ProductResponse = z.infer<typeof ProductResponseSchema>;
+
+export const AdminProductListResponseSchema = paginatedResponse(
+  AdminProductSchema,
+).meta({ id: "AdminProductListResponse" });
+export type AdminProductListResponse = z.infer<
+  typeof AdminProductListResponseSchema
+>;
+
+export const ProductListResponseSchema = paginatedResponse(
+  ProductWithPriceSchema,
+).meta({ id: "ProductListResponse" });
+export type ProductListResponse = z.infer<typeof ProductListResponseSchema>;
+
+export const CategoryListingSchema = z
+  .object({
+    products: z.array(ProductWithPriceSchema),
+    filter_options: z.array(FilterOptionSchema),
+    price_range: PriceRangeSchema,
+  })
+  .meta({
+    id: "CategoryListing",
+    description:
+      "A page of a category's products with its filter options and price range.",
+  });
+export type CategoryListing = z.infer<typeof CategoryListingSchema>;
+
+export const CategoryListingResponseSchema = successResponse(
+  CategoryListingSchema,
+)
+  .extend({ meta: PaginationMetaSchema })
+  .meta({ id: "CategoryListingResponse" });
+export type CategoryListingResponse = z.infer<
+  typeof CategoryListingResponseSchema
+>;

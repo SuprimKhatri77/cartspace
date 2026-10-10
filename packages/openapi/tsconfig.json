@@ -17,12 +17,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
-
     "types": ["node"]
   },
-
-  "include": ["src"],
-  "paths": {
-    "@repo/types": ["../packages/types/src/index.ts"]
-  }
+  "include": ["src"]
 }

@@ -10,6 +10,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,yml,yaml,css}\"",
     "check-types": "turbo run check-types",
     "generate": "turbo run generate",
+    "generate:check": "bun run scripts/check-generated.ts",
     "db:migrate": "cd apps/api && make migrate-up",
     "db:migrate:down": "cd apps/api && make migrate-down",
     "db:sqlc": "cd apps/api && make sqlc",
@@ -19,7 +20,7 @@
     "docker:dev:down": "docker compose --env-file .env.local -f docker-compose.dev.yml down",
     "docker:dev:reset": "docker compose --env-file .env.local -f docker-compose.dev.yml down -v && bun run docker:dev:up",
     "prepush": "bun run check-types && bun run lint:go && bun run test:go && bun run build",
-    "ci": "bun run db:sqlc:check && bun run check-types && bun run lint && bun run lint:go && bun run test:go && bun run build",
+    "ci": "bun run generate:check && bun run db:sqlc:check && bun run check-types && bun run lint && bun run lint:go && bun run test:go && bun run build",
     "prepare": "husky"
   },
   "devDependencies": {

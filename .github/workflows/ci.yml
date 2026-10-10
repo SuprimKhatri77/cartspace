@@ -35,6 +35,9 @@ jobs:
       - name: Install JS dependencies
         run: bun install --frozen-lockfile
 
+      - name: Check generated OpenAPI spec and client
+        run: bun run generate:check
+
       - name: Setup sqlc
         uses: sqlc-dev/setup-sqlc@v4
         with:
