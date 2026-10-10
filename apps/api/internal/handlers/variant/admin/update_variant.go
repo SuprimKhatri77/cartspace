@@ -110,8 +110,6 @@ func UpdateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 			return
 		}
 
-		utils.TrimStruct(req)
-
 		variant, err := queries.GetVariantByID(ctx, variantID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {

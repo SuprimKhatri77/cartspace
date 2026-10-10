@@ -48,8 +48,6 @@ func UpdateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			return
 		}
 
-		utils.TrimStruct(updateProductRequest)
-
 		product, err := queries.GetProductByID(ctx, productID)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {

@@ -32,8 +32,6 @@ func CreateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			return
 		}
 
-		utils.TrimStruct(createProductRequest)
-
 		slug := utils.Slugify(createProductRequest.Name)
 
 		slugExists, err := queries.ProductSlugExists(ctx, slug)
