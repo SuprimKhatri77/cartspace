@@ -77,45 +77,46 @@ func (q *Queries) AdminProductsList(ctx context.Context, arg AdminProductsListPa
 	return items, nil
 }
 
-const countActiveProducts = `-- name: CountActiveProducts :one
-SELECT COUNT(*)
-FROM products p
-JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-WHERE p.is_active = TRUE
-`
-
-// must match the joins and filters of ListActiveProducts
-func (q *Queries) CountActiveProducts(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countActiveProducts)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const countProductsByCategory = `-- name: CountProductsByCategory :one
+const countStorefrontProducts = `-- name: CountStorefrontProducts :one
 WITH RECURSIVE subtree AS (
-    SELECT root.id FROM categories root WHERE root.slug = $3
+    SELECT root.id FROM categories root WHERE root.slug = $1::text
     UNION
     SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
 )
 SELECT COUNT(*)
-FROM products p
-JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-WHERE p.is_active = TRUE
-AND p.category_id IN (SELECT id FROM subtree)
-AND ($1::int = 0 OR pv.selling_price >= $1::int)
-AND ($2::int = 0 OR pv.selling_price <= $2::int)
+FROM storefront_products sp
+WHERE ($1::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
+AND (NOT $2::bool OR sp.is_featured)
+AND ($3::int = 0 OR sp.price >= $3::int)
+AND ($4::int = 0 OR sp.price <= $4::int)
+AND (
+    cardinality($5::text[]) = 0
+    OR EXISTS (
+        SELECT 1 FROM product_variants v
+        WHERE v.product_id = sp.id AND v.is_active = TRUE
+        AND variant_matches_options(v.id, $5::text[], $6::text[])
+    )
+)
 `
 
-type CountProductsByCategoryParams struct {
-	PriceMin int32  `json:"price_min"`
-	PriceMax int32  `json:"price_max"`
-	Slug     string `json:"slug"`
+type CountStorefrontProductsParams struct {
+	CategorySlug pgtype.Text `json:"category_slug"`
+	FeaturedOnly bool        `json:"featured_only"`
+	PriceMin     int32       `json:"price_min"`
+	PriceMax     int32       `json:"price_max"`
+	OptionNames  []string    `json:"option_names"`
+	OptionValues []string    `json:"option_values"`
 }
 
-// must match the joins and filters of ListProductsByCategory
-func (q *Queries) CountProductsByCategory(ctx context.Context, arg CountProductsByCategoryParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countProductsByCategory, arg.PriceMin, arg.PriceMax, arg.Slug)
+func (q *Queries) CountStorefrontProducts(ctx context.Context, arg CountStorefrontProductsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countStorefrontProducts,
+		arg.CategorySlug,
+		arg.FeaturedOnly,
+		arg.PriceMin,
+		arg.PriceMax,
+		arg.OptionNames,
+		arg.OptionValues,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -177,79 +178,6 @@ func (q *Queries) DeleteProduct(ctx context.Context, id pgtype.UUID) (pgconn.Com
 	return q.db.Exec(ctx, deleteProduct, id)
 }
 
-const getCategoryFilterOptions = `-- name: GetCategoryFilterOptions :many
-WITH RECURSIVE subtree AS (
-    SELECT root.id FROM categories root WHERE root.slug = $1
-    UNION
-    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
-)
-SELECT
-    po.name as option_name,
-    pov.value as option_value
-FROM product_options po
-JOIN product_option_values pov ON pov.option_id = po.id
-JOIN variant_option_values vov ON vov.option_value_id = pov.id
-JOIN product_variants v ON v.id = vov.variant_id AND v.is_active = TRUE
-JOIN products p ON p.id = po.product_id
-JOIN product_variants dv ON dv.product_id = p.id AND dv.is_default = TRUE AND dv.is_active = TRUE
-WHERE p.category_id IN (SELECT id FROM subtree)
-AND p.is_active = TRUE
-GROUP BY po.name, pov.value
-ORDER BY po.name, pov.value
-`
-
-type GetCategoryFilterOptionsRow struct {
-	OptionName  string `json:"option_name"`
-	OptionValue string `json:"option_value"`
-}
-
-// Option values of the active variants of visible products only.
-func (q *Queries) GetCategoryFilterOptions(ctx context.Context, slug string) ([]GetCategoryFilterOptionsRow, error) {
-	rows, err := q.db.Query(ctx, getCategoryFilterOptions, slug)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetCategoryFilterOptionsRow{}
-	for rows.Next() {
-		var i GetCategoryFilterOptionsRow
-		if err := rows.Scan(&i.OptionName, &i.OptionValue); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getMinMaxSellingPrice = `-- name: GetMinMaxSellingPrice :one
-WITH RECURSIVE subtree AS (
-    SELECT root.id FROM categories root WHERE root.slug = $1
-    UNION
-    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
-)
-SELECT COALESCE(MIN(pv.selling_price), 0)::int AS min_price, COALESCE(MAX(pv.selling_price), 0)::int AS max_price
-FROM product_variants pv
-JOIN products p ON p.id = pv.product_id
-WHERE p.category_id IN (SELECT id FROM subtree) AND p.is_active = TRUE AND pv.is_default = TRUE AND pv.is_active = TRUE
-`
-
-type GetMinMaxSellingPriceRow struct {
-	MinPrice int32 `json:"min_price"`
-	MaxPrice int32 `json:"max_price"`
-}
-
-// Over the same default-variant prices that price_min/price_max filter on.
-// COALESCE: MIN/MAX are NULL when the category has no visible products.
-func (q *Queries) GetMinMaxSellingPrice(ctx context.Context, slug string) (GetMinMaxSellingPriceRow, error) {
-	row := q.db.QueryRow(ctx, getMinMaxSellingPrice, slug)
-	var i GetMinMaxSellingPriceRow
-	err := row.Scan(&i.MinPrice, &i.MaxPrice)
-	return i, err
-}
-
 const getProductByID = `-- name: GetProductByID :one
 SELECT id, name, slug, category_id, description, features, images, image_public_ids, is_active, is_featured, created_at, updated_at FROM products WHERE id = $1
 `
@@ -299,16 +227,13 @@ func (q *Queries) GetProductBySlug(ctx context.Context, slug string) (Product, e
 }
 
 const getProductWithDefaultVariantBySlug = `-- name: GetProductWithDefaultVariantBySlug :one
-SELECT 
-    p.id, p.name, p.slug, p.category_id, p.description, p.features, p.images, p.image_public_ids, p.is_active, p.is_featured, p.created_at, p.updated_at,
-    pv.id AS variant_id,
+SELECT
+    sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.variant_id, sp.selling_price, sp.offer_price, sp.price,
     pv.stock,
-    pv.images AS variant_images,
-    pv.selling_price,
-    pv.offer_price
-FROM products p
-JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-WHERE p.slug = $1 AND p.is_active = TRUE
+    pv.images AS variant_images
+FROM storefront_products sp
+JOIN product_variants pv ON pv.id = sp.variant_id
+WHERE sp.slug = $1
 `
 
 type GetProductWithDefaultVariantBySlugRow struct {
@@ -325,10 +250,11 @@ type GetProductWithDefaultVariantBySlugRow struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	VariantID      pgtype.UUID        `json:"variant_id"`
-	Stock          int32              `json:"stock"`
-	VariantImages  []string           `json:"variant_images"`
 	SellingPrice   int32              `json:"selling_price"`
 	OfferPrice     pgtype.Int4        `json:"offer_price"`
+	Price          int32              `json:"price"`
+	Stock          int32              `json:"stock"`
+	VariantImages  []string           `json:"variant_images"`
 }
 
 func (q *Queries) GetProductWithDefaultVariantBySlug(ctx context.Context, slug string) (GetProductWithDefaultVariantBySlugRow, error) {
@@ -348,10 +274,11 @@ func (q *Queries) GetProductWithDefaultVariantBySlug(ctx context.Context, slug s
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.VariantID,
-		&i.Stock,
-		&i.VariantImages,
 		&i.SellingPrice,
 		&i.OfferPrice,
+		&i.Price,
+		&i.Stock,
+		&i.VariantImages,
 	)
 	return i, err
 }
@@ -368,46 +295,23 @@ func (q *Queries) GetProductsCount(ctx context.Context) (int64, error) {
 }
 
 const getRelatedProducts = `-- name: GetRelatedProducts :many
-SELECT 
-    p.id, p.name, p.slug, p.category_id, p.description, p.features, p.images, p.image_public_ids, p.is_active, p.is_featured, p.created_at, p.updated_at,
-    pv.selling_price,
-    pv.offer_price
-FROM products p
-JOIN categories c ON c.id = p.category_id
-JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-WHERE c.id = (SELECT pr.category_id FROM products pr WHERE pr.slug = $1)
-AND p.slug != $1
-AND p.is_active = TRUE
-ORDER BY p.created_at DESC, p.id DESC
+SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.variant_id, sp.selling_price, sp.offer_price, sp.price
+FROM storefront_products sp
+WHERE sp.category_id = (SELECT pr.category_id FROM products pr WHERE pr.slug = $1)
+AND sp.slug != $1
+ORDER BY sp.created_at DESC, sp.id DESC
 LIMIT 8
 `
 
-type GetRelatedProductsRow struct {
-	ID             pgtype.UUID        `json:"id"`
-	Name           string             `json:"name"`
-	Slug           string             `json:"slug"`
-	CategoryID     pgtype.UUID        `json:"category_id"`
-	Description    pgtype.Text        `json:"description"`
-	Features       []string           `json:"features"`
-	Images         []string           `json:"images"`
-	ImagePublicIds []string           `json:"image_public_ids"`
-	IsActive       bool               `json:"is_active"`
-	IsFeatured     bool               `json:"is_featured"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
-	SellingPrice   int32              `json:"selling_price"`
-	OfferPrice     pgtype.Int4        `json:"offer_price"`
-}
-
-func (q *Queries) GetRelatedProducts(ctx context.Context, slug string) ([]GetRelatedProductsRow, error) {
+func (q *Queries) GetRelatedProducts(ctx context.Context, slug string) ([]StorefrontProduct, error) {
 	rows, err := q.db.Query(ctx, getRelatedProducts, slug)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []GetRelatedProductsRow{}
+	items := []StorefrontProduct{}
 	for rows.Next() {
-		var i GetRelatedProductsRow
+		var i StorefrontProduct
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -421,8 +325,10 @@ func (q *Queries) GetRelatedProducts(ctx context.Context, slug string) ([]GetRel
 			&i.IsFeatured,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.VariantID,
 			&i.SellingPrice,
 			&i.OfferPrice,
+			&i.Price,
 		); err != nil {
 			return nil, err
 		}
@@ -434,13 +340,100 @@ func (q *Queries) GetRelatedProducts(ctx context.Context, slug string) ([]GetRel
 	return items, nil
 }
 
+const getStorefrontFilterOptions = `-- name: GetStorefrontFilterOptions :many
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = $1::text
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
+SELECT
+    po.name AS option_name,
+    pov.value AS option_value,
+    MIN(po.type)::text AS option_type
+FROM storefront_products sp
+JOIN product_options po ON po.product_id = sp.id
+JOIN product_option_values pov ON pov.option_id = po.id
+JOIN variant_option_values vov ON vov.option_value_id = pov.id
+JOIN product_variants v ON v.id = vov.variant_id AND v.is_active = TRUE
+WHERE ($1::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
+AND (NOT $2::bool OR sp.is_featured)
+GROUP BY po.name, pov.value
+ORDER BY po.name, pov.value
+`
+
+type GetStorefrontFilterOptionsParams struct {
+	CategorySlug pgtype.Text `json:"category_slug"`
+	FeaturedOnly bool        `json:"featured_only"`
+}
+
+type GetStorefrontFilterOptionsRow struct {
+	OptionName  string `json:"option_name"`
+	OptionValue string `json:"option_value"`
+	OptionType  string `json:"option_type"`
+}
+
+// Option values of the active variants of the products in scope. An option
+// is a colour when any product declares it as one.
+func (q *Queries) GetStorefrontFilterOptions(ctx context.Context, arg GetStorefrontFilterOptionsParams) ([]GetStorefrontFilterOptionsRow, error) {
+	rows, err := q.db.Query(ctx, getStorefrontFilterOptions, arg.CategorySlug, arg.FeaturedOnly)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetStorefrontFilterOptionsRow{}
+	for rows.Next() {
+		var i GetStorefrontFilterOptionsRow
+		if err := rows.Scan(&i.OptionName, &i.OptionValue, &i.OptionType); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getStorefrontPriceRange = `-- name: GetStorefrontPriceRange :one
+WITH RECURSIVE subtree AS (
+    SELECT root.id FROM categories root WHERE root.slug = $1::text
+    UNION
+    SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
+)
+SELECT
+    COALESCE(MIN(sp.price), 0)::int AS min_price,
+    COALESCE(MAX(sp.price), 0)::int AS max_price
+FROM storefront_products sp
+WHERE ($1::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
+AND (NOT $2::bool OR sp.is_featured)
+`
+
+type GetStorefrontPriceRangeParams struct {
+	CategorySlug pgtype.Text `json:"category_slug"`
+	FeaturedOnly bool        `json:"featured_only"`
+}
+
+type GetStorefrontPriceRangeRow struct {
+	MinPrice int32 `json:"min_price"`
+	MaxPrice int32 `json:"max_price"`
+}
+
+// Over the same prices that price_min/price_max filter on. COALESCE: MIN and
+// MAX are NULL when nothing is in scope.
+func (q *Queries) GetStorefrontPriceRange(ctx context.Context, arg GetStorefrontPriceRangeParams) (GetStorefrontPriceRangeRow, error) {
+	row := q.db.QueryRow(ctx, getStorefrontPriceRange, arg.CategorySlug, arg.FeaturedOnly)
+	var i GetStorefrontPriceRangeRow
+	err := row.Scan(&i.MinPrice, &i.MaxPrice)
+	return i, err
+}
+
 const getVariantsByProductSlug = `-- name: GetVariantsByProductSlug :many
-SELECT 
-    pv.id, pv.product_id, pv.sku, pv.stock, pv.images, pv.image_public_ids, pv.selling_price, pv.offer_price, pv.is_default, pv.is_active, pv.created_at, pv.updated_at, pv.option_combination_key, pv.offer_expires_at,
+SELECT
+    sv.id, sv.product_id, sv.sku, sv.stock, sv.images, sv.selling_price, sv.offer_price, sv.price, sv.offer_expires_at, sv.is_default, sv.created_at,
     (
         SELECT COALESCE(
             json_agg(
-                jsonb_build_object('name', po.name, 'value', pov.value)
+                jsonb_build_object('name', po.name, 'value', pov.value, 'type', po.type)
                 ORDER BY po.name
             ),
             '[]'::json
@@ -448,30 +441,27 @@ SELECT
         FROM variant_option_values vov
         JOIN product_option_values pov ON pov.id = vov.option_value_id
         JOIN product_options po ON po.id = pov.option_id
-        WHERE vov.variant_id = pv.id
+        WHERE vov.variant_id = sv.id
     ) AS options
-FROM product_variants pv
-JOIN products p ON p.id = pv.product_id
-WHERE p.slug = $1 AND p.is_active = TRUE AND pv.is_active = TRUE
-ORDER BY pv.is_default DESC, pv.created_at ASC, pv.id ASC
+FROM storefront_variants sv
+JOIN products p ON p.id = sv.product_id
+WHERE p.slug = $1
+ORDER BY sv.is_default DESC, sv.created_at ASC, sv.id ASC
 `
 
 type GetVariantsByProductSlugRow struct {
-	ID                   pgtype.UUID        `json:"id"`
-	ProductID            pgtype.UUID        `json:"product_id"`
-	Sku                  pgtype.Text        `json:"sku"`
-	Stock                int32              `json:"stock"`
-	Images               []string           `json:"images"`
-	ImagePublicIds       []string           `json:"image_public_ids"`
-	SellingPrice         int32              `json:"selling_price"`
-	OfferPrice           pgtype.Int4        `json:"offer_price"`
-	IsDefault            bool               `json:"is_default"`
-	IsActive             bool               `json:"is_active"`
-	CreatedAt            pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
-	OptionCombinationKey string             `json:"option_combination_key"`
-	OfferExpiresAt       pgtype.Timestamptz `json:"offer_expires_at"`
-	Options              interface{}        `json:"options"`
+	ID             pgtype.UUID        `json:"id"`
+	ProductID      pgtype.UUID        `json:"product_id"`
+	Sku            pgtype.Text        `json:"sku"`
+	Stock          int32              `json:"stock"`
+	Images         []string           `json:"images"`
+	SellingPrice   int32              `json:"selling_price"`
+	OfferPrice     pgtype.Int4        `json:"offer_price"`
+	Price          int32              `json:"price"`
+	OfferExpiresAt pgtype.Timestamptz `json:"offer_expires_at"`
+	IsDefault      bool               `json:"is_default"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	Options        interface{}        `json:"options"`
 }
 
 func (q *Queries) GetVariantsByProductSlug(ctx context.Context, slug string) ([]GetVariantsByProductSlugRow, error) {
@@ -489,15 +479,12 @@ func (q *Queries) GetVariantsByProductSlug(ctx context.Context, slug string) ([]
 			&i.Sku,
 			&i.Stock,
 			&i.Images,
-			&i.ImagePublicIds,
 			&i.SellingPrice,
 			&i.OfferPrice,
-			&i.IsDefault,
-			&i.IsActive,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.OptionCombinationKey,
+			&i.Price,
 			&i.OfferExpiresAt,
+			&i.IsDefault,
+			&i.CreatedAt,
 			&i.Options,
 		); err != nil {
 			return nil, err
@@ -510,197 +497,70 @@ func (q *Queries) GetVariantsByProductSlug(ctx context.Context, slug string) ([]
 	return items, nil
 }
 
-const listActiveProducts = `-- name: ListActiveProducts :many
-SELECT p.id, p.name, p.slug, p.category_id, p.description, p.features, p.images, p.image_public_ids, p.is_active, p.is_featured, p.created_at, p.updated_at, pv.selling_price, pv.offer_price
-FROM products p
-JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-WHERE p.is_active = TRUE
-ORDER BY p.created_at DESC, p.id DESC
-LIMIT $1 OFFSET $2
-`
+const listStorefrontProducts = `-- name: ListStorefrontProducts :many
 
-type ListActiveProductsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
-
-type ListActiveProductsRow struct {
-	ID             pgtype.UUID        `json:"id"`
-	Name           string             `json:"name"`
-	Slug           string             `json:"slug"`
-	CategoryID     pgtype.UUID        `json:"category_id"`
-	Description    pgtype.Text        `json:"description"`
-	Features       []string           `json:"features"`
-	Images         []string           `json:"images"`
-	ImagePublicIds []string           `json:"image_public_ids"`
-	IsActive       bool               `json:"is_active"`
-	IsFeatured     bool               `json:"is_featured"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
-	SellingPrice   int32              `json:"selling_price"`
-	OfferPrice     pgtype.Int4        `json:"offer_price"`
-}
-
-// A product is publicly visible when it and its default variant are active.
-func (q *Queries) ListActiveProducts(ctx context.Context, arg ListActiveProductsParams) ([]ListActiveProductsRow, error) {
-	rows, err := q.db.Query(ctx, listActiveProducts, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListActiveProductsRow{}
-	for rows.Next() {
-		var i ListActiveProductsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Slug,
-			&i.CategoryID,
-			&i.Description,
-			&i.Features,
-			&i.Images,
-			&i.ImagePublicIds,
-			&i.IsActive,
-			&i.IsFeatured,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.SellingPrice,
-			&i.OfferPrice,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listFeaturedProducts = `-- name: ListFeaturedProducts :many
-SELECT p.id, p.name, p.slug, p.category_id, p.description, p.features, p.images, p.image_public_ids, p.is_active, p.is_featured, p.created_at, p.updated_at, pv.selling_price, pv.offer_price
-FROM products p
-JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-WHERE p.is_active = TRUE AND p.is_featured = TRUE
-ORDER BY p.created_at DESC, p.id DESC
-`
-
-type ListFeaturedProductsRow struct {
-	ID             pgtype.UUID        `json:"id"`
-	Name           string             `json:"name"`
-	Slug           string             `json:"slug"`
-	CategoryID     pgtype.UUID        `json:"category_id"`
-	Description    pgtype.Text        `json:"description"`
-	Features       []string           `json:"features"`
-	Images         []string           `json:"images"`
-	ImagePublicIds []string           `json:"image_public_ids"`
-	IsActive       bool               `json:"is_active"`
-	IsFeatured     bool               `json:"is_featured"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
-	SellingPrice   int32              `json:"selling_price"`
-	OfferPrice     pgtype.Int4        `json:"offer_price"`
-}
-
-func (q *Queries) ListFeaturedProducts(ctx context.Context) ([]ListFeaturedProductsRow, error) {
-	rows, err := q.db.Query(ctx, listFeaturedProducts)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListFeaturedProductsRow{}
-	for rows.Next() {
-		var i ListFeaturedProductsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Slug,
-			&i.CategoryID,
-			&i.Description,
-			&i.Features,
-			&i.Images,
-			&i.ImagePublicIds,
-			&i.IsActive,
-			&i.IsFeatured,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.SellingPrice,
-			&i.OfferPrice,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listProductsByCategory = `-- name: ListProductsByCategory :many
 WITH RECURSIVE subtree AS (
-    SELECT root.id FROM categories root WHERE root.slug = $6
+    SELECT root.id FROM categories root WHERE root.slug = $1::text
     UNION
     SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
 )
-SELECT p.id, p.name, p.slug, p.category_id, p.description, p.features, p.images, p.image_public_ids, p.is_active, p.is_featured, p.created_at, p.updated_at, pv.selling_price, pv.offer_price
-FROM products p
-JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE AND pv.is_active = TRUE
-WHERE p.is_active = TRUE
-AND p.category_id IN (SELECT id FROM subtree)
-AND ($1::int = 0 OR pv.selling_price >= $1::int)
-AND ($2::int = 0 OR pv.selling_price <= $2::int)
+SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.variant_id, sp.selling_price, sp.offer_price, sp.price
+FROM storefront_products sp
+WHERE ($1::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
+AND (NOT $2::bool OR sp.is_featured)
+AND ($3::int = 0 OR sp.price >= $3::int)
+AND ($4::int = 0 OR sp.price <= $4::int)
+AND (
+    cardinality($5::text[]) = 0
+    OR EXISTS (
+        SELECT 1 FROM product_variants v
+        WHERE v.product_id = sp.id AND v.is_active = TRUE
+        AND variant_matches_options(v.id, $5::text[], $6::text[])
+    )
+)
 ORDER BY
-    CASE WHEN $3::text = 'price_asc' THEN pv.selling_price END ASC,
-    CASE WHEN $3::text = 'price_desc' THEN pv.selling_price END DESC,
-    p.created_at DESC,
-    p.id DESC
-LIMIT $5 OFFSET $4
+    CASE WHEN $7::text = 'price_asc' THEN sp.price END ASC,
+    CASE WHEN $7::text = 'price_desc' THEN sp.price END DESC,
+    sp.created_at DESC,
+    sp.id DESC
+LIMIT $9 OFFSET $8
 `
 
-type ListProductsByCategoryParams struct {
-	PriceMin   int32  `json:"price_min"`
-	PriceMax   int32  `json:"price_max"`
-	Sort       string `json:"sort"`
-	PageOffset int32  `json:"page_offset"`
-	PageLimit  int32  `json:"page_limit"`
-	Slug       string `json:"slug"`
+type ListStorefrontProductsParams struct {
+	CategorySlug pgtype.Text `json:"category_slug"`
+	FeaturedOnly bool        `json:"featured_only"`
+	PriceMin     int32       `json:"price_min"`
+	PriceMax     int32       `json:"price_max"`
+	OptionNames  []string    `json:"option_names"`
+	OptionValues []string    `json:"option_values"`
+	Sort         string      `json:"sort"`
+	PageOffset   int32       `json:"page_offset"`
+	PageLimit    int32       `json:"page_limit"`
 }
 
-type ListProductsByCategoryRow struct {
-	ID             pgtype.UUID        `json:"id"`
-	Name           string             `json:"name"`
-	Slug           string             `json:"slug"`
-	CategoryID     pgtype.UUID        `json:"category_id"`
-	Description    pgtype.Text        `json:"description"`
-	Features       []string           `json:"features"`
-	Images         []string           `json:"images"`
-	ImagePublicIds []string           `json:"image_public_ids"`
-	IsActive       bool               `json:"is_active"`
-	IsFeatured     bool               `json:"is_featured"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
-	SellingPrice   int32              `json:"selling_price"`
-	OfferPrice     pgtype.Int4        `json:"offer_price"`
-}
-
-// The category and all its subcategories (UNION: terminates even on a cycle).
-func (q *Queries) ListProductsByCategory(ctx context.Context, arg ListProductsByCategoryParams) ([]ListProductsByCategoryRow, error) {
-	rows, err := q.db.Query(ctx, listProductsByCategory,
+// Storefront listings. The four queries below share one scope (an optional
+// category with all its subcategories, and featured_only); count and list
+// also share the price and option filters. Keep their WHERE clauses in sync.
+// UNION (not UNION ALL) in the subtree CTE terminates even on a cycle.
+func (q *Queries) ListStorefrontProducts(ctx context.Context, arg ListStorefrontProductsParams) ([]StorefrontProduct, error) {
+	rows, err := q.db.Query(ctx, listStorefrontProducts,
+		arg.CategorySlug,
+		arg.FeaturedOnly,
 		arg.PriceMin,
 		arg.PriceMax,
+		arg.OptionNames,
+		arg.OptionValues,
 		arg.Sort,
 		arg.PageOffset,
 		arg.PageLimit,
-		arg.Slug,
 	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListProductsByCategoryRow{}
+	items := []StorefrontProduct{}
 	for rows.Next() {
-		var i ListProductsByCategoryRow
+		var i StorefrontProduct
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -714,8 +574,10 @@ func (q *Queries) ListProductsByCategory(ctx context.Context, arg ListProductsBy
 			&i.IsFeatured,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.VariantID,
 			&i.SellingPrice,
 			&i.OfferPrice,
+			&i.Price,
 		); err != nil {
 			return nil, err
 		}

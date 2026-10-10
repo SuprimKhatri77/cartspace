@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserCircleIcon } from "@phosphor-icons/react";
+import { UserIcon } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,33 +24,43 @@ export function UserMenu() {
 
   if (!user) {
     return (
-      <div className="flex items-center gap-2">
-        <Link
-          className={buttonVariants({ variant: "ghost" })}
-          href={loginPath(pathname)}
-        >
-          Sign in
-        </Link>
-        <Link className={buttonVariants()} href="/auth/register">
-          Create account
-        </Link>
-      </div>
+      <Link
+        className={buttonVariants({
+          variant: "ghost",
+          className: "gap-2 px-2.5",
+        })}
+        href={loginPath(pathname)}
+      >
+        <UserIcon className="size-5" weight="light" />
+        <span className="hidden sm:inline">Sign in</span>
+      </Link>
     );
   }
+
+  const initials = user.name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className={buttonVariants({ variant: "ghost" })}
+        className={buttonVariants({ variant: "ghost", size: "icon" })}
         aria-label="Account menu"
       >
-        <UserCircleIcon />
-        <span className="hidden max-w-32 truncate sm:inline">{user.name}</span>
+        <span className="flex size-8 items-center justify-center rounded-full bg-primary font-mono text-[0.625rem] tracking-wider text-primary-foreground">
+          {initials}
+        </span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-60 p-1.5">
         <DropdownMenuGroup>
-          <DropdownMenuLabel>
-            <span className="block truncate">{user.email}</span>
+          <DropdownMenuLabel className="space-y-0.5 px-2 py-2">
+            <span className="block truncate text-sm text-foreground">
+              {user.name}
+            </span>
+            <span className="block truncate font-normal">{user.email}</span>
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />

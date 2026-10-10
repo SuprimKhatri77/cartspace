@@ -1,19 +1,36 @@
-import type { Metadata } from "next";
-import { Geist, JetBrains_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
+import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { getSessionUser } from "@/lib/auth/session";
 import { Providers } from "@/providers/providers";
 
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
-const jetbrainsMono = JetBrains_Mono({
+const geistMono = Geist_Mono({
   subsets: ["latin"],
-  variable: "--font-mono",
+  variable: "--font-geist-mono",
+});
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-instrument-serif",
 });
 
 export const metadata: Metadata = {
-  title: { default: "cartspace", template: "%s | cartspace" },
-  description: "A full-stack e-commerce store: Go API and Next.js.",
+  title: {
+    default: `${site.name}: ${site.tagline}`,
+    template: `%s | ${site.name}`,
+  },
+  description: site.description,
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf8f4" },
+    { media: "(prefers-color-scheme: dark)", color: "#1c1a18" },
+  ],
 };
 
 export default async function RootLayout({
@@ -28,7 +45,8 @@ export default async function RootLayout({
       className={cn(
         "h-full antialiased",
         geistSans.variable,
-        jetbrainsMono.variable,
+        geistMono.variable,
+        instrumentSerif.variable,
       )}
     >
       <body className="flex min-h-full flex-col">

@@ -1,5 +1,5 @@
 import type { RouteConfig } from "@asteasolutions/zod-to-openapi";
-import type { ZodType } from "zod";
+import { z, type ZodType } from "zod";
 import { registry } from "../registry.ts";
 import { ACCESS_COOKIE, REFRESH_COOKIE, schemas } from "../schemas.ts";
 
@@ -75,3 +75,45 @@ export function operation(op: Operation) {
 export const body = (schema: ZodType) => ({
   body: { required: true, content: { "application/json": { schema } } },
 });
+
+/** Query parameters shared by the storefront listings (24 per page). */
+export const listingQuery = z.object({
+  page: z
+    .int()
+    .min(1)
+    .max(100_000)
+    .optional()
+    .openapi({ description: "1-based page number (default 1)" }),
+  sort: schemas.SortOptionSchema.optional().openapi({
+    description: "Default `newest`; prices sort by what the customer pays",
+  }),
+  featured: z
+    .boolean()
+    .optional()
+    .openapi({ description: "Only featured products (default false)" }),
+  price_min: z
+    .int()
+    .min(0)
+    .max(100_000_000)
+    .optional()
+    .openapi({ description: "Minimum price in cents; 0 means no bound" }),
+  price_max: z
+    .int()
+    .min(0)
+    .max(100_000_000)
+    .optional()
+    .openapi({ description: "Maximum price in cents; 0 means no bound" }),
+  option: z
+    .array(z.string())
+    .max(20)
+    .optional()
+    .openapi({
+      description:
+        "Repeatable `name:value` filter. A product matches when one of its active variants has, for every named option, one of the given values (values of one option are ORed, options ANDed).",
+      example: ["size:M", "color:Black"],
+    }),
+});
+
+export const listingErrors = {
+  400: "Invalid page, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)",
+} as const;

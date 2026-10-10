@@ -10,6 +10,7 @@ import {
   type LoginBody,
   type RegisterBody,
 } from "@repo/types";
+import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -56,6 +57,7 @@ export function AuthForm(props: AuthFormProps) {
     password: "",
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
 
   function updateField(field: FieldName, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -99,9 +101,14 @@ export function AuthForm(props: AuthFormProps) {
   function field(name: FieldName, label: string, input: React.ReactNode) {
     return (
       <Field data-invalid={Boolean(fieldErrors[name])}>
-        <FieldLabel htmlFor={name}>{label}</FieldLabel>
+        <FieldLabel htmlFor={name} className="eyebrow !text-foreground">
+          {label}
+        </FieldLabel>
         {input}
-        <FieldError>{fieldErrors[name]}</FieldError>
+        {/* key: a new message replays the entrance. */}
+        <FieldError key={fieldErrors[name]} className="animate-rise">
+          {fieldErrors[name]}
+        </FieldError>
       </Field>
     );
   }
@@ -111,19 +118,32 @@ export function AuthForm(props: AuthFormProps) {
   }`;
 
   return (
-    <form
-      className="w-full max-w-sm border border-border bg-card p-6 text-card-foreground shadow-sm"
-      onSubmit={handleSubmit}
-      noValidate
-    >
-      <div className="mb-6 space-y-1">
-        <h1 className="text-xl font-semibold">
-          {isRegister ? "Create your account" : "Welcome back"}
+    <form className="w-full max-w-sm" onSubmit={handleSubmit} noValidate>
+      <div className="mb-10 space-y-3">
+        <p className="eyebrow animate-rise">
+          {isRegister ? "Join cartspace" : "Welcome back"}
+        </p>
+        <h1
+          className="display animate-rise text-5xl sm:text-6xl"
+          style={{ "--i": 1 } as React.CSSProperties}
+        >
+          {isRegister ? (
+            <>
+              Create your <em className="italic">account.</em>
+            </>
+          ) : (
+            <>
+              Sign <em className="italic">in.</em>
+            </>
+          )}
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p
+          className="animate-rise text-sm text-muted-foreground"
+          style={{ "--i": 2 } as React.CSSProperties}
+        >
           {isRegister
-            ? "Sign up to save your cart and orders."
-            : "Sign in to your cartspace account."}
+            ? "Save your bag, check out faster and track every order."
+            : "Pick up where you left off."}
         </p>
       </div>
 
@@ -157,19 +177,35 @@ export function AuthForm(props: AuthFormProps) {
         {field(
           "password",
           "Password",
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete={isRegister ? "new-password" : "current-password"}
-            value={values.password}
-            onChange={(e) => updateField("password", e.target.value)}
-            aria-invalid={Boolean(fieldErrors.password)}
-          />,
+          <div className="relative">
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete={isRegister ? "new-password" : "current-password"}
+              value={values.password}
+              onChange={(e) => updateField("password", e.target.value)}
+              aria-invalid={Boolean(fieldErrors.password)}
+              className="pr-11"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((shown) => !shown)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-pressed={showPassword}
+              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {showPassword ? (
+                <EyeSlashIcon className="size-4" />
+              ) : (
+                <EyeIcon className="size-4" />
+              )}
+            </button>
+          </div>,
         )}
 
         <Button
-          className="w-full"
+          className="mt-2 w-full"
           size="lg"
           type="submit"
           disabled={props.isPending}
@@ -184,7 +220,7 @@ export function AuthForm(props: AuthFormProps) {
         </Button>
       </FieldGroup>
 
-      <p className="mt-5 text-center text-sm text-muted-foreground">
+      <p className="mt-8 border-t border-border pt-6 text-sm text-muted-foreground">
         {isRegister ? "Already have an account?" : "New to cartspace?"}{" "}
         <Link
           className="font-medium text-foreground underline underline-offset-4"

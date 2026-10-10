@@ -11,29 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createProductOption = `-- name: CreateProductOption :one
-INSERT INTO product_options (product_id, name)
-VALUES ($1, $2)
-RETURNING id, product_id, name, type
-`
-
-type CreateProductOptionParams struct {
-	ProductID pgtype.UUID `json:"product_id"`
-	Name      string      `json:"name"`
-}
-
-func (q *Queries) CreateProductOption(ctx context.Context, arg CreateProductOptionParams) (ProductOption, error) {
-	row := q.db.QueryRow(ctx, createProductOption, arg.ProductID, arg.Name)
-	var i ProductOption
-	err := row.Scan(
-		&i.ID,
-		&i.ProductID,
-		&i.Name,
-		&i.Type,
-	)
-	return i, err
-}
-
 const deleteProductOption = `-- name: DeleteProductOption :exec
 DELETE FROM product_options
 WHERE id = $1
@@ -93,4 +70,31 @@ func (q *Queries) GetProductOptionsByProduct(ctx context.Context, productID pgty
 		return nil, err
 	}
 	return items, nil
+}
+
+const upsertProductOption = `-- name: UpsertProductOption :one
+INSERT INTO product_options (product_id, name, type)
+VALUES ($1, $2, $3)
+ON CONFLICT (product_id, name) DO UPDATE SET type = EXCLUDED.type
+RETURNING id, product_id, name, type
+`
+
+type UpsertProductOptionParams struct {
+	ProductID pgtype.UUID `json:"product_id"`
+	Name      string      `json:"name"`
+	Type      string      `json:"type"`
+}
+
+// The latest variant decides the option's type (text or color). The no-op
+// update makes RETURNING yield the row when it already exists.
+func (q *Queries) UpsertProductOption(ctx context.Context, arg UpsertProductOptionParams) (ProductOption, error) {
+	row := q.db.QueryRow(ctx, upsertProductOption, arg.ProductID, arg.Name, arg.Type)
+	var i ProductOption
+	err := row.Scan(
+		&i.ID,
+		&i.ProductID,
+		&i.Name,
+		&i.Type,
+	)
+	return i, err
 }

@@ -14,22 +14,20 @@ type ProductRepository interface {
 	GetProductByID(ctx context.Context, id pgtype.UUID) (db.Product, error)
 	UpdateProduct(ctx context.Context, params db.UpdateProductParams) (db.Product, error)
 	DeleteProduct(ctx context.Context, id pgtype.UUID) (pgconn.CommandTag, error)
-	ListActiveProducts(ctx context.Context, params db.ListActiveProductsParams) ([]db.ListActiveProductsRow, error)
 	GetProductsCount(ctx context.Context) (int64, error)
-	CountActiveProducts(ctx context.Context) (int64, error)
-	CountProductsByCategory(ctx context.Context, arg db.CountProductsByCategoryParams) (int64, error)
 	GetCategoryBySlug(ctx context.Context, slug string) (db.Category, error)
 
 	// for /admin/products route
 	AdminProductsList(ctx context.Context, args db.AdminProductsListParams) ([]db.AdminProductsListRow, error)
 
-	// for /category/:slug route
-	GetCategoryFilterOptions(ctx context.Context, slug string) ([]db.GetCategoryFilterOptionsRow, error)
-	ListProductsByCategory(ctx context.Context, params db.ListProductsByCategoryParams) ([]db.ListProductsByCategoryRow, error)
-	GetMinMaxSellingPrice(ctx context.Context, slug string) (db.GetMinMaxSellingPriceRow, error)
+	// storefront listings: /products and /categories/:slug
+	ListStorefrontProducts(ctx context.Context, arg db.ListStorefrontProductsParams) ([]db.StorefrontProduct, error)
+	CountStorefrontProducts(ctx context.Context, arg db.CountStorefrontProductsParams) (int64, error)
+	GetStorefrontFilterOptions(ctx context.Context, arg db.GetStorefrontFilterOptionsParams) ([]db.GetStorefrontFilterOptionsRow, error)
+	GetStorefrontPriceRange(ctx context.Context, arg db.GetStorefrontPriceRangeParams) (db.GetStorefrontPriceRangeRow, error)
 
 	// for /products/:slug
 	GetProductWithDefaultVariantBySlug(ctx context.Context, slug string) (db.GetProductWithDefaultVariantBySlugRow, error)
 	GetVariantsByProductSlug(ctx context.Context, slug string) ([]db.GetVariantsByProductSlugRow, error)
-	GetRelatedProducts(ctx context.Context, slug string) ([]db.GetRelatedProductsRow, error)
+	GetRelatedProducts(ctx context.Context, slug string) ([]db.StorefrontProduct, error)
 }

@@ -47,11 +47,3 @@ RETURNING *;
 
 -- name: DeleteVariant :execresult
 DELETE FROM product_variants WHERE id = @id AND product_id = @product_id;
-
--- name: FetchExistingProductOptions :many
-SELECT * FROM product_options
-WHERE product_id = $1 AND name = ANY($2::text[]);
-
--- name: FetchExistingProductOptionValues :many
-SELECT * FROM product_option_values
-WHERE option_id = ANY($1::uuid[]) AND value = ANY($2::text[]);

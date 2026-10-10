@@ -26,9 +26,19 @@ export const ProductSchema = z
   .meta({ id: "Product" });
 export type Product = z.infer<typeof ProductSchema>;
 
-export const ProductWithPriceSchema = ProductSchema.extend({
+// Storefront prices: offer_price is the active offer only (set, and either
+// open-ended or not yet expired); price is what the customer pays.
+const storefrontPrice = {
   selling_price: Cents,
-  offer_price: Cents.nullable(),
+  offer_price: Cents.nullable().describe("The active offer, or null"),
+  price: Cents.describe(
+    "What the customer pays: the active offer, else the selling price",
+  ),
+};
+
+export const ProductWithPriceSchema = ProductSchema.extend({
+  variant_id: Uuid.describe("The default variant"),
+  ...storefrontPrice,
 }).meta({
   id: "ProductWithPrice",
   description: "A product priced by its default variant (storefront listings).",
@@ -43,22 +53,25 @@ export const AdminProductSchema = ProductSchema.extend({
 });
 export type AdminProduct = z.infer<typeof AdminProductSchema>;
 
-export const ProductDetailSchema = ProductSchema.extend({
-  variant_id: Uuid,
+export const ProductDetailSchema = ProductWithPriceSchema.extend({
   stock: z.int().nonnegative(),
   variant_images: z.array(z.url()),
-  selling_price: Cents,
-  offer_price: Cents.nullable(),
 }).meta({
   id: "ProductDetail",
   description: "A product with its default variant's stock, images and price.",
 });
 export type ProductDetail = z.infer<typeof ProductDetailSchema>;
 
+export const OptionTypeSchema = z
+  .enum(["text", "color"])
+  .meta({ id: "OptionType", description: "color options render as swatches" });
+export type OptionType = z.infer<typeof OptionTypeSchema>;
+
 export const VariantOptionSchema = z
   .object({
     name: z.string(),
     value: z.string(),
+    type: OptionTypeSchema,
   })
   .meta({ id: "VariantOption" });
 export type VariantOption = z.infer<typeof VariantOptionSchema>;
@@ -67,13 +80,14 @@ export const FilterOptionSchema = z
   .object({
     option_name: z.string(),
     option_value: z.string(),
+    option_type: OptionTypeSchema,
   })
   .meta({ id: "FilterOption" });
 export type FilterOption = z.infer<typeof FilterOptionSchema>;
 
 export const PriceRangeSchema = z
   .object({
-    min_price: Cents.describe("0 when the category has no visible products"),
+    min_price: Cents.describe("0 when nothing is in scope"),
     max_price: Cents,
   })
   .meta({ id: "PriceRange" });
@@ -122,29 +136,30 @@ export type AdminProductListResponse = z.infer<
   typeof AdminProductListResponseSchema
 >;
 
-export const ProductListResponseSchema = paginatedResponse(
-  ProductWithPriceSchema,
-).meta({ id: "ProductListResponse" });
-export type ProductListResponse = z.infer<typeof ProductListResponseSchema>;
-
-export const CategoryListingSchema = z
+export const ProductListingSchema = z
   .object({
     products: z.array(ProductWithPriceSchema),
-    filter_options: z.array(FilterOptionSchema),
-    price_range: PriceRangeSchema,
+    filter_options: z
+      .array(FilterOptionSchema)
+      .describe(
+        "Every option value in scope, ignoring the price and option filters",
+      ),
+    price_range: PriceRangeSchema.describe(
+      "Of everything in scope, ignoring the price and option filters",
+    ),
   })
   .meta({
-    id: "CategoryListing",
+    id: "ProductListing",
     description:
-      "A page of a category's products with its filter options and price range.",
+      "A page of storefront products with the filter options and price range of their scope.",
   });
-export type CategoryListing = z.infer<typeof CategoryListingSchema>;
+export type ProductListing = z.infer<typeof ProductListingSchema>;
 
-export const CategoryListingResponseSchema = successResponse(
-  CategoryListingSchema,
+export const ProductListingResponseSchema = successResponse(
+  ProductListingSchema,
 )
   .extend({ meta: PaginationMetaSchema })
-  .meta({ id: "CategoryListingResponse" });
-export type CategoryListingResponse = z.infer<
-  typeof CategoryListingResponseSchema
+  .meta({ id: "ProductListingResponse" });
+export type ProductListingResponse = z.infer<
+  typeof ProductListingResponseSchema
 >;

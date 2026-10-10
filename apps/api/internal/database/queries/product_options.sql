@@ -1,6 +1,9 @@
--- name: CreateProductOption :one
-INSERT INTO product_options (product_id, name)
-VALUES ($1, $2)
+-- name: UpsertProductOption :one
+-- The latest variant decides the option's type (text or color). The no-op
+-- update makes RETURNING yield the row when it already exists.
+INSERT INTO product_options (product_id, name, type)
+VALUES (@product_id, @name, @type)
+ON CONFLICT (product_id, name) DO UPDATE SET type = EXCLUDED.type
 RETURNING *;
 
 -- name: GetProductOptionsByProduct :many

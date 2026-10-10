@@ -17,15 +17,17 @@ type CreateProduct struct {
 
 type UpdateProduct CreateProduct
 
-type ListProductsByCategoryResponse struct {
-	FilterOptions []db.GetCategoryFilterOptionsRow `json:"filter_options"`
-	Products      []db.ListProductsByCategoryRow   `json:"products"`
-	PriceRange    db.GetMinMaxSellingPriceRow      `json:"price_range"`
+// ProductListing is a page of storefront products with the filter options
+// and price range of everything in scope (unfiltered by price and options).
+type ProductListing struct {
+	Products      []db.StorefrontProduct             `json:"products"`
+	FilterOptions []db.GetStorefrontFilterOptionsRow `json:"filter_options"`
+	PriceRange    db.GetStorefrontPriceRangeRow      `json:"price_range"`
 }
 
 // handlers/product/user/get_product.go response sructure
 type GetProductDetailResponse struct {
 	ProductDetail   db.GetProductWithDefaultVariantBySlugRow `json:"product_detail"`
 	Variants        []db.GetVariantsByProductSlugRow         `json:"variants"`
-	RelatedProducts []db.GetRelatedProductsRow               `json:"related_products"`
+	RelatedProducts []db.StorefrontProduct                   `json:"related_products"`
 }

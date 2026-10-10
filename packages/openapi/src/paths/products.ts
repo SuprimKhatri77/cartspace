@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Uuid } from "@repo/types";
 import { schemas } from "../schemas.ts";
-import { body, operation } from "./shared.ts";
+import { body, listingErrors, listingQuery, operation } from "./shared.ts";
 
 const tag = "Products";
 const productParam = z.object({ productID: Uuid });
@@ -22,14 +22,14 @@ export function registerProductPaths() {
     tag,
     summary: "List products",
     description:
-      "Visible products (active, with an active default variant), 20 per page, newest first, priced by their default variant.",
-    request: { query: pageQuery },
+      "Visible products (active, with an active default variant), 24 per page, priced by their default variant. Also returns the filter options and price range of all visible (or featured) products.",
+    request: { query: listingQuery },
     success: {
       status: 200,
       description: "Products fetched",
-      schema: schemas.ProductListResponseSchema,
+      schema: schemas.ProductListingResponseSchema,
     },
-    errors: { 400: "Invalid or out-of-range page (INVALID_PAGE_PARAMETER)" },
+    errors: listingErrors,
   });
 
   operation({

@@ -1,14 +1,42 @@
+import Image from "next/image";
 import Link from "next/link";
+import { site } from "@/lib/site";
 
 export default function AuthLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-muted/40 px-4 py-10">
-      <Link href="/" className="text-sm font-semibold tracking-tight">
-        cartspace
-      </Link>
-      {children}
+    <main className="grid min-h-svh lg:grid-cols-2">
+      <div className="relative hidden overflow-hidden bg-surface lg:block">
+        <Image
+          src={site.authImage}
+          alt={site.authImageAlt}
+          fill
+          preload
+          sizes="50vw"
+          className="animate-[hero-settle_2.2s_var(--ease-out-expo)_both] object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[oklch(0.15_0.01_60/0.55)] via-transparent to-transparent" />
+        <blockquote className="absolute inset-x-0 bottom-0 p-12 text-[oklch(0.98_0.005_85)]">
+          <p className="display max-w-md text-4xl">
+            &ldquo;Fewer, better things, chosen with care.&rdquo;
+          </p>
+          <footer className="mt-4 font-mono text-[0.6875rem] tracking-[0.16em] uppercase opacity-80">
+            The {site.name} promise
+          </footer>
+        </blockquote>
+      </div>
+
+      <div className="flex flex-col">
+        <div className="flex h-16 items-center px-6 sm:px-10">
+          <Link href="/" className="font-serif text-[1.65rem] leading-none">
+            {site.name}
+          </Link>
+        </div>
+        <div className="flex flex-1 items-center justify-center px-6 py-12 sm:px-10">
+          {children}
+        </div>
+      </div>
     </main>
   );
 }

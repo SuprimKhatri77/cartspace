@@ -14,8 +14,8 @@ type VariantRepository interface {
 	CreateProductVariant(ctx context.Context, params db.CreateProductVariantParams) (db.ProductVariant, error)
 	VariantSKUExists(ctx context.Context, sku pgtype.Text) (bool, error)
 	GetProductByID(ctx context.Context, id pgtype.UUID) (db.Product, error)
-	CreateProductOption(ctx context.Context, params db.CreateProductOptionParams) (db.ProductOption, error)
-	CreateProductOptionValue(ctx context.Context, params db.CreateProductOptionValueParams) (db.ProductOptionValue, error)
+	UpsertProductOption(ctx context.Context, params db.UpsertProductOptionParams) (db.ProductOption, error)
+	UpsertProductOptionValue(ctx context.Context, params db.UpsertProductOptionValueParams) (db.ProductOptionValue, error)
 	CreateVariantOptionValue(ctx context.Context, params db.CreateVariantOptionValueParams) error
 	GetProductOptionByName(ctx context.Context, params db.GetProductOptionByNameParams) (db.ProductOption, error)
 	GetOptionValueByValue(ctx context.Context, params db.GetOptionValueByValueParams) (db.ProductOptionValue, error)
@@ -24,8 +24,6 @@ type VariantRepository interface {
 	DeleteVariantOptionValues(ctx context.Context, id pgtype.UUID) error
 	DeleteVariant(ctx context.Context, params db.DeleteVariantParams) (pgconn.CommandTag, error)
 	UpdateVariantStock(ctx context.Context, params db.UpdateVariantStockParams) (db.ProductVariant, error)
-	FetchExistingProductOptions(ctx context.Context, params db.FetchExistingProductOptionsParams) ([]db.ProductOption, error)
-	FetchExistingProductOptionValues(ctx context.Context, params db.FetchExistingProductOptionValuesParams) ([]db.ProductOptionValue, error)
 }
 
 // concrete struct wrapping *db.Queries
@@ -56,12 +54,12 @@ func (r *variantRepository) GetProductByID(ctx context.Context, id pgtype.UUID) 
 	return r.queries.GetProductByID(ctx, id)
 }
 
-func (r *variantRepository) CreateProductOption(ctx context.Context, params db.CreateProductOptionParams) (db.ProductOption, error) {
-	return r.queries.CreateProductOption(ctx, params)
+func (r *variantRepository) UpsertProductOption(ctx context.Context, params db.UpsertProductOptionParams) (db.ProductOption, error) {
+	return r.queries.UpsertProductOption(ctx, params)
 }
 
-func (r *variantRepository) CreateProductOptionValue(ctx context.Context, params db.CreateProductOptionValueParams) (db.ProductOptionValue, error) {
-	return r.queries.CreateProductOptionValue(ctx, params)
+func (r *variantRepository) UpsertProductOptionValue(ctx context.Context, params db.UpsertProductOptionValueParams) (db.ProductOptionValue, error) {
+	return r.queries.UpsertProductOptionValue(ctx, params)
 }
 
 func (r *variantRepository) CreateVariantOptionValue(ctx context.Context, params db.CreateVariantOptionValueParams) error {
@@ -94,12 +92,4 @@ func (r *variantRepository) DeleteVariant(ctx context.Context, params db.DeleteV
 
 func (r *variantRepository) UpdateVariantStock(ctx context.Context, params db.UpdateVariantStockParams) (db.ProductVariant, error) {
 	return r.queries.UpdateVariantStock(ctx, params)
-}
-
-func (r *variantRepository) FetchExistingProductOptions(ctx context.Context, params db.FetchExistingProductOptionsParams) ([]db.ProductOption, error) {
-	return r.queries.FetchExistingProductOptions(ctx, params)
-}
-
-func (r *variantRepository) FetchExistingProductOptionValues(ctx context.Context, params db.FetchExistingProductOptionValuesParams) ([]db.ProductOptionValue, error) {
-	return r.queries.FetchExistingProductOptionValues(ctx, params)
 }

@@ -28,12 +28,27 @@ export const ProductVariantSchema = z
   .meta({ id: "ProductVariant" });
 export type ProductVariant = z.infer<typeof ProductVariantSchema>;
 
-export const StorefrontVariantSchema = ProductVariantSchema.extend({
-  options: z.array(VariantOptionSchema),
-}).meta({
-  id: "StorefrontVariant",
-  description: "A variant on the storefront, with its option values.",
-});
+export const StorefrontVariantSchema = z
+  .object({
+    id: Uuid,
+    product_id: Uuid,
+    sku: z.string().nullable(),
+    stock: z.int().nonnegative(),
+    images: z.array(z.url()),
+    selling_price: Cents,
+    offer_price: Cents.nullable().describe("The active offer, or null"),
+    price: Cents.describe("What the customer pays"),
+    offer_expires_at: Timestamp.nullable().describe(
+      "When the offer ends; null for an open-ended offer",
+    ),
+    is_default: z.boolean(),
+    created_at: Timestamp,
+    options: z.array(VariantOptionSchema),
+  })
+  .meta({
+    id: "StorefrontVariant",
+    description: "A variant on the storefront, with its option values.",
+  });
 export type StorefrontVariant = z.infer<typeof StorefrontVariantSchema>;
 
 export const VariantPropertySchema = z

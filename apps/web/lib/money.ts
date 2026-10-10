@@ -6,8 +6,26 @@ const formatter = new Intl.NumberFormat("en-US", {
   currency: CURRENCY,
 });
 
+const wholeFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: CURRENCY,
+  maximumFractionDigits: 0,
+});
+
 export function formatPrice(cents: number): string {
   return formatter.format(cents / 100);
+}
+
+/** Drops ".00" from whole amounts: 2900 → "$29", 2950 → "$29.50". */
+export function formatPriceShort(cents: number): string {
+  return cents % 100 === 0
+    ? wholeFormatter.format(cents / 100)
+    : formatter.format(cents / 100);
+}
+
+/** Whole percent saved by an offer: (8900, 6900) → 22. */
+export function percentOff(selling: number, offer: number): number {
+  return selling > 0 ? Math.round(((selling - offer) / selling) * 100) : 0;
 }
 
 /** "12.5" → 1250; null for anything that isn't a non-negative amount. */
