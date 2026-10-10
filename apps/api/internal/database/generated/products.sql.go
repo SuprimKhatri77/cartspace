@@ -31,16 +31,16 @@ type AdminProductsListRow struct {
 	ID             pgtype.UUID        `json:"id"`
 	Name           string             `json:"name"`
 	Slug           string             `json:"slug"`
-	CategoryID     pgtype.UUID        `json:"categoryId"`
+	CategoryID     pgtype.UUID        `json:"category_id"`
 	Description    pgtype.Text        `json:"description"`
 	Features       []string           `json:"features"`
 	Images         []string           `json:"images"`
-	ImagePublicIds []string           `json:"imagePublicIds"`
-	IsActive       bool               `json:"isActive"`
-	IsFeatured     bool               `json:"isFeatured"`
-	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
-	CategoryName   pgtype.Text        `json:"categoryName"`
+	ImagePublicIds []string           `json:"image_public_ids"`
+	IsActive       bool               `json:"is_active"`
+	IsFeatured     bool               `json:"is_featured"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	CategoryName   pgtype.Text        `json:"category_name"`
 }
 
 func (q *Queries) AdminProductsList(ctx context.Context, arg AdminProductsListParams) ([]AdminProductsListRow, error) {
@@ -49,7 +49,7 @@ func (q *Queries) AdminProductsList(ctx context.Context, arg AdminProductsListPa
 		return nil, err
 	}
 	defer rows.Close()
-	var items []AdminProductsListRow
+	items := []AdminProductsListRow{}
 	for rows.Next() {
 		var i AdminProductsListRow
 		if err := rows.Scan(
@@ -105,8 +105,8 @@ AND ($3::int = 0 OR pv.selling_price <= $3::int)
 
 type CountProductsByCategoryParams struct {
 	Slug    string `json:"slug"`
-	Column2 int32  `json:"column2"`
-	Column3 int32  `json:"column3"`
+	Column2 int32  `json:"column_2"`
+	Column3 int32  `json:"column_3"`
 }
 
 // must match the joins and filters of ListProductsByCategory*
@@ -126,13 +126,13 @@ RETURNING id, name, slug, category_id, description, features, images, image_publ
 type CreateProductParams struct {
 	Name           string      `json:"name"`
 	Slug           string      `json:"slug"`
-	CategoryID     pgtype.UUID `json:"categoryId"`
+	CategoryID     pgtype.UUID `json:"category_id"`
 	Description    pgtype.Text `json:"description"`
 	Features       []string    `json:"features"`
 	Images         []string    `json:"images"`
-	ImagePublicIds []string    `json:"imagePublicIds"`
-	IsActive       bool        `json:"isActive"`
-	IsFeatured     bool        `json:"isFeatured"`
+	ImagePublicIds []string    `json:"image_public_ids"`
+	IsActive       bool        `json:"is_active"`
+	IsFeatured     bool        `json:"is_featured"`
 }
 
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
@@ -188,8 +188,8 @@ ORDER BY po.name, pov.value
 `
 
 type GetCategoryFilterOptionsRow struct {
-	OptionName  string `json:"optionName"`
-	OptionValue string `json:"optionValue"`
+	OptionName  string `json:"option_name"`
+	OptionValue string `json:"option_value"`
 }
 
 func (q *Queries) GetCategoryFilterOptions(ctx context.Context, slug string) ([]GetCategoryFilterOptionsRow, error) {
@@ -198,7 +198,7 @@ func (q *Queries) GetCategoryFilterOptions(ctx context.Context, slug string) ([]
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetCategoryFilterOptionsRow
+	items := []GetCategoryFilterOptionsRow{}
 	for rows.Next() {
 		var i GetCategoryFilterOptionsRow
 		if err := rows.Scan(&i.OptionName, &i.OptionValue); err != nil {
@@ -221,8 +221,8 @@ WHERE c.slug = $1 AND p.is_active = TRUE
 `
 
 type GetMinMaxSellingPriceRow struct {
-	MinPrice int32 `json:"minPrice"`
-	MaxPrice int32 `json:"maxPrice"`
+	MinPrice int32 `json:"min_price"`
+	MaxPrice int32 `json:"max_price"`
 }
 
 // COALESCE: MIN/MAX are NULL when the category has no active products
@@ -298,20 +298,20 @@ type GetProductWithDefaultVariantBySlugRow struct {
 	ID             pgtype.UUID        `json:"id"`
 	Name           string             `json:"name"`
 	Slug           string             `json:"slug"`
-	CategoryID     pgtype.UUID        `json:"categoryId"`
+	CategoryID     pgtype.UUID        `json:"category_id"`
 	Description    pgtype.Text        `json:"description"`
 	Features       []string           `json:"features"`
 	Images         []string           `json:"images"`
-	ImagePublicIds []string           `json:"imagePublicIds"`
-	IsActive       bool               `json:"isActive"`
-	IsFeatured     bool               `json:"isFeatured"`
-	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
-	VariantID      pgtype.UUID        `json:"variantId"`
+	ImagePublicIds []string           `json:"image_public_ids"`
+	IsActive       bool               `json:"is_active"`
+	IsFeatured     bool               `json:"is_featured"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	VariantID      pgtype.UUID        `json:"variant_id"`
 	Stock          int32              `json:"stock"`
-	VariantImages  []string           `json:"variantImages"`
-	SellingPrice   int32              `json:"sellingPrice"`
-	OfferPrice     pgtype.Int4        `json:"offerPrice"`
+	VariantImages  []string           `json:"variant_images"`
+	SellingPrice   int32              `json:"selling_price"`
+	OfferPrice     pgtype.Int4        `json:"offer_price"`
 }
 
 func (q *Queries) GetProductWithDefaultVariantBySlug(ctx context.Context, slug string) (GetProductWithDefaultVariantBySlugRow, error) {
@@ -368,17 +368,17 @@ type GetRelatedProductsRow struct {
 	ID             pgtype.UUID        `json:"id"`
 	Name           string             `json:"name"`
 	Slug           string             `json:"slug"`
-	CategoryID     pgtype.UUID        `json:"categoryId"`
+	CategoryID     pgtype.UUID        `json:"category_id"`
 	Description    pgtype.Text        `json:"description"`
 	Features       []string           `json:"features"`
 	Images         []string           `json:"images"`
-	ImagePublicIds []string           `json:"imagePublicIds"`
-	IsActive       bool               `json:"isActive"`
-	IsFeatured     bool               `json:"isFeatured"`
-	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
-	SellingPrice   int32              `json:"sellingPrice"`
-	OfferPrice     pgtype.Int4        `json:"offerPrice"`
+	ImagePublicIds []string           `json:"image_public_ids"`
+	IsActive       bool               `json:"is_active"`
+	IsFeatured     bool               `json:"is_featured"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	SellingPrice   int32              `json:"selling_price"`
+	OfferPrice     pgtype.Int4        `json:"offer_price"`
 }
 
 func (q *Queries) GetRelatedProducts(ctx context.Context, slug string) ([]GetRelatedProductsRow, error) {
@@ -387,7 +387,7 @@ func (q *Queries) GetRelatedProducts(ctx context.Context, slug string) ([]GetRel
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetRelatedProductsRow
+	items := []GetRelatedProductsRow{}
 	for rows.Next() {
 		var i GetRelatedProductsRow
 		if err := rows.Scan(
@@ -439,19 +439,19 @@ ORDER BY pv.is_default DESC
 
 type GetVariantsByProductSlugRow struct {
 	ID                   pgtype.UUID        `json:"id"`
-	ProductID            pgtype.UUID        `json:"productId"`
+	ProductID            pgtype.UUID        `json:"product_id"`
 	Sku                  pgtype.Text        `json:"sku"`
 	Stock                int32              `json:"stock"`
 	Images               []string           `json:"images"`
-	ImagePublicIds       []string           `json:"imagePublicIds"`
-	SellingPrice         int32              `json:"sellingPrice"`
-	OfferPrice           pgtype.Int4        `json:"offerPrice"`
-	IsDefault            bool               `json:"isDefault"`
-	IsActive             bool               `json:"isActive"`
-	CreatedAt            pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt            pgtype.Timestamptz `json:"updatedAt"`
-	OptionCombinationKey string             `json:"optionCombinationKey"`
-	OfferExpiresAt       pgtype.Timestamptz `json:"offerExpiresAt"`
+	ImagePublicIds       []string           `json:"image_public_ids"`
+	SellingPrice         int32              `json:"selling_price"`
+	OfferPrice           pgtype.Int4        `json:"offer_price"`
+	IsDefault            bool               `json:"is_default"`
+	IsActive             bool               `json:"is_active"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	OptionCombinationKey string             `json:"option_combination_key"`
+	OfferExpiresAt       pgtype.Timestamptz `json:"offer_expires_at"`
 	Options              interface{}        `json:"options"`
 }
 
@@ -461,7 +461,7 @@ func (q *Queries) GetVariantsByProductSlug(ctx context.Context, slug string) ([]
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetVariantsByProductSlugRow
+	items := []GetVariantsByProductSlugRow{}
 	for rows.Next() {
 		var i GetVariantsByProductSlugRow
 		if err := rows.Scan(
@@ -509,17 +509,17 @@ type ListActiveProductsRow struct {
 	ID             pgtype.UUID        `json:"id"`
 	Name           string             `json:"name"`
 	Slug           string             `json:"slug"`
-	CategoryID     pgtype.UUID        `json:"categoryId"`
+	CategoryID     pgtype.UUID        `json:"category_id"`
 	Description    pgtype.Text        `json:"description"`
 	Features       []string           `json:"features"`
 	Images         []string           `json:"images"`
-	ImagePublicIds []string           `json:"imagePublicIds"`
-	IsActive       bool               `json:"isActive"`
-	IsFeatured     bool               `json:"isFeatured"`
-	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
-	SellingPrice   int32              `json:"sellingPrice"`
-	OfferPrice     pgtype.Int4        `json:"offerPrice"`
+	ImagePublicIds []string           `json:"image_public_ids"`
+	IsActive       bool               `json:"is_active"`
+	IsFeatured     bool               `json:"is_featured"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	SellingPrice   int32              `json:"selling_price"`
+	OfferPrice     pgtype.Int4        `json:"offer_price"`
 }
 
 func (q *Queries) ListActiveProducts(ctx context.Context, arg ListActiveProductsParams) ([]ListActiveProductsRow, error) {
@@ -528,7 +528,7 @@ func (q *Queries) ListActiveProducts(ctx context.Context, arg ListActiveProducts
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListActiveProductsRow
+	items := []ListActiveProductsRow{}
 	for rows.Next() {
 		var i ListActiveProductsRow
 		if err := rows.Scan(
@@ -569,17 +569,17 @@ type ListFeaturedProductsRow struct {
 	ID             pgtype.UUID        `json:"id"`
 	Name           string             `json:"name"`
 	Slug           string             `json:"slug"`
-	CategoryID     pgtype.UUID        `json:"categoryId"`
+	CategoryID     pgtype.UUID        `json:"category_id"`
 	Description    pgtype.Text        `json:"description"`
 	Features       []string           `json:"features"`
 	Images         []string           `json:"images"`
-	ImagePublicIds []string           `json:"imagePublicIds"`
-	IsActive       bool               `json:"isActive"`
-	IsFeatured     bool               `json:"isFeatured"`
-	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
-	SellingPrice   int32              `json:"sellingPrice"`
-	OfferPrice     pgtype.Int4        `json:"offerPrice"`
+	ImagePublicIds []string           `json:"image_public_ids"`
+	IsActive       bool               `json:"is_active"`
+	IsFeatured     bool               `json:"is_featured"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	SellingPrice   int32              `json:"selling_price"`
+	OfferPrice     pgtype.Int4        `json:"offer_price"`
 }
 
 func (q *Queries) ListFeaturedProducts(ctx context.Context) ([]ListFeaturedProductsRow, error) {
@@ -588,7 +588,7 @@ func (q *Queries) ListFeaturedProducts(ctx context.Context) ([]ListFeaturedProdu
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListFeaturedProductsRow
+	items := []ListFeaturedProductsRow{}
 	for rows.Next() {
 		var i ListFeaturedProductsRow
 		if err := rows.Scan(
@@ -632,8 +632,8 @@ LIMIT $4 OFFSET $5
 
 type ListProductsByCategoryParams struct {
 	Slug    string `json:"slug"`
-	Column2 int32  `json:"column2"`
-	Column3 int32  `json:"column3"`
+	Column2 int32  `json:"column_2"`
+	Column3 int32  `json:"column_3"`
 	Limit   int32  `json:"limit"`
 	Offset  int32  `json:"offset"`
 }
@@ -642,17 +642,17 @@ type ListProductsByCategoryRow struct {
 	ID             pgtype.UUID        `json:"id"`
 	Name           string             `json:"name"`
 	Slug           string             `json:"slug"`
-	CategoryID     pgtype.UUID        `json:"categoryId"`
+	CategoryID     pgtype.UUID        `json:"category_id"`
 	Description    pgtype.Text        `json:"description"`
 	Features       []string           `json:"features"`
 	Images         []string           `json:"images"`
-	ImagePublicIds []string           `json:"imagePublicIds"`
-	IsActive       bool               `json:"isActive"`
-	IsFeatured     bool               `json:"isFeatured"`
-	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
-	SellingPrice   int32              `json:"sellingPrice"`
-	OfferPrice     pgtype.Int4        `json:"offerPrice"`
+	ImagePublicIds []string           `json:"image_public_ids"`
+	IsActive       bool               `json:"is_active"`
+	IsFeatured     bool               `json:"is_featured"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	SellingPrice   int32              `json:"selling_price"`
+	OfferPrice     pgtype.Int4        `json:"offer_price"`
 }
 
 func (q *Queries) ListProductsByCategory(ctx context.Context, arg ListProductsByCategoryParams) ([]ListProductsByCategoryRow, error) {
@@ -667,7 +667,7 @@ func (q *Queries) ListProductsByCategory(ctx context.Context, arg ListProductsBy
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListProductsByCategoryRow
+	items := []ListProductsByCategoryRow{}
 	for rows.Next() {
 		var i ListProductsByCategoryRow
 		if err := rows.Scan(
@@ -711,8 +711,8 @@ LIMIT $4 OFFSET $5
 
 type ListProductsByCategoryPriceAscParams struct {
 	Slug    string `json:"slug"`
-	Column2 int32  `json:"column2"`
-	Column3 int32  `json:"column3"`
+	Column2 int32  `json:"column_2"`
+	Column3 int32  `json:"column_3"`
 	Limit   int32  `json:"limit"`
 	Offset  int32  `json:"offset"`
 }
@@ -721,17 +721,17 @@ type ListProductsByCategoryPriceAscRow struct {
 	ID             pgtype.UUID        `json:"id"`
 	Name           string             `json:"name"`
 	Slug           string             `json:"slug"`
-	CategoryID     pgtype.UUID        `json:"categoryId"`
+	CategoryID     pgtype.UUID        `json:"category_id"`
 	Description    pgtype.Text        `json:"description"`
 	Features       []string           `json:"features"`
 	Images         []string           `json:"images"`
-	ImagePublicIds []string           `json:"imagePublicIds"`
-	IsActive       bool               `json:"isActive"`
-	IsFeatured     bool               `json:"isFeatured"`
-	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
-	SellingPrice   int32              `json:"sellingPrice"`
-	OfferPrice     pgtype.Int4        `json:"offerPrice"`
+	ImagePublicIds []string           `json:"image_public_ids"`
+	IsActive       bool               `json:"is_active"`
+	IsFeatured     bool               `json:"is_featured"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	SellingPrice   int32              `json:"selling_price"`
+	OfferPrice     pgtype.Int4        `json:"offer_price"`
 }
 
 func (q *Queries) ListProductsByCategoryPriceAsc(ctx context.Context, arg ListProductsByCategoryPriceAscParams) ([]ListProductsByCategoryPriceAscRow, error) {
@@ -746,7 +746,7 @@ func (q *Queries) ListProductsByCategoryPriceAsc(ctx context.Context, arg ListPr
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListProductsByCategoryPriceAscRow
+	items := []ListProductsByCategoryPriceAscRow{}
 	for rows.Next() {
 		var i ListProductsByCategoryPriceAscRow
 		if err := rows.Scan(
@@ -790,8 +790,8 @@ LIMIT $4 OFFSET $5
 
 type ListProductsByCategoryPriceDescParams struct {
 	Slug    string `json:"slug"`
-	Column2 int32  `json:"column2"`
-	Column3 int32  `json:"column3"`
+	Column2 int32  `json:"column_2"`
+	Column3 int32  `json:"column_3"`
 	Limit   int32  `json:"limit"`
 	Offset  int32  `json:"offset"`
 }
@@ -800,17 +800,17 @@ type ListProductsByCategoryPriceDescRow struct {
 	ID             pgtype.UUID        `json:"id"`
 	Name           string             `json:"name"`
 	Slug           string             `json:"slug"`
-	CategoryID     pgtype.UUID        `json:"categoryId"`
+	CategoryID     pgtype.UUID        `json:"category_id"`
 	Description    pgtype.Text        `json:"description"`
 	Features       []string           `json:"features"`
 	Images         []string           `json:"images"`
-	ImagePublicIds []string           `json:"imagePublicIds"`
-	IsActive       bool               `json:"isActive"`
-	IsFeatured     bool               `json:"isFeatured"`
-	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
-	SellingPrice   int32              `json:"sellingPrice"`
-	OfferPrice     pgtype.Int4        `json:"offerPrice"`
+	ImagePublicIds []string           `json:"image_public_ids"`
+	IsActive       bool               `json:"is_active"`
+	IsFeatured     bool               `json:"is_featured"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	SellingPrice   int32              `json:"selling_price"`
+	OfferPrice     pgtype.Int4        `json:"offer_price"`
 }
 
 func (q *Queries) ListProductsByCategoryPriceDesc(ctx context.Context, arg ListProductsByCategoryPriceDescParams) ([]ListProductsByCategoryPriceDescRow, error) {
@@ -825,7 +825,7 @@ func (q *Queries) ListProductsByCategoryPriceDesc(ctx context.Context, arg ListP
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListProductsByCategoryPriceDescRow
+	items := []ListProductsByCategoryPriceDescRow{}
 	for rows.Next() {
 		var i ListProductsByCategoryPriceDescRow
 		if err := rows.Scan(
@@ -889,10 +889,10 @@ type UpdateProductParams struct {
 	Description    pgtype.Text `json:"description"`
 	Features       []string    `json:"features"`
 	Images         []string    `json:"images"`
-	ImagePublicIds []string    `json:"imagePublicIds"`
-	IsActive       bool        `json:"isActive"`
-	IsFeatured     bool        `json:"isFeatured"`
-	CategoryID     pgtype.UUID `json:"categoryId"`
+	ImagePublicIds []string    `json:"image_public_ids"`
+	IsActive       bool        `json:"is_active"`
+	IsFeatured     bool        `json:"is_featured"`
+	CategoryID     pgtype.UUID `json:"category_id"`
 }
 
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {

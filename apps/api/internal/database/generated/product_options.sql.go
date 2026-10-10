@@ -18,7 +18,7 @@ RETURNING id, product_id, name, type
 `
 
 type CreateProductOptionParams struct {
-	ProductID pgtype.UUID `json:"productId"`
+	ProductID pgtype.UUID `json:"product_id"`
 	Name      string      `json:"name"`
 }
 
@@ -50,7 +50,7 @@ SELECT id, product_id, name, type FROM product_options WHERE name = $1 AND produ
 
 type GetProductOptionByNameParams struct {
 	Name      string      `json:"name"`
-	ProductID pgtype.UUID `json:"productId"`
+	ProductID pgtype.UUID `json:"product_id"`
 }
 
 func (q *Queries) GetProductOptionByName(ctx context.Context, arg GetProductOptionByNameParams) (ProductOption, error) {
@@ -76,7 +76,7 @@ func (q *Queries) GetProductOptionsByProduct(ctx context.Context, productID pgty
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ProductOption
+	items := []ProductOption{}
 	for rows.Next() {
 		var i ProductOption
 		if err := rows.Scan(

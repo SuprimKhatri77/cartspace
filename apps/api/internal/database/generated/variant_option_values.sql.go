@@ -17,8 +17,8 @@ VALUES ($1, $2)
 `
 
 type CreateVariantOptionValueParams struct {
-	VariantID     pgtype.UUID `json:"variantId"`
-	OptionValueID pgtype.UUID `json:"optionValueId"`
+	VariantID     pgtype.UUID `json:"variant_id"`
+	OptionValueID pgtype.UUID `json:"option_value_id"`
 }
 
 func (q *Queries) CreateVariantOptionValue(ctx context.Context, arg CreateVariantOptionValueParams) error {
@@ -48,9 +48,9 @@ WHERE vov.variant_id = $1
 `
 
 type GetOptionValuesByVariantRow struct {
-	OptionName    string      `json:"optionName"`
-	OptionValue   string      `json:"optionValue"`
-	OptionValueID pgtype.UUID `json:"optionValueId"`
+	OptionName    string      `json:"option_name"`
+	OptionValue   string      `json:"option_value"`
+	OptionValueID pgtype.UUID `json:"option_value_id"`
 }
 
 func (q *Queries) GetOptionValuesByVariant(ctx context.Context, variantID pgtype.UUID) ([]GetOptionValuesByVariantRow, error) {
@@ -59,7 +59,7 @@ func (q *Queries) GetOptionValuesByVariant(ctx context.Context, variantID pgtype
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetOptionValuesByVariantRow
+	items := []GetOptionValuesByVariantRow{}
 	for rows.Next() {
 		var i GetOptionValuesByVariantRow
 		if err := rows.Scan(&i.OptionName, &i.OptionValue, &i.OptionValueID); err != nil {
@@ -87,7 +87,7 @@ func (q *Queries) GetVariantsByOptionValue(ctx context.Context, optionValueID pg
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ProductVariant
+	items := []ProductVariant{}
 	for rows.Next() {
 		var i ProductVariant
 		if err := rows.Scan(

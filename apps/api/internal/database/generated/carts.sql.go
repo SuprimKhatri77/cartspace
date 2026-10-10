@@ -65,13 +65,13 @@ WHERE c.user_id = $1
 `
 
 type GetUserCartRow struct {
-	CartID       pgtype.UUID `json:"cartId"`
-	CartItemID   pgtype.UUID `json:"cartItemId"`
-	VariantID    pgtype.UUID `json:"variantId"`
+	CartID       pgtype.UUID `json:"cart_id"`
+	CartItemID   pgtype.UUID `json:"cart_item_id"`
+	VariantID    pgtype.UUID `json:"variant_id"`
 	Quantity     pgtype.Int4 `json:"quantity"`
-	UnitPrice    pgtype.Int4 `json:"unitPrice"`
-	ProductName  pgtype.Text `json:"productName"`
-	SellingPrice pgtype.Int4 `json:"sellingPrice"`
+	UnitPrice    pgtype.Int4 `json:"unit_price"`
+	ProductName  pgtype.Text `json:"product_name"`
+	SellingPrice pgtype.Int4 `json:"selling_price"`
 	Stock        pgtype.Int4 `json:"stock"`
 	Image        interface{} `json:"image"`
 }
@@ -82,7 +82,7 @@ func (q *Queries) GetUserCart(ctx context.Context, userID pgtype.UUID) ([]GetUse
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetUserCartRow
+	items := []GetUserCartRow{}
 	for rows.Next() {
 		var i GetUserCartRow
 		if err := rows.Scan(

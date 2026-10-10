@@ -23,10 +23,10 @@ RETURNING id, cart_id, variant_id, quantity, unit_price, created_at, updated_at
 `
 
 type AddCartItemParams struct {
-	CartID    pgtype.UUID `json:"cartId"`
-	VariantID pgtype.UUID `json:"variantId"`
+	CartID    pgtype.UUID `json:"cart_id"`
+	VariantID pgtype.UUID `json:"variant_id"`
 	Quantity  int32       `json:"quantity"`
-	UnitPrice int32       `json:"unitPrice"`
+	UnitPrice int32       `json:"unit_price"`
 }
 
 func (q *Queries) AddCartItem(ctx context.Context, arg AddCartItemParams) (CartItem, error) {
@@ -58,8 +58,8 @@ AND carts.user_id = $2
 `
 
 type ClearCartParams struct {
-	CartID pgtype.UUID `json:"cartId"`
-	UserID pgtype.UUID `json:"userId"`
+	CartID pgtype.UUID `json:"cart_id"`
+	UserID pgtype.UUID `json:"user_id"`
 }
 
 func (q *Queries) ClearCart(ctx context.Context, arg ClearCartParams) (int64, error) {
@@ -80,9 +80,9 @@ AND cart_items.variant_id = $3
 `
 
 type DeleteCartItemParams struct {
-	UserID    pgtype.UUID `json:"userId"`
-	CartID    pgtype.UUID `json:"cartId"`
-	VariantID pgtype.UUID `json:"variantId"`
+	UserID    pgtype.UUID `json:"user_id"`
+	CartID    pgtype.UUID `json:"cart_id"`
+	VariantID pgtype.UUID `json:"variant_id"`
 }
 
 func (q *Queries) DeleteCartItem(ctx context.Context, arg DeleteCartItemParams) (int64, error) {
@@ -104,7 +104,7 @@ func (q *Queries) GetCartItems(ctx context.Context, cartID pgtype.UUID) ([]CartI
 		return nil, err
 	}
 	defer rows.Close()
-	var items []CartItem
+	items := []CartItem{}
 	for rows.Next() {
 		var i CartItem
 		if err := rows.Scan(
@@ -139,9 +139,9 @@ RETURNING cart_items.id, cart_items.cart_id, cart_items.variant_id, cart_items.q
 
 type UpdateCartItemQuantityParams struct {
 	Quantity  int32       `json:"quantity"`
-	UserID    pgtype.UUID `json:"userId"`
-	CartID    pgtype.UUID `json:"cartId"`
-	VariantID pgtype.UUID `json:"variantId"`
+	UserID    pgtype.UUID `json:"user_id"`
+	CartID    pgtype.UUID `json:"cart_id"`
+	VariantID pgtype.UUID `json:"variant_id"`
 }
 
 func (q *Queries) UpdateCartItemQuantity(ctx context.Context, arg UpdateCartItemQuantityParams) (CartItem, error) {

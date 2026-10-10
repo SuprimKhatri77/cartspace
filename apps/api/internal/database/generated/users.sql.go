@@ -22,7 +22,7 @@ type CreateUserParams struct {
 	Email        string      `json:"email"`
 	PasswordHash string      `json:"-"`
 	Role         string      `json:"role"`
-	ImageUrl     pgtype.Text `json:"imageUrl"`
+	ImageUrl     pgtype.Text `json:"image_url"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -94,7 +94,7 @@ RETURNING id, name, email, password_hash, role, image_url, created_at, updated_a
 
 type UpdateUserImageParams struct {
 	ID       pgtype.UUID `json:"id"`
-	ImageUrl pgtype.Text `json:"imageUrl"`
+	ImageUrl pgtype.Text `json:"image_url"`
 }
 
 func (q *Queries) UpdateUserImage(ctx context.Context, arg UpdateUserImageParams) (User, error) {

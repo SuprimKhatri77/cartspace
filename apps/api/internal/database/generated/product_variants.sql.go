@@ -19,16 +19,16 @@ RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, o
 `
 
 type CreateProductVariantParams struct {
-	ProductID            pgtype.UUID `json:"productId"`
+	ProductID            pgtype.UUID `json:"product_id"`
 	Sku                  pgtype.Text `json:"sku"`
 	Stock                int32       `json:"stock"`
 	Images               []string    `json:"images"`
-	ImagePublicIds       []string    `json:"imagePublicIds"`
-	SellingPrice         int32       `json:"sellingPrice"`
-	OfferPrice           pgtype.Int4 `json:"offerPrice"`
-	IsDefault            bool        `json:"isDefault"`
-	IsActive             bool        `json:"isActive"`
-	OptionCombinationKey string      `json:"optionCombinationKey"`
+	ImagePublicIds       []string    `json:"image_public_ids"`
+	SellingPrice         int32       `json:"selling_price"`
+	OfferPrice           pgtype.Int4 `json:"offer_price"`
+	IsDefault            bool        `json:"is_default"`
+	IsActive             bool        `json:"is_active"`
+	OptionCombinationKey string      `json:"option_combination_key"`
 }
 
 func (q *Queries) CreateProductVariant(ctx context.Context, arg CreateProductVariantParams) (ProductVariant, error) {
@@ -78,8 +78,8 @@ WHERE option_id = ANY($1::uuid[]) AND value = ANY($2::text[])
 `
 
 type FetchExistingProductOptionValuesParams struct {
-	Column1 []pgtype.UUID `json:"column1"`
-	Column2 []string      `json:"column2"`
+	Column1 []pgtype.UUID `json:"column_1"`
+	Column2 []string      `json:"column_2"`
 }
 
 func (q *Queries) FetchExistingProductOptionValues(ctx context.Context, arg FetchExistingProductOptionValuesParams) ([]ProductOptionValue, error) {
@@ -88,7 +88,7 @@ func (q *Queries) FetchExistingProductOptionValues(ctx context.Context, arg Fetc
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ProductOptionValue
+	items := []ProductOptionValue{}
 	for rows.Next() {
 		var i ProductOptionValue
 		if err := rows.Scan(&i.ID, &i.OptionID, &i.Value); err != nil {
@@ -108,8 +108,8 @@ WHERE product_id = $1 AND name = ANY($2::text[])
 `
 
 type FetchExistingProductOptionsParams struct {
-	ProductID pgtype.UUID `json:"productId"`
-	Column2   []string    `json:"column2"`
+	ProductID pgtype.UUID `json:"product_id"`
+	Column2   []string    `json:"column_2"`
 }
 
 func (q *Queries) FetchExistingProductOptions(ctx context.Context, arg FetchExistingProductOptionsParams) ([]ProductOption, error) {
@@ -118,7 +118,7 @@ func (q *Queries) FetchExistingProductOptions(ctx context.Context, arg FetchExis
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ProductOption
+	items := []ProductOption{}
 	for rows.Next() {
 		var i ProductOption
 		if err := rows.Scan(
@@ -203,7 +203,7 @@ func (q *Queries) GetVariantsByProduct(ctx context.Context, productID pgtype.UUI
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ProductVariant
+	items := []ProductVariant{}
 	for rows.Next() {
 		var i ProductVariant
 		if err := rows.Scan(
@@ -252,12 +252,12 @@ type UpdateVariantParams struct {
 	Sku                  pgtype.Text `json:"sku"`
 	Stock                int32       `json:"stock"`
 	Images               []string    `json:"images"`
-	ImagePublicIds       []string    `json:"imagePublicIds"`
-	SellingPrice         int32       `json:"sellingPrice"`
-	OfferPrice           pgtype.Int4 `json:"offerPrice"`
-	IsDefault            bool        `json:"isDefault"`
-	IsActive             bool        `json:"isActive"`
-	OptionCombinationKey string      `json:"optionCombinationKey"`
+	ImagePublicIds       []string    `json:"image_public_ids"`
+	SellingPrice         int32       `json:"selling_price"`
+	OfferPrice           pgtype.Int4 `json:"offer_price"`
+	IsDefault            bool        `json:"is_default"`
+	IsActive             bool        `json:"is_active"`
+	OptionCombinationKey string      `json:"option_combination_key"`
 }
 
 func (q *Queries) UpdateVariant(ctx context.Context, arg UpdateVariantParams) (ProductVariant, error) {
