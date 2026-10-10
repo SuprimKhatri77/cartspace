@@ -26,6 +26,9 @@ func New(ctx context.Context) (*App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("config: %w", err)
 	}
+	if err := cfg.ValidateAuth(); err != nil {
+		return nil, fmt.Errorf("config: %w", err)
+	}
 
 	initLogger()
 	gin.SetMode(cfg.GinMode)

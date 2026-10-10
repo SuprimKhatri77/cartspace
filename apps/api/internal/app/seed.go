@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/suprimkhatri77/cartspace/backend/internal/auth"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
@@ -55,13 +56,13 @@ func Seed(ctx context.Context) error {
 	users := []seedUser{
 		{
 			Name:     envOr("SEED_ADMIN_NAME", "Admin User"),
-			Email:    envOr("SEED_ADMIN_EMAIL", "admin@example.com"),
+			Email:    auth.NormalizeEmail(envOr("SEED_ADMIN_EMAIL", "admin@example.com")),
 			Password: adminPassword,
 			Role:     constants.RoleAdmin,
 		},
 		{
 			Name:     envOr("SEED_CUSTOMER_NAME", "Customer User"),
-			Email:    envOr("SEED_CUSTOMER_EMAIL", "customer@example.com"),
+			Email:    auth.NormalizeEmail(envOr("SEED_CUSTOMER_EMAIL", "customer@example.com")),
 			Password: customerPassword,
 			Role:     constants.RoleCustomer,
 		},

@@ -1,121 +1,55 @@
 package middleware
 
 import (
-	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt"
+
+	session "github.com/suprimkhatri77/cartspace/backend/internal/auth"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
+// RequireAuth accepts a valid access token cookie and stores the user id and
+// role on the context. Any failure is a 401 so the client can try a refresh.
 func RequireAuth(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		accessToken, err := c.Cookie("access_token")
-		if err != nil {
-			slog.Warn("missing access token",
-				"path", c.FullPath(),
-				"ip", c.ClientIP(),
-			)
-
-			c.JSON(http.StatusUnauthorized, types.APIResponse{
+		token, err := c.Cookie(session.AccessCookie)
+		if err != nil || token == "" {
+			rlog.Warn(c, "missing access token")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, types.APIResponse{
 				Success: false,
 				Message: "Missing access token",
 				Code:    constants.MissingAccessToken,
 			})
-			c.Abort()
 			return
 		}
 
-		token, err := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				slog.Error("unexpected signing method",
-					"alg", token.Header["alg"],
-				)
-				return nil, fmt.Errorf("unexpected signing method")
-			}
-			return []byte(cfg.JWTAccessSecret), nil
-		})
-
-		if err != nil || !token.Valid {
-			slog.Warn("invalid access token",
-				"error", err,
-				"path", c.FullPath(),
-				"ip", c.ClientIP(),
-			)
-
-			c.JSON(http.StatusUnauthorized, types.APIResponse{
+		claims, err := session.ParseAccess(token, cfg.JWTAccessSecret)
+		if err != nil {
+			rlog.Warn(c, "invalid access token", "error", err)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, types.APIResponse{
 				Success: false,
 				Message: "Invalid access token",
 				Code:    constants.InvalidAccessToken,
 			})
-			c.Abort()
 			return
 		}
 
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			slog.Warn("invalid token claims structure",
-				"path", c.FullPath(),
-				"ip", c.ClientIP(),
-			)
-
-			c.JSON(http.StatusUnauthorized, types.APIResponse{
+		if !constants.IsValidRole(claims.Role) {
+			rlog.Warn(c, "invalid role in access token", "role", claims.Role)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, types.APIResponse{
 				Success: false,
-				Message: "Invalid token claims",
-				Code:    constants.Unauthorized,
+				Message: "Invalid access token",
+				Code:    constants.InvalidTokenClaims,
 			})
-			c.Abort()
 			return
 		}
 
-		userID, ok := claims["user_id"].(string)
-		if !ok {
-			slog.Warn("missing user_id in claims",
-				"path", c.FullPath(),
-				"ip", c.ClientIP(),
-			)
-
-			c.JSON(http.StatusUnauthorized, types.APIResponse{
-				Success: false,
-				Message: "Invalid token claims",
-				Code:    constants.Unauthorized,
-			})
-			c.Abort()
-			return
-		}
-
-		role, ok := claims["role"].(string)
-		if !ok || !constants.IsValidRole(role) {
-			slog.Warn("invalid role in claims",
-				"user_id", userID,
-				"role", role,
-				"path", c.FullPath(),
-				"ip", c.ClientIP(),
-			)
-
-			c.JSON(http.StatusUnauthorized, types.APIResponse{
-				Success: false,
-				Message: "Invalid token claims",
-				Code:    constants.Unauthorized,
-			})
-			c.Abort()
-			return
-		}
-
-		slog.Info("authenticated request",
-			"user_id", userID,
-			"role", role,
-			"path", c.FullPath(),
-			"ip", c.ClientIP(),
-		)
-
-		c.Set(constants.UserIDKey, userID)
-		c.Set(constants.RoleKey, role)
-
+		c.Set(constants.UserIDKey, claims.UserID)
+		c.Set(constants.RoleKey, claims.Role)
 		c.Next()
 	}
 }
