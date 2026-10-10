@@ -17,6 +17,7 @@ import {
 import { EASE_OUT } from "@/lib/motion";
 import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
+import { AddToBag } from "@/modules/cart/components/add-to-bag";
 import { optionGroups, pickOption, selectionOf } from "../lib/variants";
 import { Price } from "./price";
 import { ProductGallery } from "./product-gallery";
@@ -127,7 +128,13 @@ export function ProductView({
           />
         )}
 
-        <StockLine stock={stock} />
+        <div className="space-y-4">
+          <AddToBag
+            variantId={variant?.id ?? product.variant_id}
+            stock={stock}
+          />
+          <StockLine stock={stock} />
+        </div>
 
         <ul className="grid gap-3 border-y border-border py-6 text-[0.8125rem] sm:grid-cols-2">
           <li className="flex items-center gap-3">
