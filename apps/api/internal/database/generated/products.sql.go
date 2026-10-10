@@ -77,6 +77,46 @@ func (q *Queries) AdminProductsList(ctx context.Context, arg AdminProductsListPa
 	return items, nil
 }
 
+const countActiveProducts = `-- name: CountActiveProducts :one
+SELECT COUNT(*)
+FROM products p
+JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE
+WHERE p.is_active = TRUE
+`
+
+// must match the joins and filters of ListActiveProducts
+func (q *Queries) CountActiveProducts(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveProducts)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countProductsByCategory = `-- name: CountProductsByCategory :one
+SELECT COUNT(*)
+FROM products p
+JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE
+JOIN categories c ON c.id = p.category_id
+WHERE p.is_active = TRUE
+AND c.slug = $1
+AND ($2::int = 0 OR pv.selling_price >= $2::int)
+AND ($3::int = 0 OR pv.selling_price <= $3::int)
+`
+
+type CountProductsByCategoryParams struct {
+	Slug    string `json:"slug"`
+	Column2 int32  `json:"column2"`
+	Column3 int32  `json:"column3"`
+}
+
+// must match the joins and filters of ListProductsByCategory*
+func (q *Queries) CountProductsByCategory(ctx context.Context, arg CountProductsByCategoryParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countProductsByCategory, arg.Slug, arg.Column2, arg.Column3)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createProduct = `-- name: CreateProduct :one
 INSERT INTO products (name, slug, category_id, description, features, images, image_public_ids, is_active, is_featured)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -173,7 +213,7 @@ func (q *Queries) GetCategoryFilterOptions(ctx context.Context, slug string) ([]
 }
 
 const getMinMaxSellingPrice = `-- name: GetMinMaxSellingPrice :one
-SELECT MIN(selling_price)::int, MAX(selling_price)::int
+SELECT COALESCE(MIN(selling_price), 0)::int AS min_price, COALESCE(MAX(selling_price), 0)::int AS max_price
 FROM product_variants pv
 JOIN products p ON p.id = pv.product_id
 JOIN categories c ON p.category_id = c.id
@@ -181,14 +221,15 @@ WHERE c.slug = $1 AND p.is_active = TRUE
 `
 
 type GetMinMaxSellingPriceRow struct {
-	Column1 int32 `json:"column1"`
-	Column2 int32 `json:"column2"`
+	MinPrice int32 `json:"minPrice"`
+	MaxPrice int32 `json:"maxPrice"`
 }
 
+// COALESCE: MIN/MAX are NULL when the category has no active products
 func (q *Queries) GetMinMaxSellingPrice(ctx context.Context, slug string) (GetMinMaxSellingPriceRow, error) {
 	row := q.db.QueryRow(ctx, getMinMaxSellingPrice, slug)
 	var i GetMinMaxSellingPriceRow
-	err := row.Scan(&i.Column1, &i.Column2)
+	err := row.Scan(&i.MinPrice, &i.MaxPrice)
 	return i, err
 }
 
