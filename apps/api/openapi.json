@@ -105,11 +105,10 @@
           "CATEGORY_ALREADY_EXISTS",
           "SELF_REFERENCING_CATEGORY",
           "CYCLIC_CATEGORY_REFERENCE",
-          "CART_NOT_FOUND",
-          "CART_ALREADY_EXISTS",
-          "INVALID_CART_ID",
-          "INVALID_VARIANT_QUANTITY",
+          "VARIANT_UNAVAILABLE",
           "INSUFFICIENT_STOCK",
+          "CART_QUANTITY_LIMIT",
+          "CART_FULL",
           "CART_ITEM_NOT_FOUND"
         ],
         "description": "Machine-readable failure code."
@@ -1473,6 +1472,20 @@
         ],
         "description": "The SKU and option combination are fixed at creation."
       },
+      "SetStockBody": {
+        "type": "object",
+        "properties": {
+          "stock": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          }
+        },
+        "required": [
+          "stock"
+        ],
+        "description": "The counted stock (an absolute value, not a change)."
+      },
       "CartResponse": {
         "type": "object",
         "properties": {
@@ -1486,10 +1499,7 @@
             "type": "string"
           },
           "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CartLine"
-            }
+            "$ref": "#/components/schemas/Cart"
           }
         },
         "required": [
@@ -1498,17 +1508,41 @@
           "data"
         ]
       },
+      "Cart": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CartLine"
+            },
+            "description": "Oldest first, at most 50"
+          },
+          "item_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Units in the lines that can be checked out"
+          },
+          "subtotal": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Cents, over the lines that can be checked out"
+          },
+          "has_issues": {
+            "type": "boolean",
+            "description": "A line is off sale or above its stock; checkout refuses until it is fixed"
+          }
+        },
+        "required": [
+          "items",
+          "item_count",
+          "subtotal",
+          "has_issues"
+        ]
+      },
       "CartLine": {
         "type": "object",
         "properties": {
-          "cart_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "cart_item_id": {
-            "type": "string",
-            "format": "uuid"
-          },
           "variant_id": {
             "type": "string",
             "format": "uuid"
@@ -1517,17 +1551,25 @@
             "type": "integer",
             "exclusiveMinimum": 0
           },
-          "unit_price": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Price per unit when the item was added"
+          "added_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
           },
           "product_name": {
             "type": "string"
           },
-          "selling_price": {
-            "type": "integer",
-            "minimum": 0
+          "product_slug": {
+            "type": "string"
+          },
+          "sku": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "stock": {
             "type": "integer",
@@ -1535,87 +1577,67 @@
           },
           "image": {
             "type": "string",
-            "description": "The variant's first image, \"\" if it has none"
-          }
-        },
-        "required": [
-          "cart_id",
-          "cart_item_id",
-          "variant_id",
-          "quantity",
-          "unit_price",
-          "product_name",
-          "selling_price",
-          "stock",
-          "image"
-        ],
-        "description": "One line of the cart (GET /carts)."
-      },
-      "CartItemResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "enum": [
-              true
-            ]
+            "description": "The variant's first image, else the product's; \"\" if none"
           },
-          "message": {
-            "type": "string"
-          },
-          "data": {
-            "$ref": "#/components/schemas/CartItem"
-          }
-        },
-        "required": [
-          "success",
-          "message",
-          "data"
-        ]
-      },
-      "CartItem": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "cart_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "variant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "quantity": {
-            "type": "integer",
-            "exclusiveMinimum": 0
-          },
-          "unit_price": {
+          "selling_price": {
             "type": "integer",
             "minimum": 0
           },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
+          "offer_price": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "The active offer, or null"
           },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
+          "price": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "What one costs right now"
+          },
+          "available": {
+            "type": "boolean",
+            "description": "False once the variant or its product is off sale"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VariantOption"
+            }
+          },
+          "line_total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "price × quantity"
+          },
+          "max_quantity": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "What the line can be raised to: the stock, at most 10; 0 when it can't be bought"
           }
         },
         "required": [
-          "id",
-          "cart_id",
           "variant_id",
           "quantity",
-          "unit_price",
-          "created_at",
-          "updated_at"
-        ]
+          "added_at",
+          "product_id",
+          "product_name",
+          "product_slug",
+          "sku",
+          "stock",
+          "image",
+          "selling_price",
+          "offer_price",
+          "price",
+          "available",
+          "options",
+          "line_total",
+          "max_quantity"
+        ],
+        "description": "One cart line, priced live."
       },
-      "AddToCartBody": {
+      "AddCartItemBody": {
         "type": "object",
         "properties": {
           "variant_id": {
@@ -1625,24 +1647,22 @@
           "quantity": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 1,
-            "description": "Adding a variant already in the cart increases its quantity."
+            "maximum": 10
           }
         },
         "required": [
           "variant_id",
           "quantity"
         ],
-        "description": "Adding a variant already in the cart increases its quantity."
+        "description": "Adds to the quantity already in the cart."
       },
       "UpdateCartItemBody": {
         "type": "object",
         "properties": {
           "quantity": {
             "type": "integer",
-            "minimum": 0,
-            "maximum": 50,
-            "description": "0 removes the item"
+            "minimum": 1,
+            "maximum": 10
           }
         },
         "required": [
@@ -3542,14 +3562,121 @@
         }
       }
     },
-    "/api/v1/carts": {
+    "/api/v1/admin/products/{productID}/variants/{variantID}/stock": {
+      "put": {
+        "operationId": "adminSetVariantStock",
+        "tags": [
+          "Variants"
+        ],
+        "summary": "Set a variant's stock",
+        "description": "Sets the counted stock (an absolute value, so retrying is harmless).",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "productID",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "variantID",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetStockBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stock updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VariantResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product or variant id (INVALID_PRODUCT_ID, INVALID_VARIANT_ID), or invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such variant on this product (VARIANT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cart": {
       "get": {
         "operationId": "getCart",
         "tags": [
           "Cart"
         ],
         "summary": "Get my cart",
-        "description": "The items in the user's cart, oldest first; empty when there is no cart yet.",
+        "description": "One cart per user, priced live; empty until something is added. Capped at 50 lines, so it is not paginated.",
         "security": [
           {
             "accessTokenCookie": []
@@ -3588,13 +3715,60 @@
           }
         }
       },
-      "post": {
-        "operationId": "addToCart",
+      "delete": {
+        "operationId": "clearCart",
         "tags": [
           "Cart"
         ],
-        "summary": "Add an item to my cart",
-        "description": "Creates the cart on first use. Adding a variant that is already in the cart increases its quantity.",
+        "summary": "Empty my cart",
+        "description": "Removes every line; emptying an empty cart succeeds.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The whole cart after the change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cart/items": {
+      "post": {
+        "operationId": "addCartItem",
+        "tags": [
+          "Cart"
+        ],
+        "summary": "Add to my cart",
+        "description": "Adds to the quantity already in the cart. The stock check counts it; the cart does not reserve stock (checkout does).",
         "security": [
           {
             "accessTokenCookie": []
@@ -3605,102 +3779,24 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AddToCartBody"
+                "$ref": "#/components/schemas/AddCartItemBody"
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Item added to cart",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CartItemResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid body or not enough stock (VALIDATION_FAILED, INSUFFICIENT_STOCK)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Variant or cart not found (VARIANT_NOT_FOUND, CART_NOT_FOUND)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/carts/{cartID}": {
-      "delete": {
-        "operationId": "clearCart",
-        "tags": [
-          "Cart"
-        ],
-        "summary": "Clear my cart",
-        "description": "Removes every item; the cart itself stays.",
-        "security": [
-          {
-            "accessTokenCookie": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": true,
-            "name": "cartID",
-            "in": "path"
-          }
-        ],
-        "responses": {
           "200": {
-            "description": "Cart cleared",
+            "description": "The whole cart after the change",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MessageResponse"
+                  "$ref": "#/components/schemas/CartResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid cart id (INVALID_CART_ID)",
+            "description": "Invalid body (VALIDATION_FAILED, INVALID_VARIANT_ID)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3720,7 +3816,17 @@
             }
           },
           "404": {
-            "description": "The cart is empty or not yours (CART_ITEM_NOT_FOUND)",
+            "description": "No such variant (VARIANT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Off sale, not enough stock, more than 10 of the item, or 50 lines already (VARIANT_UNAVAILABLE, INSUFFICIENT_STOCK, CART_QUANTITY_LIMIT, CART_FULL)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3742,29 +3848,20 @@
         }
       }
     },
-    "/api/v1/carts/{cartID}/{variantID}": {
+    "/api/v1/cart/items/{variantID}": {
       "patch": {
         "operationId": "updateCartItem",
         "tags": [
           "Cart"
         ],
-        "summary": "Change an item's quantity",
-        "description": "Quantity 0 removes the item.",
+        "summary": "Change a line's quantity",
+        "description": "Lowering always works, so a line that went short or off sale can be fixed; raising needs the variant on sale with enough stock.",
         "security": [
           {
             "accessTokenCookie": []
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": true,
-            "name": "cartID",
-            "in": "path"
-          },
           {
             "schema": {
               "type": "string",
@@ -3787,17 +3884,17 @@
         },
         "responses": {
           "200": {
-            "description": "Cart item updated or removed",
+            "description": "The whole cart after the change",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MessageResponse"
+                  "$ref": "#/components/schemas/CartResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid ids or body, or not enough stock (INVALID_CART_ID, INVALID_VARIANT_ID, VALIDATION_FAILED, INSUFFICIENT_STOCK)",
+            "description": "Invalid id or body (INVALID_VARIANT_ID, VALIDATION_FAILED)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3817,7 +3914,92 @@
             }
           },
           "404": {
-            "description": "Variant or cart item not found (VARIANT_NOT_FOUND, CART_ITEM_NOT_FOUND)",
+            "description": "Not in the cart (CART_ITEM_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Off sale or not enough stock (VARIANT_UNAVAILABLE, INSUFFICIENT_STOCK)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeCartItem",
+        "tags": [
+          "Cart"
+        ],
+        "summary": "Remove a line",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "variantID",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The whole cart after the change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id (INVALID_VARIANT_ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not in the cart (CART_ITEM_NOT_FOUND)",
             "content": {
               "application/json": {
                 "schema": {

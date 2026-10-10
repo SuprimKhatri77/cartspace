@@ -4,85 +4,85 @@ import { schemas } from "../schemas.ts";
 import { body, operation } from "./shared.ts";
 
 const tag = "Cart";
+const cart = {
+  status: 200 as const,
+  description: "The whole cart after the change",
+  schema: schemas.CartResponseSchema,
+};
+const itemParams = z.object({ variantID: Uuid });
 
 export function registerCartPaths() {
   operation({
     method: "get",
-    path: "/api/v1/carts",
+    path: "/api/v1/cart",
     operationId: "getCart",
     tag,
     summary: "Get my cart",
     description:
-      "The items in the user's cart, oldest first; empty when there is no cart yet.",
+      "One cart per user, priced live; empty until something is added. Capped at 50 lines, so it is not paginated.",
     auth: "user",
-    success: {
-      status: 200,
-      description: "Cart fetched",
-      schema: schemas.CartResponseSchema,
-    },
-  });
-
-  operation({
-    method: "post",
-    path: "/api/v1/carts",
-    operationId: "addToCart",
-    tag,
-    summary: "Add an item to my cart",
-    description:
-      "Creates the cart on first use. Adding a variant that is already in the cart increases its quantity.",
-    auth: "user",
-    request: body(schemas.AddToCartBodySchema),
-    success: {
-      status: 201,
-      description: "Item added to cart",
-      schema: schemas.CartItemResponseSchema,
-    },
-    errors: {
-      400: "Invalid body or not enough stock (VALIDATION_FAILED, INSUFFICIENT_STOCK)",
-      404: "Variant or cart not found (VARIANT_NOT_FOUND, CART_NOT_FOUND)",
-    },
+    success: { ...cart, description: "Cart fetched" },
   });
 
   operation({
     method: "delete",
-    path: "/api/v1/carts/{cartID}",
+    path: "/api/v1/cart",
     operationId: "clearCart",
     tag,
-    summary: "Clear my cart",
-    description: "Removes every item; the cart itself stays.",
+    summary: "Empty my cart",
+    description: "Removes every line; emptying an empty cart succeeds.",
     auth: "user",
-    request: { params: z.object({ cartID: Uuid }) },
-    success: {
-      status: 200,
-      description: "Cart cleared",
-      schema: schemas.MessageResponseSchema,
-    },
+    success: cart,
+  });
+
+  operation({
+    method: "post",
+    path: "/api/v1/cart/items",
+    operationId: "addCartItem",
+    tag,
+    summary: "Add to my cart",
+    description:
+      "Adds to the quantity already in the cart. The stock check counts it; the cart does not reserve stock (checkout does).",
+    auth: "user",
+    request: body(schemas.AddCartItemBodySchema),
+    success: cart,
     errors: {
-      400: "Invalid cart id (INVALID_CART_ID)",
-      404: "The cart is empty or not yours (CART_ITEM_NOT_FOUND)",
+      400: "Invalid body (VALIDATION_FAILED, INVALID_VARIANT_ID)",
+      404: "No such variant (VARIANT_NOT_FOUND)",
+      409: "Off sale, not enough stock, more than 10 of the item, or 50 lines already (VARIANT_UNAVAILABLE, INSUFFICIENT_STOCK, CART_QUANTITY_LIMIT, CART_FULL)",
     },
   });
 
   operation({
     method: "patch",
-    path: "/api/v1/carts/{cartID}/{variantID}",
+    path: "/api/v1/cart/items/{variantID}",
     operationId: "updateCartItem",
     tag,
-    summary: "Change an item's quantity",
-    description: "Quantity 0 removes the item.",
+    summary: "Change a line's quantity",
+    description:
+      "Lowering always works, so a line that went short or off sale can be fixed; raising needs the variant on sale with enough stock.",
     auth: "user",
-    request: {
-      params: z.object({ cartID: Uuid, variantID: Uuid }),
-      ...body(schemas.UpdateCartItemBodySchema),
-    },
-    success: {
-      status: 200,
-      description: "Cart item updated or removed",
-      schema: schemas.MessageResponseSchema,
-    },
+    request: { params: itemParams, ...body(schemas.UpdateCartItemBodySchema) },
+    success: cart,
     errors: {
-      400: "Invalid ids or body, or not enough stock (INVALID_CART_ID, INVALID_VARIANT_ID, VALIDATION_FAILED, INSUFFICIENT_STOCK)",
-      404: "Variant or cart item not found (VARIANT_NOT_FOUND, CART_ITEM_NOT_FOUND)",
+      400: "Invalid id or body (INVALID_VARIANT_ID, VALIDATION_FAILED)",
+      404: "Not in the cart (CART_ITEM_NOT_FOUND)",
+      409: "Off sale or not enough stock (VARIANT_UNAVAILABLE, INSUFFICIENT_STOCK)",
+    },
+  });
+
+  operation({
+    method: "delete",
+    path: "/api/v1/cart/items/{variantID}",
+    operationId: "removeCartItem",
+    tag,
+    summary: "Remove a line",
+    auth: "user",
+    request: { params: itemParams },
+    success: cart,
+    errors: {
+      400: "Invalid id (INVALID_VARIANT_ID)",
+      404: "Not in the cart (CART_ITEM_NOT_FOUND)",
     },
   });
 }

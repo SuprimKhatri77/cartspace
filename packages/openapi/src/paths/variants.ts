@@ -78,6 +78,27 @@ export function registerVariantPaths() {
   });
 
   operation({
+    method: "put",
+    path: `${base}/{variantID}/stock`,
+    operationId: "adminSetVariantStock",
+    tag,
+    summary: "Set a variant's stock",
+    description:
+      "Sets the counted stock (an absolute value, so retrying is harmless).",
+    auth: "admin",
+    request: { params: variantParams, ...body(schemas.SetStockBodySchema) },
+    success: {
+      status: 200,
+      description: "Stock updated",
+      schema: schemas.VariantResponseSchema,
+    },
+    errors: {
+      400: `${invalidIds}, or invalid body (VALIDATION_FAILED)`,
+      404: notFound,
+    },
+  });
+
+  operation({
     method: "delete",
     path: `${base}/{variantID}`,
     operationId: "adminDeleteVariant",

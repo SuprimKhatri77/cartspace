@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'CART_NOT_FOUND' | 'CART_ALREADY_EXISTS' | 'INVALID_CART_ID' | 'INVALID_VARIANT_QUANTITY' | 'INSUFFICIENT_STOCK' | 'CART_ITEM_NOT_FOUND';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -459,64 +459,87 @@ export type UpdateVariantBody = {
     is_active: boolean;
 };
 
+/**
+ * The counted stock (an absolute value, not a change).
+ */
+export type SetStockBody = {
+    stock: number;
+};
+
 export type CartResponse = {
     success: true;
     message: string;
-    data: Array<CartLine>;
+    data: Cart;
+};
+
+export type Cart = {
+    /**
+     * Oldest first, at most 50
+     */
+    items: Array<CartLine>;
+    /**
+     * Units in the lines that can be checked out
+     */
+    item_count: number;
+    /**
+     * Cents, over the lines that can be checked out
+     */
+    subtotal: number;
+    /**
+     * A line is off sale or above its stock; checkout refuses until it is fixed
+     */
+    has_issues: boolean;
 };
 
 /**
- * One line of the cart (GET /carts).
+ * One cart line, priced live.
  */
 export type CartLine = {
-    cart_id: string;
-    cart_item_id: string;
     variant_id: string;
     quantity: number;
-    /**
-     * Price per unit when the item was added
-     */
-    unit_price: number;
+    added_at: string;
+    product_id: string;
     product_name: string;
-    selling_price: number;
+    product_slug: string;
+    sku: string | null;
     stock: number;
     /**
-     * The variant's first image, "" if it has none
+     * The variant's first image, else the product's; "" if none
      */
     image: string;
-};
-
-export type CartItemResponse = {
-    success: true;
-    message: string;
-    data: CartItem;
-};
-
-export type CartItem = {
-    id: string;
-    cart_id: string;
-    variant_id: string;
-    quantity: number;
-    unit_price: number;
-    created_at: string;
-    updated_at: string;
+    selling_price: number;
+    /**
+     * The active offer, or null
+     */
+    offer_price: number | null;
+    /**
+     * What one costs right now
+     */
+    price: number;
+    /**
+     * False once the variant or its product is off sale
+     */
+    available: boolean;
+    options: Array<VariantOption>;
+    /**
+     * price × quantity
+     */
+    line_total: number;
+    /**
+     * What the line can be raised to: the stock, at most 10; 0 when it can't be bought
+     */
+    max_quantity: number;
 };
 
 /**
- * Adding a variant already in the cart increases its quantity.
+ * Adds to the quantity already in the cart.
  */
-export type AddToCartBody = {
+export type AddCartItemBody = {
     variant_id: string;
-    /**
-     * Adding a variant already in the cart increases its quantity.
-     */
     quantity: number;
 };
 
 export type UpdateCartItemBody = {
-    /**
-     * 0 removes the item
-     */
     quantity: number;
 };
 
@@ -1448,11 +1471,84 @@ export type AdminUpdateVariantResponses = {
 
 export type AdminUpdateVariantResponse = AdminUpdateVariantResponses[keyof AdminUpdateVariantResponses];
 
+export type AdminSetVariantStockData = {
+    body: SetStockBody;
+    path: {
+        productID: string;
+        variantID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/products/{productID}/variants/{variantID}/stock';
+};
+
+export type AdminSetVariantStockErrors = {
+    /**
+     * Invalid product or variant id (INVALID_PRODUCT_ID, INVALID_VARIANT_ID), or invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such variant on this product (VARIANT_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSetVariantStockError = AdminSetVariantStockErrors[keyof AdminSetVariantStockErrors];
+
+export type AdminSetVariantStockResponses = {
+    /**
+     * Stock updated
+     */
+    200: VariantResponse;
+};
+
+export type AdminSetVariantStockResponse = AdminSetVariantStockResponses[keyof AdminSetVariantStockResponses];
+
+export type ClearCartData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/cart';
+};
+
+export type ClearCartErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type ClearCartError = ClearCartErrors[keyof ClearCartErrors];
+
+export type ClearCartResponses = {
+    /**
+     * The whole cart after the change
+     */
+    200: CartResponse;
+};
+
+export type ClearCartResponse = ClearCartResponses[keyof ClearCartResponses];
+
 export type GetCartData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/api/v1/carts';
+    url: '/api/v1/cart';
 };
 
 export type GetCartErrors = {
@@ -1477,16 +1573,16 @@ export type GetCartResponses = {
 
 export type GetCartResponse = GetCartResponses[keyof GetCartResponses];
 
-export type AddToCartData = {
-    body: AddToCartBody;
+export type AddCartItemData = {
+    body: AddCartItemBody;
     path?: never;
     query?: never;
-    url: '/api/v1/carts';
+    url: '/api/v1/cart/items';
 };
 
-export type AddToCartErrors = {
+export type AddCartItemErrors = {
     /**
-     * Invalid body or not enough stock (VALIDATION_FAILED, INSUFFICIENT_STOCK)
+     * Invalid body (VALIDATION_FAILED, INVALID_VARIANT_ID)
      */
     400: ApiError;
     /**
@@ -1494,38 +1590,42 @@ export type AddToCartErrors = {
      */
     401: ApiError;
     /**
-     * Variant or cart not found (VARIANT_NOT_FOUND, CART_NOT_FOUND)
+     * No such variant (VARIANT_NOT_FOUND)
      */
     404: ApiError;
+    /**
+     * Off sale, not enough stock, more than 10 of the item, or 50 lines already (VARIANT_UNAVAILABLE, INSUFFICIENT_STOCK, CART_QUANTITY_LIMIT, CART_FULL)
+     */
+    409: ApiError;
     /**
      * Unexpected server error (INTERNAL_SERVER_ERROR)
      */
     500: ApiError;
 };
 
-export type AddToCartError = AddToCartErrors[keyof AddToCartErrors];
+export type AddCartItemError = AddCartItemErrors[keyof AddCartItemErrors];
 
-export type AddToCartResponses = {
+export type AddCartItemResponses = {
     /**
-     * Item added to cart
+     * The whole cart after the change
      */
-    201: CartItemResponse;
+    200: CartResponse;
 };
 
-export type AddToCartResponse = AddToCartResponses[keyof AddToCartResponses];
+export type AddCartItemResponse = AddCartItemResponses[keyof AddCartItemResponses];
 
-export type ClearCartData = {
+export type RemoveCartItemData = {
     body?: never;
     path: {
-        cartID: string;
+        variantID: string;
     };
     query?: never;
-    url: '/api/v1/carts/{cartID}';
+    url: '/api/v1/cart/items/{variantID}';
 };
 
-export type ClearCartErrors = {
+export type RemoveCartItemErrors = {
     /**
-     * Invalid cart id (INVALID_CART_ID)
+     * Invalid id (INVALID_VARIANT_ID)
      */
     400: ApiError;
     /**
@@ -1533,7 +1633,7 @@ export type ClearCartErrors = {
      */
     401: ApiError;
     /**
-     * The cart is empty or not yours (CART_ITEM_NOT_FOUND)
+     * Not in the cart (CART_ITEM_NOT_FOUND)
      */
     404: ApiError;
     /**
@@ -1542,30 +1642,29 @@ export type ClearCartErrors = {
     500: ApiError;
 };
 
-export type ClearCartError = ClearCartErrors[keyof ClearCartErrors];
+export type RemoveCartItemError = RemoveCartItemErrors[keyof RemoveCartItemErrors];
 
-export type ClearCartResponses = {
+export type RemoveCartItemResponses = {
     /**
-     * Cart cleared
+     * The whole cart after the change
      */
-    200: MessageResponse;
+    200: CartResponse;
 };
 
-export type ClearCartResponse = ClearCartResponses[keyof ClearCartResponses];
+export type RemoveCartItemResponse = RemoveCartItemResponses[keyof RemoveCartItemResponses];
 
 export type UpdateCartItemData = {
     body: UpdateCartItemBody;
     path: {
-        cartID: string;
         variantID: string;
     };
     query?: never;
-    url: '/api/v1/carts/{cartID}/{variantID}';
+    url: '/api/v1/cart/items/{variantID}';
 };
 
 export type UpdateCartItemErrors = {
     /**
-     * Invalid ids or body, or not enough stock (INVALID_CART_ID, INVALID_VARIANT_ID, VALIDATION_FAILED, INSUFFICIENT_STOCK)
+     * Invalid id or body (INVALID_VARIANT_ID, VALIDATION_FAILED)
      */
     400: ApiError;
     /**
@@ -1573,9 +1672,13 @@ export type UpdateCartItemErrors = {
      */
     401: ApiError;
     /**
-     * Variant or cart item not found (VARIANT_NOT_FOUND, CART_ITEM_NOT_FOUND)
+     * Not in the cart (CART_ITEM_NOT_FOUND)
      */
     404: ApiError;
+    /**
+     * Off sale or not enough stock (VARIANT_UNAVAILABLE, INSUFFICIENT_STOCK)
+     */
+    409: ApiError;
     /**
      * Unexpected server error (INTERNAL_SERVER_ERROR)
      */
@@ -1586,9 +1689,9 @@ export type UpdateCartItemError = UpdateCartItemErrors[keyof UpdateCartItemError
 
 export type UpdateCartItemResponses = {
     /**
-     * Cart item updated or removed
+     * The whole cart after the change
      */
-    200: MessageResponse;
+    200: CartResponse;
 };
 
 export type UpdateCartItemResponse = UpdateCartItemResponses[keyof UpdateCartItemResponses];

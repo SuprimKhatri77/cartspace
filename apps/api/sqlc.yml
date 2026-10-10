@@ -20,3 +20,5 @@ sql:
             go_type: "github.com/jackc/pgx/v5/pgtype.Int4"
           - column: "storefront_variants.offer_price"
             go_type: "github.com/jackc/pgx/v5/pgtype.Int4"
+          - column: "variant_prices.offer_price"
+            go_type: "github.com/jackc/pgx/v5/pgtype.Int4"

@@ -138,33 +138,6 @@ func (q *Queries) GetProductVariant(ctx context.Context, arg GetProductVariantPa
 	return i, err
 }
 
-const getVariantByID = `-- name: GetVariantByID :one
-SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at FROM product_variants
-WHERE id = $1
-`
-
-func (q *Queries) GetVariantByID(ctx context.Context, id pgtype.UUID) (ProductVariant, error) {
-	row := q.db.QueryRow(ctx, getVariantByID, id)
-	var i ProductVariant
-	err := row.Scan(
-		&i.ID,
-		&i.ProductID,
-		&i.Sku,
-		&i.Stock,
-		&i.Images,
-		&i.ImagePublicIds,
-		&i.SellingPrice,
-		&i.OfferPrice,
-		&i.IsDefault,
-		&i.IsActive,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.OptionCombinationKey,
-		&i.OfferExpiresAt,
-	)
-	return i, err
-}
-
 const getVariantsByProduct = `-- name: GetVariantsByProduct :many
 SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at FROM product_variants
 WHERE product_id = $1 AND is_active = TRUE
@@ -206,6 +179,41 @@ func (q *Queries) GetVariantsByProduct(ctx context.Context, productID pgtype.UUI
 	return items, nil
 }
 
+const setVariantStock = `-- name: SetVariantStock :one
+UPDATE product_variants SET stock = $1
+WHERE id = $2 AND product_id = $3
+RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at
+`
+
+type SetVariantStockParams struct {
+	Stock     int32       `json:"stock"`
+	ID        pgtype.UUID `json:"id"`
+	ProductID pgtype.UUID `json:"product_id"`
+}
+
+// Admin stock count: an absolute value, for a variant of the given product.
+func (q *Queries) SetVariantStock(ctx context.Context, arg SetVariantStockParams) (ProductVariant, error) {
+	row := q.db.QueryRow(ctx, setVariantStock, arg.Stock, arg.ID, arg.ProductID)
+	var i ProductVariant
+	err := row.Scan(
+		&i.ID,
+		&i.ProductID,
+		&i.Sku,
+		&i.Stock,
+		&i.Images,
+		&i.ImagePublicIds,
+		&i.SellingPrice,
+		&i.OfferPrice,
+		&i.IsDefault,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.OptionCombinationKey,
+		&i.OfferExpiresAt,
+	)
+	return i, err
+}
+
 const updateVariant = `-- name: UpdateVariant :one
 UPDATE product_variants SET
     stock = $1,
@@ -244,39 +252,6 @@ func (q *Queries) UpdateVariant(ctx context.Context, arg UpdateVariantParams) (P
 		arg.ID,
 		arg.ProductID,
 	)
-	var i ProductVariant
-	err := row.Scan(
-		&i.ID,
-		&i.ProductID,
-		&i.Sku,
-		&i.Stock,
-		&i.Images,
-		&i.ImagePublicIds,
-		&i.SellingPrice,
-		&i.OfferPrice,
-		&i.IsDefault,
-		&i.IsActive,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.OptionCombinationKey,
-		&i.OfferExpiresAt,
-	)
-	return i, err
-}
-
-const updateVariantStock = `-- name: UpdateVariantStock :one
-UPDATE product_variants SET stock = stock + $1
-WHERE id = $2
-RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at
-`
-
-type UpdateVariantStockParams struct {
-	Delta int32       `json:"delta"`
-	ID    pgtype.UUID `json:"id"`
-}
-
-func (q *Queries) UpdateVariantStock(ctx context.Context, arg UpdateVariantStockParams) (ProductVariant, error) {
-	row := q.db.QueryRow(ctx, updateVariantStock, arg.Delta, arg.ID)
 	var i ProductVariant
 	err := row.Scan(
 		&i.ID,

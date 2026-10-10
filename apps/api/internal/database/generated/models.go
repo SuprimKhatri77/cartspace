@@ -20,7 +20,6 @@ type CartItem struct {
 	CartID    pgtype.UUID        `json:"cart_id"`
 	VariantID pgtype.UUID        `json:"variant_id"`
 	Quantity  int32              `json:"quantity"`
-	UnitPrice int32              `json:"unit_price"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
@@ -140,4 +139,11 @@ type User struct {
 type VariantOptionValue struct {
 	VariantID     pgtype.UUID `json:"variant_id"`
 	OptionValueID pgtype.UUID `json:"option_value_id"`
+}
+
+type VariantPrice struct {
+	ID           pgtype.UUID `json:"id"`
+	SellingPrice int32       `json:"selling_price"`
+	OfferPrice   pgtype.Int4 `json:"offer_price"`
+	Price        int32       `json:"price"`
 }

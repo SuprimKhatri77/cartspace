@@ -132,6 +132,15 @@ export const UpdateVariantBodySchema = z
   });
 export type UpdateVariantBody = z.infer<typeof UpdateVariantBodySchema>;
 
+// Mirrors UpdateStock in apps/api/internal/types/variant.go.
+export const SetStockBodySchema = z
+  .object({ stock: z.int().min(0).max(10_000) })
+  .meta({
+    id: "SetStockBody",
+    description: "The counted stock (an absolute value, not a change).",
+  });
+export type SetStockBody = z.infer<typeof SetStockBodySchema>;
+
 export const VariantResponseSchema = successResponse(ProductVariantSchema).meta(
   { id: "VariantResponse" },
 );

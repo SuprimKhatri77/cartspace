@@ -15,4 +15,5 @@ func setupVariantRoutes(router *gin.RouterGroup, cfg config.Config) {
 	admin.PUT("/:variantID", adminVariant.UpdateProductVariant(cfg.VariantRepo))
 	admin.DELETE("/:variantID", adminVariant.DeleteVariant(cfg.VariantRepo))
 	admin.GET("/:variantID", adminVariant.GetByVariantID(cfg.VariantRepo))
+	admin.PUT("/:variantID/stock", adminVariant.SetVariantStock(cfg.VariantRepo))
 }
