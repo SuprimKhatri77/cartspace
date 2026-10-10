@@ -5,7 +5,7 @@ import { generateOpenAPIDocument } from "./schema";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const outPath = `${__dirname}/../../../apps/backend/openapi.json`;
+const outPath = `${__dirname}/../../../apps/api/openapi.json`;
 
 const doc = generateOpenAPIDocument();
 const json = JSON.stringify(doc, null, 2);

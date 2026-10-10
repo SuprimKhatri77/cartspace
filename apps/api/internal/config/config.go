@@ -17,13 +17,14 @@ type Config struct {
 	CloudinaryCloudName string
 	CloudinaryAPIKey    string
 	CloudinaryAPISecret string
+	FrontendURL         string
 	CookieDomain        string
 }
 
-// Load loads .env from the current directory (if present) then reads configuration from environment variables.
+// Load loads the repo-root .env.local (if present) then reads configuration from environment variables.
 // No hardcoded URLs: PORT defaults to 5000 if unset; GIN_MODE defaults to "debug"; DATABASE_URL must be set in .env or env.
 func Load() (*Config, error) {
-	_ = godotenv.Load() // ignore error if .env is missing
+	_ = godotenv.Load("../../.env.local") // ignore error if missing (e.g. in Docker, env comes from compose)
 
 	port := 5000
 	if p := os.Getenv("PORT"); p != "" {
@@ -43,6 +44,7 @@ func Load() (*Config, error) {
 	cloudinaryCloudName := os.Getenv("CLOUDINARY_CLOUD_NAME")
 	cloudinaryAPIKey := os.Getenv("CLOUDINARY_API_KEY")
 	cloudinaryAPISecret := os.Getenv("CLOUDINARY_API_SECRET")
+	frontendURL := os.Getenv("FRONTEND_URL")
 	cookieDomain := os.Getenv("COOKIE_DOMAIN")
 
 	return &Config{
@@ -54,6 +56,7 @@ func Load() (*Config, error) {
 		CloudinaryCloudName: cloudinaryCloudName,
 		CloudinaryAPIKey:    cloudinaryAPIKey,
 		CloudinaryAPISecret: cloudinaryAPISecret,
+		FrontendURL:         frontendURL,
 		CookieDomain:        cookieDomain,
 	}, nil
 }

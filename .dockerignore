@@ -1,7 +1,7 @@
 apps/web/.next/
 apps/web/node_modules/
-apps/backend/tmp/
-apps/backend/*.exe
+apps/api/tmp/
+apps/api/*.exe
 node_modules/
 .git/
 **/.env*

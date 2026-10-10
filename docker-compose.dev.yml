@@ -3,7 +3,7 @@ name: cartspace
 services:
   api:
     build:
-      context: ./apps/backend
+      context: ./apps/api
       dockerfile: Dockerfile.dev
     container_name: cartspace-api
     depends_on:
@@ -12,9 +12,9 @@ services:
     ports:
       - "5000:5000"
     env_file:
-      - .env
+      - .env.local
     volumes:
-      - ./apps/backend:/app
+      - ./apps/api:/app
       - /app/tmp
     networks:
       - app-network
@@ -27,10 +27,13 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - .env
+      - .env.local
+    depends_on:
+      - api
     volumes:
       - ./apps/web:/app/apps/web
       - ./packages:/app/packages
+      - ./turbo.json:/app/turbo.json
       - /app/apps/web/node_modules
       - /app/apps/web/.next
     networks:
@@ -47,7 +50,7 @@ services:
     ports:
       - "5432:5432"
     env_file:
-      - .env
+      - .env.local
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
