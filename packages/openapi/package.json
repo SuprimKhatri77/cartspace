@@ -8,8 +8,8 @@
   },
   "dependencies": {
     "@repo/types": "*",
-    "zod": "^4.3.6",
-    "zod-openapi": "^5.4.6"
+    "zod": "^4.6.5",
+    "zod-openapi": "^6.0.2"
   },
   "devDependencies": {
     "@repo/typescript-config": "*",
