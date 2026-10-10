@@ -120,8 +120,12 @@ export const ProductBodySchema = z
 export type ProductBody = z.infer<typeof ProductBodySchema>;
 
 export const SortOptionSchema = z
-  .enum(["newest", "price_asc", "price_desc"])
-  .meta({ id: "SortOption" });
+  .enum(["relevance", "newest", "price_asc", "price_desc"])
+  .meta({
+    id: "SortOption",
+    description:
+      "`relevance` ranks search matches; without a search it means `newest`.",
+  });
 export type SortOption = z.infer<typeof SortOptionSchema>;
 
 export const ProductResponseSchema = successResponse(ProductSchema).meta({

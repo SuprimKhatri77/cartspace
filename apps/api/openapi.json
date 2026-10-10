@@ -2384,15 +2384,28 @@
           {
             "schema": {
               "type": "string",
+              "maxLength": 100,
+              "description": "Search. Words of letters and digits (at most 8) all have to match, each as a prefix, against the name, category path, description and features. Without letters or digits it is ignored.",
+              "example": "linen shirt"
+            },
+            "required": false,
+            "description": "Search. Words of letters and digits (at most 8) all have to match, each as a prefix, against the name, category path, description and features. Without letters or digits it is ignored.",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "enum": [
+                "relevance",
                 "newest",
                 "price_asc",
                 "price_desc"
               ],
-              "description": "Default `newest`; prices sort by what the customer pays"
+              "description": "Default `relevance` with a search, else `newest`; prices sort by what the customer pays"
             },
             "required": false,
-            "description": "Default `newest`; prices sort by what the customer pays",
+            "description": "Default `relevance` with a search, else `newest`; prices sort by what the customer pays",
             "name": "sort",
             "in": "query"
           },
@@ -2461,7 +2474,7 @@
             }
           },
           "400": {
-            "description": "Invalid page, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)",
+            "description": "Invalid page, search, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2517,15 +2530,28 @@
           {
             "schema": {
               "type": "string",
+              "maxLength": 100,
+              "description": "Search. Words of letters and digits (at most 8) all have to match, each as a prefix, against the name, category path, description and features. Without letters or digits it is ignored.",
+              "example": "linen shirt"
+            },
+            "required": false,
+            "description": "Search. Words of letters and digits (at most 8) all have to match, each as a prefix, against the name, category path, description and features. Without letters or digits it is ignored.",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "enum": [
+                "relevance",
                 "newest",
                 "price_asc",
                 "price_desc"
               ],
-              "description": "Default `newest`; prices sort by what the customer pays"
+              "description": "Default `relevance` with a search, else `newest`; prices sort by what the customer pays"
             },
             "required": false,
-            "description": "Default `newest`; prices sort by what the customer pays",
+            "description": "Default `relevance` with a search, else `newest`; prices sort by what the customer pays",
             "name": "sort",
             "in": "query"
           },
@@ -2594,7 +2620,7 @@
             }
           },
           "400": {
-            "description": "Invalid page, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)",
+            "description": "Invalid page, search, sort, featured, price or option filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER, INVALID_PRICE_FILTER)",
             "content": {
               "application/json": {
                 "schema": {

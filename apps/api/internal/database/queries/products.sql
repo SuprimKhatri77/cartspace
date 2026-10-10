@@ -44,8 +44,9 @@ ORDER BY p.created_at DESC, p.id DESC
 LIMIT $1 OFFSET $2;
 
 -- Storefront listings. The four queries below share one scope (an optional
--- category with all its subcategories, and featured_only); count and list
--- also share the price and option filters. Keep their WHERE clauses in sync.
+-- category with all its subcategories, featured_only and the search terms);
+-- count and list also share the price and option filters. Keep their WHERE
+-- clauses in sync. Search terms are lowercase letters and digits (listing.go).
 -- UNION (not UNION ALL) in the subtree CTE terminates even on a cycle.
 
 -- name: ListStorefrontProducts :many
@@ -58,6 +59,11 @@ SELECT sp.*
 FROM storefront_products sp
 WHERE (sqlc.narg(category_slug)::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
 AND (NOT sqlc.arg(featured_only)::bool OR sp.is_featured)
+AND (
+    cardinality(sqlc.arg(search_terms)::text[]) = 0
+    OR product_search_document(sp.name, sp.description, sp.features, sp.category_id) @@ search_tsquery(sqlc.arg(search_terms)::text[])
+    OR name_has_terms(sp.name, sqlc.arg(search_terms)::text[])
+)
 AND (sqlc.arg(price_min)::int = 0 OR sp.price >= sqlc.arg(price_min)::int)
 AND (sqlc.arg(price_max)::int = 0 OR sp.price <= sqlc.arg(price_max)::int)
 AND (
@@ -69,6 +75,13 @@ AND (
     )
 )
 ORDER BY
+    -- Relevance: text rank, plus a bonus when the name holds every term.
+    CASE WHEN sqlc.arg(sort)::text = 'relevance' THEN
+        ts_rank(
+            product_search_document(sp.name, sp.description, sp.features, sp.category_id),
+            search_tsquery(sqlc.arg(search_terms)::text[])
+        ) + CASE WHEN name_has_terms(sp.name, sqlc.arg(search_terms)::text[]) THEN 1 ELSE 0 END
+    END DESC NULLS LAST,
     CASE WHEN sqlc.arg(sort)::text = 'price_asc' THEN sp.price END ASC,
     CASE WHEN sqlc.arg(sort)::text = 'price_desc' THEN sp.price END DESC,
     sp.created_at DESC,
@@ -85,6 +98,11 @@ SELECT COUNT(*)
 FROM storefront_products sp
 WHERE (sqlc.narg(category_slug)::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
 AND (NOT sqlc.arg(featured_only)::bool OR sp.is_featured)
+AND (
+    cardinality(sqlc.arg(search_terms)::text[]) = 0
+    OR product_search_document(sp.name, sp.description, sp.features, sp.category_id) @@ search_tsquery(sqlc.arg(search_terms)::text[])
+    OR name_has_terms(sp.name, sqlc.arg(search_terms)::text[])
+)
 AND (sqlc.arg(price_min)::int = 0 OR sp.price >= sqlc.arg(price_min)::int)
 AND (sqlc.arg(price_max)::int = 0 OR sp.price <= sqlc.arg(price_max)::int)
 AND (
@@ -115,6 +133,11 @@ JOIN variant_option_values vov ON vov.option_value_id = pov.id
 JOIN product_variants v ON v.id = vov.variant_id AND v.is_active = TRUE
 WHERE (sqlc.narg(category_slug)::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
 AND (NOT sqlc.arg(featured_only)::bool OR sp.is_featured)
+AND (
+    cardinality(sqlc.arg(search_terms)::text[]) = 0
+    OR product_search_document(sp.name, sp.description, sp.features, sp.category_id) @@ search_tsquery(sqlc.arg(search_terms)::text[])
+    OR name_has_terms(sp.name, sqlc.arg(search_terms)::text[])
+)
 GROUP BY po.name, pov.value
 ORDER BY po.name, pov.value;
 
@@ -131,7 +154,12 @@ SELECT
     COALESCE(MAX(sp.price), 0)::int AS max_price
 FROM storefront_products sp
 WHERE (sqlc.narg(category_slug)::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
-AND (NOT sqlc.arg(featured_only)::bool OR sp.is_featured);
+AND (NOT sqlc.arg(featured_only)::bool OR sp.is_featured)
+AND (
+    cardinality(sqlc.arg(search_terms)::text[]) = 0
+    OR product_search_document(sp.name, sp.description, sp.features, sp.category_id) @@ search_tsquery(sqlc.arg(search_terms)::text[])
+    OR name_has_terms(sp.name, sqlc.arg(search_terms)::text[])
+);
 
 -- name: GetVariantsByProductSlug :many
 SELECT
