@@ -214,6 +214,7 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 				FilterOptions: filterOptions,
 				PriceRange:    priceRange,
 			},
+			Meta: types.NewPaginationMeta(total, page, pageLimit),
 		})
 
 	}

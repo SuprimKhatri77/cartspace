@@ -55,6 +55,7 @@ func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 				Success: true,
 				Message: "No products found",
 				Data:    []db.ListActiveProductsRow{},
+				Meta:    types.NewPaginationMeta(total, page, pageLimit),
 			})
 			return
 		}
@@ -89,6 +90,7 @@ func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 			Success: true,
 			Message: "Products fetched",
 			Data:    products,
+			Meta:    types.NewPaginationMeta(total, page, pageLimit),
 		})
 
 	}
