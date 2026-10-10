@@ -4,10 +4,6 @@ export default {
     `bunx eslint --fix --max-warnings=0 -c apps/web/eslint.config.js ${filenames.join(" ")}`,
     `bunx prettier --write ${filenames.join(" ")}`,
   ],
-  "packages/ui/**/*.{js,jsx,ts,tsx,mjs,cjs}": (filenames) => [
-    `bunx eslint --fix --max-warnings=0 -c packages/ui/eslint.config.mjs ${filenames.join(" ")}`,
-    `bunx prettier --write ${filenames.join(" ")}`,
-  ],
   // Keep the OpenAPI spec and typed client in sync when the contract or the
   // generator config changes. Prettier runs here, before generating, rather
   // than in the generic rule below, so the two never touch a file at once.
@@ -23,10 +19,13 @@ export default {
   // Keep sqlc Go output in sync when queries/schema change.
   "apps/api/{sqlc.yml,internal/database/queries/**/*.sql,migrations/**/*.sql}":
     () => ["bun run db:sqlc", "git add apps/api/internal/database/generated"],
+  // Skips files another rule already formats, so two prettier runs never
+  // write the same file concurrently.
   "*.{js,jsx,ts,tsx,mjs,cjs,json,yml,yaml,css}": (filenames) => {
     const files = filenames.filter(
       (f) =>
-        !/\/packages\/(types\/src|openapi\/src|api-client)\/.*\.ts$/.test(f),
+        !/\/packages\/(types\/src|openapi\/src|api-client)\/.*\.ts$/.test(f) &&
+        !/\/apps\/web\/.*\.(js|jsx|ts|tsx|mjs|cjs)$/.test(f),
     );
     return files.length ? [`bunx prettier --write ${files.join(" ")}`] : [];
   },
