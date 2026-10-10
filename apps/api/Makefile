@@ -11,7 +11,9 @@ migrate-up:
 migrate-down:
 	migrate -path migrations -database "$(DB_URL)" down $(N)
 
+# clear old output first: sqlc never deletes files for removed query files
 sqlc:
+	rm -f internal/database/generated/*.go
 	sqlc generate
 
 seed:

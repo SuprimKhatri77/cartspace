@@ -1,8 +1,11 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -20,6 +23,12 @@ type Config struct {
 	FrontendURL         string
 	CookieDomain        string
 	OpenAPIPath         string
+	TrustedProxies      []string // proxies allowed to set X-Forwarded-For; none by default
+
+	AccessTokenTTL     time.Duration
+	RefreshTokenTTL    time.Duration
+	RefreshReuseWindow time.Duration // grace for a request that lost a concurrent refresh
+	MaxSessionAge      time.Duration // absolute session lifetime, however often it's refreshed
 }
 
 // Load loads the repo-root .env.local (if present) then reads configuration from environment variables.
@@ -66,5 +75,37 @@ func Load() (*Config, error) {
 		FrontendURL:         frontendURL,
 		CookieDomain:        cookieDomain,
 		OpenAPIPath:         openapiPath,
+		TrustedProxies:      splitList(os.Getenv("TRUSTED_PROXIES")),
+
+		AccessTokenTTL:     15 * time.Minute,
+		RefreshTokenTTL:    30 * 24 * time.Hour,
+		RefreshReuseWindow: 30 * time.Second,
+		MaxSessionAge:      90 * 24 * time.Hour,
 	}, nil
+}
+
+// minJWTSecretLen is the minimum HMAC key size: 32 bytes for HS256.
+const minJWTSecretLen = 32
+
+// ValidateAuth fails fast on JWT secrets that would make tokens forgeable:
+// empty or short keys, or one key shared by access and refresh tokens.
+func (c *Config) ValidateAuth() error {
+	if len(c.JWTAccessSecret) < minJWTSecretLen || len(c.JWTRefreshSecret) < minJWTSecretLen {
+		return errors.New("JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must each be at least 32 characters (openssl rand -hex 32)")
+	}
+	if c.JWTAccessSecret == c.JWTRefreshSecret {
+		return errors.New("JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different")
+	}
+	return nil
+}
+
+// splitList parses a comma-separated env value, dropping empty entries.
+func splitList(v string) []string {
+	var out []string
+	for _, part := range strings.Split(v, ",") {
+		if part = strings.TrimSpace(part); part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }

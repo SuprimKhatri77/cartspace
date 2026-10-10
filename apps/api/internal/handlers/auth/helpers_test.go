@@ -1,178 +1,210 @@
-package authHandler_test
+package auth
 
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/json"
-	"fmt"
-	"log/slog"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/suprimkhatri77/cartspace/backend/internal/config"
-	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
-	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 	"golang.org/x/crypto/bcrypt"
+
+	session "github.com/suprimkhatri77/cartspace/backend/internal/auth"
+	"github.com/suprimkhatri77/cartspace/backend/internal/config"
+	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
+	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/types"
+	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 )
 
-type mockAuthRepo struct {
-	createUserFn         func(ctx context.Context, params db.CreateUserParams) (db.User, error)
-	createRefreshTokenFn func(ctx context.Context, params db.CreateRefreshTokenParams) (db.RefreshToken, error)
+const (
+	testUserID   = "11111111-1111-1111-1111-111111111111"
+	testFamilyID = "22222222-2222-2222-2222-222222222222"
+	testPassword = "secret123"
+)
 
-	getUserByEmailFn func(ctx context.Context, email string) (db.User, error)
-	getUserByID      func(ctx context.Context, id pgtype.UUID) (db.User, error)
+var errDB = errors.New("db down")
 
-	revokeRefreshTokenFn func(ctx context.Context, params db.RevokeRefreshTokenParams) (pgconn.CommandTag, error)
+// mockRepo implements repository.AuthRepository. Nil funcs fail the test if called.
+type mockRepo struct {
+	t *testing.T
 
-	getRefreshTokenFn func(ctx context.Context, params db.GetRefreshTokenParams) (db.RefreshToken, error)
+	createUser     func(db.CreateUserParams) (db.User, error)
+	getUserByEmail func(string) (db.User, error)
+	getUserByID    func(pgtype.UUID) (db.User, error)
+	createSession  func(db.CreateSessionParams) (db.Session, error)
+	getSession     func(pgtype.UUID) (db.Session, error)
+	rotate         func(db.RotateSessionTokenParams) (db.Session, error)
+	revoke         func(pgtype.UUID) error
+
+	rotateCalls []db.RotateSessionTokenParams
+	revokeCalls []pgtype.UUID
+	created     []db.CreateUserParams
 }
 
-func (m *mockAuthRepo) CreateUser(ctx context.Context, params db.CreateUserParams) (db.User, error) {
-	return m.createUserFn(ctx, params)
-}
+func (m *mockRepo) fail(name string) { m.t.Helper(); m.t.Fatalf("unexpected call to %s", name) }
 
-func (m *mockAuthRepo) CreateRefreshToken(ctx context.Context, params db.CreateRefreshTokenParams) (db.RefreshToken, error) {
-	return m.createRefreshTokenFn(ctx, params)
+func (m *mockRepo) CreateUser(_ context.Context, p db.CreateUserParams) (db.User, error) {
+	m.created = append(m.created, p)
+	if m.createUser == nil {
+		m.fail("CreateUser")
+	}
+	return m.createUser(p)
 }
-
-func (m *mockAuthRepo) GetUserByEmail(ctx context.Context, email string) (db.User, error) {
-	return m.getUserByEmailFn(ctx, email)
+func (m *mockRepo) GetUserByEmail(_ context.Context, e string) (db.User, error) {
+	if m.getUserByEmail == nil {
+		m.fail("GetUserByEmail")
+	}
+	return m.getUserByEmail(e)
 }
-func (m *mockAuthRepo) GetUserByID(ctx context.Context, id pgtype.UUID) (db.User, error) {
-	return m.getUserByID(ctx, id)
+func (m *mockRepo) GetUserByID(_ context.Context, id pgtype.UUID) (db.User, error) {
+	if m.getUserByID == nil {
+		m.fail("GetUserByID")
+	}
+	return m.getUserByID(id)
 }
-
-func (m *mockAuthRepo) RevokeRefreshToken(ctx context.Context, params db.RevokeRefreshTokenParams) (pgconn.CommandTag, error) {
-	return m.revokeRefreshTokenFn(ctx, params)
+func (m *mockRepo) CreateSession(_ context.Context, p db.CreateSessionParams) (db.Session, error) {
+	if m.createSession == nil {
+		m.fail("CreateSession")
+	}
+	return m.createSession(p)
 }
-
-func (m *mockAuthRepo) GetRefreshToken(ctx context.Context, params db.GetRefreshTokenParams) (db.RefreshToken, error) {
-	return m.getRefreshTokenFn(ctx, params)
+func (m *mockRepo) GetActiveSessionByID(_ context.Context, id pgtype.UUID) (db.Session, error) {
+	if m.getSession == nil {
+		m.fail("GetActiveSessionByID")
+	}
+	return m.getSession(id)
+}
+func (m *mockRepo) RotateSessionToken(_ context.Context, p db.RotateSessionTokenParams) (db.Session, error) {
+	m.rotateCalls = append(m.rotateCalls, p)
+	if m.rotate == nil {
+		m.fail("RotateSessionToken")
+	}
+	return m.rotate(p)
+}
+func (m *mockRepo) RevokeSession(_ context.Context, id pgtype.UUID) error {
+	m.revokeCalls = append(m.revokeCalls, id)
+	if m.revoke == nil {
+		return nil
+	}
+	return m.revoke(id)
+}
+func (m *mockRepo) RevokeAllUserSessions(context.Context, pgtype.UUID) error {
+	m.fail("RevokeAllUserSessions")
+	return nil
 }
 
 func testConfig() *config.Config {
 	return &config.Config{
-		JWTRefreshSecret: "test-refresh-secret",
-		JWTAccessSecret:  "test-access-secret",
+		JWTAccessSecret:    strings.Repeat("a", 32),
+		JWTRefreshSecret:   strings.Repeat("r", 32),
+		AccessTokenTTL:     15 * time.Minute,
+		RefreshTokenTTL:    30 * 24 * time.Hour,
+		RefreshReuseWindow: 30 * time.Second,
+		MaxSessionAge:      90 * 24 * time.Hour,
 	}
 }
 
-func generateRefreshToken(userID string) string {
-	claims := jwt.MapClaims{
-		"user_id":    userID,
-		"session_id": "660e8400-e29b-41d4-a716-446655440000",
-		"exp":        time.Now().Add(7 * 24 * time.Hour).Unix(),
+func uid(s string) pgtype.UUID { return pgtype.UUID{Bytes: uuid.MustParse(s), Valid: true} }
+
+func fakeUser(t *testing.T) db.User {
+	t.Helper()
+	hash, err := bcrypt.GenerateFromPassword([]byte(testPassword), bcrypt.MinCost)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, _ := token.SignedString([]byte("test-refresh-secret"))
-
-	return signed
+	return db.User{ID: uid(testUserID), Name: "Ada", Email: "ada@example.com", PasswordHash: string(hash), Role: constants.RoleCustomer}
 }
 
-func fakeUser() db.User {
-	idStr := "550e8400-e29b-41d4-a716-446655440000"
-	hash, _ := bcrypt.GenerateFromPassword([]byte("secret123"), bcrypt.DefaultCost)
-
-	var userID pgtype.UUID
-
-	if err := userID.Scan(idStr); err != nil {
-		slog.Error("Invalid user id format")
+// refreshToken signs a refresh token for the test user and family.
+func refreshToken(t *testing.T, cfg *config.Config) string {
+	t.Helper()
+	tok, err := session.SignRefresh(cfg, db.User{ID: uid(testUserID)}, uid(testFamilyID), time.Now().Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	return db.User{
-		ID:           userID,
-		Name:         "suprim",
-		Email:        "suprim@example.com",
-		PasswordHash: string(hash),
-		Role:         "customer",
-	}
+	return tok
 }
 
-func fakeRefreshToken() db.RefreshToken {
-	userIDStr := "550e8400-e29b-41d4-a716-446655440000"
-	idStr := "770e7700-e29b-41d4-a716-446655440000"
-	sessionID := uuid.New()
-
-	token := generateRefreshToken(userIDStr)
-	tokenHash := sha256.Sum256([]byte(token))
-	var id pgtype.UUID
-
-	var userID pgtype.UUID
-
-	if err := userID.Scan(userIDStr); err != nil {
-		slog.Error("Invalid user id format")
-	}
-
-	if err := id.Scan(idStr); err != nil {
-		slog.Error("invalid id format")
-	}
-	return db.RefreshToken{
-		ID:        id,
-		TokenHash: fmt.Sprintf("%x", tokenHash),
-		UserID:    userID,
-		ExpiresAt: pgtype.Timestamptz{
-			Time:  time.Now().Add(30 * 24 * time.Hour),
-			Valid: true,
-		},
-		SessionID: pgtype.UUID{Bytes: sessionID, Valid: true},
+// activeSession returns a session whose current token is currentToken.
+func activeSession(currentToken string) db.Session {
+	return db.Session{
+		ID:               uid(testFamilyID),
+		UserID:           uid(testUserID),
+		CurrentTokenHash: session.HashRefreshToken(currentToken),
+		CreatedAt:        pgtype.Timestamptz{Time: time.Now().Add(-time.Hour), Valid: true},
+		ExpiresAt:        pgtype.Timestamptz{Time: time.Now().Add(time.Hour), Valid: true},
 	}
 }
 
-func setupRouter(register func(r *gin.Engine)) *gin.Engine {
+// rotatedSession: presented token was rotated rotatedAgo; current is something else.
+func rotatedSession(presented string, rotatedAgo time.Duration) db.Session {
+	s := activeSession("someone-else")
+	s.PreviousTokenHash = pgtype.Text{String: session.HashRefreshToken(presented), Valid: true}
+	s.PreviousRotatedAt = pgtype.Timestamptz{Time: time.Now().Add(-rotatedAgo), Valid: true}
+	return s
+}
+
+type result struct {
+	code    int
+	body    types.APIResponse
+	cookies map[string]*http.Cookie
+}
+
+func do(t *testing.T, h gin.HandlerFunc, method string, body any, cookies map[string]string) result {
+	t.Helper()
 	gin.SetMode(gin.TestMode)
 	validator.Init()
-
 	r := gin.New()
-	register(r)
+	r.Handle(method, "/", h)
 
-	return r
-}
-
-func makeRequest(t *testing.T, router *gin.Engine, method, path string, body any) *httptest.ResponseRecorder {
-	t.Helper()
-
-	raw, err := json.Marshal(body)
-	if err != nil {
-		t.Fatalf("marshal body: %v", err)
-	}
-
-	req := httptest.NewRequest(method, path, bytes.NewBuffer(raw))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	return w
-
-}
-
-func makeRequestWithCookie(t *testing.T, method, path string, body any, cookieName, cookieValue string) *http.Request {
-	t.Helper()
-
-	var buf *bytes.Buffer
+	var buf bytes.Buffer
 	if body != nil {
-		raw, err := json.Marshal(body)
-		if err != nil {
-			t.Fatalf("marshal body: %v", err)
+		if err := json.NewEncoder(&buf).Encode(body); err != nil {
+			t.Fatal(err)
 		}
-		buf = bytes.NewBuffer(raw)
-	} else {
-		buf = bytes.NewBuffer(nil)
 	}
-
-	req := httptest.NewRequest(method, path, buf)
+	req := httptest.NewRequest(method, "/", &buf)
 	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{
-		Name:  cookieName,
-		Value: cookieValue,
-	})
-	return req
+	for k, v := range cookies {
+		req.AddCookie(&http.Cookie{Name: k, Value: v})
+	}
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	res := result{code: w.Code, cookies: map[string]*http.Cookie{}}
+	if err := json.Unmarshal(w.Body.Bytes(), &res.body); err != nil {
+		t.Fatalf("decode body %q: %v", w.Body.String(), err)
+	}
+	for _, c := range w.Result().Cookies() {
+		res.cookies[c.Name] = c
+	}
+	return res
+}
+
+// sessionSet: all three cookies set with positive max-age.
+func (r result) sessionSet() bool {
+	for _, n := range []string{session.AccessCookie, session.RefreshCookie, session.LoggedInCookie} {
+		if c, ok := r.cookies[n]; !ok || c.MaxAge <= 0 || c.Value == "" {
+			return false
+		}
+	}
+	return true
+}
+
+// sessionCleared: all three cookies expired.
+func (r result) sessionCleared() bool {
+	for _, n := range []string{session.AccessCookie, session.RefreshCookie, session.LoggedInCookie} {
+		if c, ok := r.cookies[n]; !ok || c.MaxAge >= 0 {
+			return false
+		}
+	}
+	return true
 }

@@ -4,6 +4,8 @@
  * Keeps apps/api/internal/database/generated in sync with queries + migrations.
  */
 import { spawnSync } from "node:child_process";
+import { readdirSync, rmSync } from "node:fs";
+import { join } from "node:path";
 
 const generatedPath = "apps/api/internal/database/generated";
 
@@ -33,6 +35,12 @@ function hasGeneratedDrift(path: string): boolean {
   return (status.stdout ?? "")
     .split("\n")
     .some((line) => line.startsWith("??"));
+}
+
+// sqlc never deletes output for removed query files, so clear the generated
+// dir first; a stale file then shows up as a deletion in the drift check.
+for (const file of readdirSync(generatedPath)) {
+  if (file.endsWith(".go")) rmSync(join(generatedPath, file));
 }
 
 const generateStatus = run("sqlc", ["generate"], "apps/api");

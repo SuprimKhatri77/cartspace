@@ -26,8 +26,6 @@ func UpdateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 			return
 		}
 
-		utils.TrimStruct(updateCategoryRequest)
-
 		categoryID, err := utils.ConvertToUUID(c.Param("id"))
 		if err != nil {
 			rlog.Warn(c, "error converting the id to UUID", "error", err)

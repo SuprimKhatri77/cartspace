@@ -1,7 +1,8 @@
 CREATE TABLE users (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name          TEXT NOT NULL,
-    email         TEXT NOT NULL UNIQUE,
+    -- stored lowercased so one address maps to one account
+    email         TEXT NOT NULL UNIQUE CHECK (email = lower(email)),
     password_hash TEXT NOT NULL,
     role          TEXT NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'admin')),
     image_url     TEXT,

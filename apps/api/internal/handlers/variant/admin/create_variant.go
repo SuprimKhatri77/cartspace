@@ -76,8 +76,6 @@ func CreateProductVariant(queries repository.VariantRepository, pool *pgxpool.Po
 			return
 		}
 
-		utils.TrimStruct(req)
-
 		props := make([]string, len(req.Properties))
 		names := make([]string, len(req.Properties))
 		values := make([]string, len(req.Properties))

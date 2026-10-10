@@ -26,7 +26,6 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 			return
 		}
 
-		utils.TrimStruct(createCategoryRequest)
 		slug := utils.Slugify(createCategoryRequest.Name)
 
 		slugExists, err := queries.CategorySlugExists(ctx, slug)

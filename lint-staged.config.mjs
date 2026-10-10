@@ -12,5 +12,12 @@ export default {
   "apps/api/{sqlc.yml,internal/database/queries/**/*.sql,migrations/**/*.sql}":
     () => ["bun run db:sqlc", "git add apps/api/internal/database/generated"],
   "*.{js,jsx,ts,tsx,mjs,cjs,json,yml,yaml,css}": ["bunx prettier --write"],
-  "*.go": ["gofmt -w"],
+  // sqlc output is already gofmt'd, and formatting it here would race the
+  // sqlc task above, which regenerates that directory concurrently.
+  "*.go": (filenames) => {
+    const files = filenames.filter(
+      (f) => !f.includes("/internal/database/generated/"),
+    );
+    return files.length ? [`gofmt -w ${files.join(" ")}`] : [];
+  },
 };

@@ -1,156 +1,89 @@
-package authHandler
+package auth
 
 import (
-	"crypto/sha256"
 	"errors"
-	"fmt"
-	"log"
 	"net/http"
-	"time"
+	"sync"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
+	"golang.org/x/crypto/bcrypt"
+
+	session "github.com/suprimkhatri77/cartspace/backend/internal/auth"
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
-	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
-	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
-	"golang.org/x/crypto/bcrypt"
 )
 
-func LoginUser(queries repository.AuthRepository, cfg *config.Config) gin.HandlerFunc {
+// dummyHash is compared against when the email doesn't exist, so a login for
+// an unknown email takes as long as a wrong password and doesn't reveal
+// which emails are registered.
+var dummyHash = sync.OnceValue(func() []byte {
+	h, err := bcrypt.GenerateFromPassword([]byte("dummy-password-for-timing"), bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+	return h
+})
+
+func Login(queries repository.AuthRepository, cfg *config.Config) gin.HandlerFunc {
+	dummyHash() // compute now, so the first unknown-email login isn't slower
 	return func(c *gin.Context) {
-		ctx := c.Request.Context()
-
-		var requestBody types.LoginRequest
-
-		if err := c.ShouldBindJSON(&requestBody); err != nil {
-			log.Println("error from binding json: ", err)
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid request data",
-				Errors:  validator.Parse(err, requestBody),
-				Code:    constants.ValidationFailed,
-			})
+		req, ok := validator.BindJSON[types.LoginRequest](c)
+		if !ok {
 			return
 		}
+		email := session.NormalizeEmail(req.Email)
 
-		user, err := queries.GetUserByEmail(ctx, requestBody.Email)
-
+		user, err := queries.GetUserByEmail(c.Request.Context(), email)
 		if err != nil {
-			log.Println("error from getting user by email: ", err)
-
 			if errors.Is(err, pgx.ErrNoRows) {
-				c.JSON(http.StatusUnauthorized, types.APIResponse{
-					Success: false,
-					Message: "Invalid credentials",
-					Code:    constants.InvalidCredentials,
-				})
+				_ = bcrypt.CompareHashAndPassword(dummyHash(), []byte(req.Password))
+				rlog.Warn(c, "invalid credentials (unknown email)")
+				invalidCredentials(c)
 				return
 			}
-			// intentionally vague don't want to reveal whether the email exists or not
-			c.JSON(http.StatusUnauthorized, types.APIResponse{
-				Success: false,
-				Message: "Invalid credentials",
-				Code:    constants.InvalidCredentials,
-			})
+			rlog.Error(c, "failed to fetch user", err)
+			internalError(c)
 			return
 		}
 
-		// bcrypt re-hashes the plain password using the salt embedded in user.PasswordHash,
-		// then compares we never store or compare plain text passwords directly
-		err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(requestBody.Password))
-		if err != nil {
-			log.Println("error from comparing password: ", err)
-			// same vague message as above don't hint which field was wrong
-			c.JSON(http.StatusUnauthorized, types.APIResponse{
-				Success: false,
-				Message: "Invalid credentials",
-				Code:    constants.InvalidCredentials,
-			})
+		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+			rlog.Warn(c, "invalid credentials (wrong password)", "user_id", user.ID)
+			invalidCredentials(c)
 			return
 		}
 
-		accessClaims := jwt.MapClaims{
-			"user_id": user.ID,
-			"role":    user.Role,
-			"exp":     time.Now().Add(15 * time.Minute).Unix(),
-		}
-
-		accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
-		accessTokenString, err := accessToken.SignedString([]byte(cfg.JWTAccessSecret))
-		if err != nil {
-			log.Println("error from signing access token: ", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to process request",
-				Code:    constants.InternalServerError,
-			})
+		if err := session.IssueSession(c, queries, cfg, user); err != nil {
+			rlog.Error(c, "failed to issue session", err, "user_id", user.ID)
+			internalError(c)
 			return
 		}
 
-		sessionID := uuid.New()
-
-		// embed user identity + expiry into the token payload (claims = JWT body)
-		refreshTokenClaims := jwt.MapClaims{
-			"user_id":    user.ID,
-			"session_id": sessionID,
-			// exp must be a Unix timestamp (seconds); JWT spec requires this format
-			"exp": time.Now().Add(30 * 24 * time.Hour).Unix(),
-		}
-
-		// build the unsigned token object in memory using HMAC-SHA256
-		refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshTokenClaims)
-
-		// sign the token with our secret — produces the final "xxxxx.yyyyy.zzzzz" string
-		refreshTokenString, err := refreshToken.SignedString([]byte(cfg.JWTRefreshSecret))
-
-		if err != nil {
-			log.Println("error from signing token: ", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to process request",
-				Code:    constants.InternalServerError,
-			})
-			return
-		}
-
-		hash := sha256.Sum256([]byte(refreshTokenString))
-		tokenHash := fmt.Sprintf("%x", hash)
-
-		expiresAt := pgtype.Timestamptz{
-			Time:  time.Now().Add(30 * 24 * time.Hour),
-			Valid: true,
-		}
-
-		_, err = queries.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
-			UserID:    user.ID,
-			TokenHash: tokenHash,
-			ExpiresAt: expiresAt,
-			SessionID: pgtype.UUID{Bytes: sessionID, Valid: true},
-		})
-
-		if err != nil {
-			log.Println("error while storing the refresh token: ", err)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Something went wrong.",
-				Code:    constants.InternalServerError,
-			})
-			return
-		}
-
-		utils.SetAuthCookie(c, "access_token", accessTokenString, 15*60, cfg)
-		utils.SetAuthCookie(c, "refresh_token", refreshTokenString, 30*24*60*60, cfg)
-
+		rlog.Info(c, "user logged in", "user_id", user.ID)
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
-			Message: "User logged in successfully.",
+			Message: "Logged in successfully",
+			Data:    session.NewPublicUser(user),
 		})
 	}
+}
+
+func invalidCredentials(c *gin.Context) {
+	c.JSON(http.StatusUnauthorized, types.APIResponse{
+		Success: false,
+		Message: "Invalid credentials",
+		Code:    constants.InvalidCredentials,
+	})
+}
+
+func internalError(c *gin.Context) {
+	c.JSON(http.StatusInternalServerError, types.APIResponse{
+		Success: false,
+		Message: "Failed to process request",
+		Code:    constants.InternalServerError,
+	})
 }

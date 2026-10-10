@@ -21,6 +21,10 @@ func (a *App) Run() error {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
+	bgCtx, stopBackground := context.WithCancel(context.Background())
+	defer stopBackground()
+	a.startSessionCleanup(bgCtx, sessionCleanupInterval)
+
 	errCh := make(chan error, 1)
 	go func() {
 		slog.Info("server listening", "addr", srv.Addr)

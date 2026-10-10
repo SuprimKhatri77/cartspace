@@ -37,8 +37,6 @@ func CreateCart(queries repository.CartRepository, pool *pgxpool.Pool) gin.Handl
 			return
 		}
 
-		utils.TrimStruct(req)
-
 		variantID, err := utils.ConvertToUUID(req.VariantID)
 
 		if err != nil {

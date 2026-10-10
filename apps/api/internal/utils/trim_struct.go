@@ -5,18 +5,17 @@ import (
 	"strings"
 )
 
+// TrimStruct trims surrounding whitespace from the top-level string fields of
+// the struct obj points to. Fields tagged `trim:"-"` (e.g. passwords) and
+// fields named in skip are left untouched.
 func TrimStruct(obj any, skip ...string) {
 	v := reflect.ValueOf(obj)
-
-	// must be a pointer to mutate the original
-	if v.Kind() != reflect.Ptr {
+	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
 		return
 	}
-
 	v = v.Elem()
 
-	// build a set of fields to skip for quick lookup
-	skipSet := make(map[string]bool)
+	skipSet := make(map[string]bool, len(skip))
 	for _, s := range skip {
 		skipSet[s] = true
 	}
@@ -25,9 +24,9 @@ func TrimStruct(obj any, skip ...string) {
 		field := v.Type().Field(i)
 		value := v.Field(i)
 
-		// only process string fields that are settable and not in skip list
-		if value.Kind() == reflect.String && value.CanSet() && !skipSet[field.Name] {
-			value.SetString(strings.TrimSpace(value.String()))
+		if value.Kind() != reflect.String || !value.CanSet() || skipSet[field.Name] || field.Tag.Get("trim") == "-" {
+			continue
 		}
+		value.SetString(strings.TrimSpace(value.String()))
 	}
 }
