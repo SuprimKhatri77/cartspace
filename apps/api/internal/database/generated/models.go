@@ -5,8 +5,24 @@
 package db
 
 import (
+	"encoding/json"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type Address struct {
+	ID         pgtype.UUID        `json:"id"`
+	UserID     pgtype.UUID        `json:"user_id"`
+	FullName   string             `json:"full_name"`
+	Phone      string             `json:"phone"`
+	Line1      string             `json:"line1"`
+	Line2      pgtype.Text        `json:"line2"`
+	City       string             `json:"city"`
+	Region     pgtype.Text        `json:"region"`
+	PostalCode string             `json:"postal_code"`
+	Country    string             `json:"country"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+}
 
 type Cart struct {
 	ID        pgtype.UUID        `json:"id"`
@@ -31,6 +47,50 @@ type Category struct {
 	ParentID  pgtype.UUID        `json:"parent_id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Order struct {
+	ID              pgtype.UUID        `json:"id"`
+	Number          int64              `json:"number"`
+	UserID          pgtype.UUID        `json:"user_id"`
+	Status          string             `json:"status"`
+	Subtotal        int32              `json:"subtotal"`
+	Shipping        int32              `json:"shipping"`
+	Total           int32              `json:"total"`
+	Currency        string             `json:"currency"`
+	Email           string             `json:"email"`
+	ShippingAddress json.RawMessage    `json:"shipping_address"`
+	StripeSessionID pgtype.Text        `json:"stripe_session_id"`
+	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
+	PaidAt          pgtype.Timestamptz `json:"paid_at"`
+	CancelledAt     pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type OrderItem struct {
+	ID          pgtype.UUID     `json:"id"`
+	OrderID     pgtype.UUID     `json:"order_id"`
+	VariantID   pgtype.UUID     `json:"variant_id"`
+	ProductID   pgtype.UUID     `json:"product_id"`
+	ProductName string          `json:"product_name"`
+	ProductSlug string          `json:"product_slug"`
+	Sku         pgtype.Text     `json:"sku"`
+	Options     json.RawMessage `json:"options"`
+	Image       string          `json:"image"`
+	UnitPrice   int32           `json:"unit_price"`
+	Quantity    int32           `json:"quantity"`
+	LineTotal   int32           `json:"line_total"`
+}
+
+type Payment struct {
+	ID                    pgtype.UUID        `json:"id"`
+	OrderID               pgtype.UUID        `json:"order_id"`
+	StripeSessionID       string             `json:"stripe_session_id"`
+	StripePaymentIntentID pgtype.Text        `json:"stripe_payment_intent_id"`
+	Amount                int32              `json:"amount"`
+	Currency              string             `json:"currency"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 }
 
 type Product struct {
@@ -123,6 +183,12 @@ type StorefrontVariant struct {
 	OfferExpiresAt pgtype.Timestamptz `json:"offer_expires_at"`
 	IsDefault      bool               `json:"is_default"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type StripeEvent struct {
+	ID         string             `json:"id"`
+	Type       string             `json:"type"`
+	ReceivedAt pgtype.Timestamptz `json:"received_at"`
 }
 
 type User struct {

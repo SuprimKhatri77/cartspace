@@ -24,6 +24,7 @@ func (a *App) Run() error {
 	bgCtx, stopBackground := context.WithCancel(context.Background())
 	defer stopBackground()
 	a.startSessionCleanup(bgCtx, sessionCleanupInterval)
+	a.startOrderExpiry(bgCtx, orderExpiryInterval)
 
 	errCh := make(chan error, 1)
 	go func() {

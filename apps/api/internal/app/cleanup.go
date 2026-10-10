@@ -39,3 +39,40 @@ func (a *App) cleanupSessions(ctx context.Context) {
 		slog.Info("session cleanup", "deleted", deleted)
 	}
 }
+
+const orderExpiryInterval = 5 * time.Minute
+
+// startOrderExpiry returns the stock of checkouts that ran out without word
+// from Stripe (no webhook reached us), at startup and then every interval.
+func (a *App) startOrderExpiry(ctx context.Context, interval time.Duration) {
+	if !a.Checkout.Enabled() {
+		return
+	}
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		a.releaseExpiredOrders(ctx)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				a.releaseExpiredOrders(ctx)
+			}
+		}
+	}()
+}
+
+func (a *App) releaseExpiredOrders(ctx context.Context) {
+	released, err := a.Checkout.ReleaseExpired(ctx)
+	if err != nil {
+		if ctx.Err() == nil {
+			slog.Error("order expiry failed", "err", err)
+		}
+		return
+	}
+	if released > 0 {
+		slog.Info("order expiry", "released", released)
+	}
+}

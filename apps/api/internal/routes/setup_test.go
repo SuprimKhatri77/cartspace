@@ -54,6 +54,14 @@ func TestSetupRegistersAllRoutes(t *testing.T) {
 		"POST /api/v1/cart/items",
 		"PATCH /api/v1/cart/items/:variantID",
 		"DELETE /api/v1/cart/items/:variantID",
+
+		"POST /api/v1/checkout",
+		"GET /api/v1/checkout/sessions/:sessionID",
+		"POST /api/v1/webhooks/stripe",
+		"GET /api/v1/orders",
+		"GET /api/v1/orders/:number",
+		"GET /api/v1/addresses",
+		"DELETE /api/v1/addresses/:addressID",
 	}
 
 	got := map[string]bool{}

@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   ArrowCounterClockwiseIcon,
   LockSimpleIcon,
@@ -10,6 +12,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { cn } from "@/lib/utils";
 import { unitCount } from "../lib/cart-math";
 import { useCart } from "../queries";
 import { CartLine } from "./cart-line";
@@ -22,6 +25,7 @@ import { CartTotals, FreeShippingProgress } from "./cart-summary";
  */
 export function CartView({ seeded }: { seeded: boolean }) {
   const hydrated = useHydrated();
+  useCancelledCheckoutNotice();
   const query = useCart();
   const ready = seeded || hydrated;
   const cart = ready ? query.data : undefined;
@@ -105,10 +109,20 @@ export function CartView({ seeded }: { seeded: boolean }) {
                 out.
               </p>
             )}
-            <Button size="lg" className="w-full" disabled>
-              <LockSimpleIcon />
-              Checkout opens soon
-            </Button>
+            {cart.has_issues ? (
+              <Button size="lg" className="w-full" disabled>
+                <LockSimpleIcon />
+                Checkout
+              </Button>
+            ) : (
+              <Link
+                href="/checkout"
+                className={cn(buttonVariants({ size: "lg" }), "w-full")}
+              >
+                <LockSimpleIcon />
+                Checkout
+              </Link>
+            )}
             <ul className="space-y-2.5 border-t border-border pt-5 text-xs text-muted-foreground">
               <li className="flex items-center gap-2.5">
                 <PackageIcon className="size-4" weight="light" />
@@ -124,4 +138,18 @@ export function CartView({ seeded }: { seeded: boolean }) {
       )}
     </div>
   );
+}
+
+/**
+ * Stripe's cancel link lands on /cart?checkout=cancelled: say so once and
+ * drop the parameter so a reload doesn't repeat it.
+ */
+function useCancelledCheckoutNotice() {
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("checkout") !== "cancelled") return;
+    toast("Checkout cancelled. Your bag is just as you left it.");
+    url.searchParams.delete("checkout");
+    window.history.replaceState(null, "", url);
+  }, []);
 }

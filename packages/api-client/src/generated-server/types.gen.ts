@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -541,6 +541,166 @@ export type AddCartItemBody = {
 
 export type UpdateCartItemBody = {
     quantity: number;
+};
+
+export type CheckoutResponse = {
+    success: true;
+    message: string;
+    data: Checkout;
+};
+
+export type Checkout = {
+    order_number: number;
+    /**
+     * The Stripe Checkout page to send the shopper to
+     */
+    checkout_url: string;
+};
+
+/**
+ * Ship to a saved address or a new one: exactly one of the two.
+ */
+export type CheckoutBody = {
+    /**
+     * A saved address
+     */
+    address_id?: string;
+    /**
+     * Or a new one
+     */
+    address?: {
+        full_name: string;
+        phone: string;
+        line1: string;
+        line2?: string;
+        city: string;
+        region?: string;
+        postal_code: string;
+        country: Country;
+    };
+    /**
+     * Add the new address to the address book
+     */
+    save_address?: boolean;
+};
+
+/**
+ * A country checkout ships to (ISO 3166-1 alpha-2)
+ */
+export type Country = 'US' | 'CA' | 'GB' | 'IE' | 'DE' | 'FR' | 'NL' | 'AU' | 'NZ' | 'NP' | 'IN' | 'JP';
+
+export type OrderDetailResponse = {
+    success: true;
+    message: string;
+    data: OrderDetail;
+};
+
+export type OrderDetail = {
+    id: string;
+    number: number;
+    user_id: string;
+    status: OrderStatus;
+    subtotal: number;
+    shipping: number;
+    total: number;
+    currency: string;
+    email: string;
+    shipping_address: AddressSnapshot;
+    stripe_session_id: string | null;
+    /**
+     * A pending order holds its stock until then
+     */
+    expires_at: string;
+    paid_at: string | null;
+    cancelled_at: string | null;
+    created_at: string;
+    updated_at: string;
+    items: Array<OrderItem>;
+};
+
+export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
+
+export type AddressSnapshot = {
+    full_name: string;
+    phone: string;
+    line1: string;
+    line2: string;
+    city: string;
+    region: string;
+    postal_code: string;
+    country: string;
+};
+
+/**
+ * What was bought, as it was then.
+ */
+export type OrderItem = {
+    id: string;
+    order_id: string;
+    /**
+     * null once the variant is deleted
+     */
+    variant_id: string | null;
+    /**
+     * null once the product is deleted
+     */
+    product_id: string | null;
+    product_name: string;
+    product_slug: string;
+    sku: string | null;
+    options: Array<VariantOption>;
+    image: string;
+    unit_price: number;
+    quantity: number;
+    line_total: number;
+};
+
+export type OrderListResponse = {
+    success: true;
+    message: string;
+    data: Array<OrderSummary>;
+    meta: PaginationMeta;
+};
+
+export type OrderSummary = {
+    id: string;
+    number: number;
+    status: OrderStatus;
+    total: number;
+    currency: string;
+    created_at: string;
+    paid_at: string | null;
+    item_count: number;
+    /**
+     * Up to 3, priciest first
+     */
+    preview_images: Array<string>;
+};
+
+export type AddressListResponse = {
+    success: true;
+    message: string;
+    /**
+     * Newest first, at most 10
+     */
+    data: Array<Address>;
+};
+
+/**
+ * A saved shipping address.
+ */
+export type Address = {
+    id: string;
+    user_id: string;
+    full_name: string;
+    phone: string;
+    line1: string;
+    line2: string | null;
+    city: string;
+    region: string | null;
+    postal_code: string;
+    country: Country;
+    created_at: string;
 };
 
 export type GetHealthData = {
@@ -1695,3 +1855,276 @@ export type UpdateCartItemResponses = {
 };
 
 export type UpdateCartItemResponse = UpdateCartItemResponses[keyof UpdateCartItemResponses];
+
+export type StartCheckoutData = {
+    body: CheckoutBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/checkout';
+};
+
+export type StartCheckoutErrors = {
+    /**
+     * Invalid body, or not exactly one of address_id and address (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * No such saved address (ADDRESS_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * The cart is empty, or a line is off sale or short (CART_EMPTY, CART_HAS_ISSUES)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+    /**
+     * Stripe could not be reached; the reservation was released (PAYMENT_PROVIDER_ERROR)
+     */
+    502: ApiError;
+    /**
+     * Payments are not configured (PAYMENTS_UNAVAILABLE)
+     */
+    503: ApiError;
+};
+
+export type StartCheckoutError = StartCheckoutErrors[keyof StartCheckoutErrors];
+
+export type StartCheckoutResponses = {
+    /**
+     * Checkout started
+     */
+    201: CheckoutResponse;
+};
+
+export type StartCheckoutResponse = StartCheckoutResponses[keyof StartCheckoutResponses];
+
+export type GetCheckoutSessionData = {
+    body?: never;
+    path: {
+        /**
+         * cs_…
+         */
+        sessionID: string;
+    };
+    query?: never;
+    url: '/api/v1/checkout/sessions/{sessionID}';
+};
+
+export type GetCheckoutSessionErrors = {
+    /**
+     * Not a checkout session id (INVALID_SESSION_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * No order of yours for that session (ORDER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+    /**
+     * Payments are not configured (PAYMENTS_UNAVAILABLE)
+     */
+    503: ApiError;
+};
+
+export type GetCheckoutSessionError = GetCheckoutSessionErrors[keyof GetCheckoutSessionErrors];
+
+export type GetCheckoutSessionResponses = {
+    /**
+     * Order fetched
+     */
+    200: OrderDetailResponse;
+};
+
+export type GetCheckoutSessionResponse = GetCheckoutSessionResponses[keyof GetCheckoutSessionResponses];
+
+export type StripeWebhookData = {
+    body?: never;
+    headers: {
+        'stripe-signature': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/webhooks/stripe';
+};
+
+export type StripeWebhookErrors = {
+    /**
+     * Missing or wrong signature (INVALID_WEBHOOK_SIGNATURE)
+     */
+    400: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+    /**
+     * Payments are not configured (PAYMENTS_UNAVAILABLE)
+     */
+    503: ApiError;
+};
+
+export type StripeWebhookError = StripeWebhookErrors[keyof StripeWebhookErrors];
+
+export type StripeWebhookResponses = {
+    /**
+     * Event received
+     */
+    200: MessageResponse;
+};
+
+export type StripeWebhookResponse = StripeWebhookResponses[keyof StripeWebhookResponses];
+
+export type ListOrdersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        page?: number;
+    };
+    url: '/api/v1/orders';
+};
+
+export type ListOrdersErrors = {
+    /**
+     * Invalid page (INVALID_PAGE_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type ListOrdersError = ListOrdersErrors[keyof ListOrdersErrors];
+
+export type ListOrdersResponses = {
+    /**
+     * Orders fetched
+     */
+    200: OrderListResponse;
+};
+
+export type ListOrdersResponse = ListOrdersResponses[keyof ListOrdersResponses];
+
+export type GetOrderData = {
+    body?: never;
+    path: {
+        number: number;
+    };
+    query?: never;
+    url: '/api/v1/orders/{number}';
+};
+
+export type GetOrderErrors = {
+    /**
+     * Invalid order number (INVALID_ORDER_NUMBER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * No order of yours with that number (ORDER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type GetOrderError = GetOrderErrors[keyof GetOrderErrors];
+
+export type GetOrderResponses = {
+    /**
+     * Order fetched
+     */
+    200: OrderDetailResponse;
+};
+
+export type GetOrderResponse = GetOrderResponses[keyof GetOrderResponses];
+
+export type ListAddressesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/addresses';
+};
+
+export type ListAddressesErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type ListAddressesError = ListAddressesErrors[keyof ListAddressesErrors];
+
+export type ListAddressesResponses = {
+    /**
+     * Addresses fetched
+     */
+    200: AddressListResponse;
+};
+
+export type ListAddressesResponse = ListAddressesResponses[keyof ListAddressesResponses];
+
+export type DeleteAddressData = {
+    body?: never;
+    path: {
+        addressID: string;
+    };
+    query?: never;
+    url: '/api/v1/addresses/{addressID}';
+};
+
+export type DeleteAddressErrors = {
+    /**
+     * Invalid id (INVALID_ADDRESS_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * No such address of yours (ADDRESS_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type DeleteAddressError = DeleteAddressErrors[keyof DeleteAddressErrors];
+
+export type DeleteAddressResponses = {
+    /**
+     * Address deleted
+     */
+    200: MessageResponse;
+};
+
+export type DeleteAddressResponse = DeleteAddressResponses[keyof DeleteAddressResponses];

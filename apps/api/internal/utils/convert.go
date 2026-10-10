@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -13,4 +14,12 @@ func ConvertToUUID(id string) (pgtype.UUID, error) {
 	}
 
 	return ID, nil
+}
+
+// UUIDToString formats a UUID ("" when it is NULL).
+func UUIDToString(id pgtype.UUID) string {
+	if !id.Valid {
+		return ""
+	}
+	return uuid.UUID(id.Bytes).String()
 }
