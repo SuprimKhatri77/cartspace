@@ -6,10 +6,12 @@ export const metadata: Metadata = { title: "Admin" };
 // admin endpoint.
 export default function AdminPage() {
   return (
-    <div className="space-y-2">
-      <h1 className="text-2xl font-semibold tracking-tight">Admin</h1>
+    <div className="max-w-2xl space-y-4">
+      <p className="eyebrow">Dashboard</p>
+      <h1 className="display text-5xl">The back office is being built.</h1>
       <p className="text-sm text-muted-foreground">
-        Managing categories, products and variants comes in a later phase.
+        Products, categories, orders and image uploads arrive with the admin
+        panel. Until then the catalog is managed through the API.
       </p>
     </div>
   );

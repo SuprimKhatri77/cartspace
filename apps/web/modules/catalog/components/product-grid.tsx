@@ -1,15 +1,30 @@
 import type { ProductWithPrice } from "@repo/types";
+import { cn } from "@/lib/utils";
 import { ProductCard } from "./product-card";
 
-export function ProductGrid({ products }: { products: ProductWithPrice[] }) {
+export const GRID_CLASSES =
+  "grid grid-cols-2 gap-x-3 gap-y-10 sm:gap-x-5 md:grid-cols-3 md:gap-y-14 xl:grid-cols-4";
+
+/** A static grid; the first row loads eagerly (it is above the fold). */
+export function ProductGrid({
+  products,
+  eagerCount = 4,
+  className,
+}: {
+  products: ProductWithPrice[];
+  eagerCount?: number;
+  className?: string;
+}) {
   return (
-    <ul className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+    <div className={cn(GRID_CLASSES, className)}>
       {products.map((product, i) => (
-        <li key={product.id}>
-          {/* The first row is usually the largest paint. */}
-          <ProductCard product={product} eager={i < 4} />
-        </li>
+        <ProductCard
+          key={product.id}
+          product={product}
+          index={i}
+          eager={i < eagerCount}
+        />
       ))}
-    </ul>
+    </div>
   );
 }

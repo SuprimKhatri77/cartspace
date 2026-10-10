@@ -15,8 +15,14 @@ export function ThemeToggle() {
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
     >
       {/* Both icons render; CSS picks one, so SSR and the client agree. */}
-      <SunIcon className="hidden dark:block" />
-      <MoonIcon className="dark:hidden" />
+      <SunIcon
+        weight="light"
+        className="hidden size-5 transition-transform duration-500 hover:rotate-45 dark:block"
+      />
+      <MoonIcon
+        weight="light"
+        className="size-5 transition-transform duration-500 hover:-rotate-12 dark:hidden"
+      />
     </Button>
   );
 }

@@ -6,11 +6,19 @@ import {
   categoryPath,
   childCategories,
 } from "@/modules/catalog/lib/category-tree";
+import cloudinaryLoader from "@/lib/image-loader";
+import { formatPriceShort, percentOff } from "@/lib/money";
+import { swatchColor } from "@/lib/swatches";
 import {
-  parseListingFilters,
-  parsePage,
-  withParams,
-} from "@/modules/catalog/lib/search-params";
+  activeFilterCount,
+  clearFilters,
+  DEFAULT_FILTERS,
+  filtersToSearch,
+  listingQuery,
+  parseFilters,
+  toggleOption,
+} from "@/modules/catalog/lib/filters";
+import { compareOptionValues } from "@/modules/catalog/lib/option-order";
 import {
   findVariant,
   isAvailable,
@@ -35,51 +43,184 @@ describe("money", () => {
   });
 });
 
-describe("search params", () => {
-  test("page falls back to 1", () => {
-    expect(parsePage({ page: "3" })).toBe(3);
-    for (const page of ["0", "-1", "1.5", "x", "100001", undefined]) {
-      expect(parsePage({ page })).toBe(1);
-    }
-    expect(parsePage({ page: ["2", "5"] })).toBe(2);
+describe("money extras", () => {
+  test("short prices drop .00", () => {
+    expect(formatPriceShort(2900)).toBe("$29");
+    expect(formatPriceShort(2950)).toBe("$29.50");
+    expect(percentOff(8900, 6900)).toBe(22);
+    expect(percentOff(0, 0)).toBe(0);
+  });
+});
+
+describe("listing filters", () => {
+  test("defaults", () => {
+    expect(parseFilters({})).toEqual(DEFAULT_FILTERS);
+    expect(parseFilters(new URLSearchParams())).toEqual(DEFAULT_FILTERS);
   });
 
-  test("listing filters", () => {
-    expect(parseListingFilters({})).toEqual({
-      page: 1,
-      sort: "newest",
-      priceMin: 0,
-      priceMax: 0,
-    });
-    expect(
-      parseListingFilters({ sort: "price_desc", min: "20", max: "80.5" }),
-    ).toEqual({ page: 1, sort: "price_desc", priceMin: 2000, priceMax: 8050 });
-    // unknown sort, junk prices, reversed range
-    expect(parseListingFilters({ sort: "cheap", min: "x" }).sort).toBe(
-      "newest",
+  test("parses sort, prices, featured and options", () => {
+    const filters = parseFilters(
+      new URLSearchParams(
+        "sort=price_desc&min=20&max=80.5&featured=true&size=M&color=Black&size=L&size=M",
+      ),
     );
-    expect(parseListingFilters({ min: "x", max: "9999999" })).toMatchObject({
-      priceMin: 0,
-      priceMax: 0,
-    });
-    expect(parseListingFilters({ min: "80", max: "20" })).toMatchObject({
+    expect(filters).toEqual({
+      sort: "price_desc",
       priceMin: 2000,
-      priceMax: 8000,
-    });
-    // only a minimum is not "reversed"
-    expect(parseListingFilters({ min: "80" })).toMatchObject({
-      priceMin: 8000,
-      priceMax: 0,
+      priceMax: 8050,
+      featured: true,
+      // deduplicated and sorted, so the query key is stable
+      options: ["color:Black", "size:L", "size:M"],
     });
   });
 
-  test("withParams drops defaults and empties", () => {
-    expect(withParams("/c/x", { sort: "newest", page: "2" }, { page: 1 })).toBe(
-      "/c/x",
+  test("record and URLSearchParams sources agree", () => {
+    expect(parseFilters({ size: ["M", "L"], sort: "price_asc" })).toEqual(
+      parseFilters(new URLSearchParams("size=L&sort=price_asc&size=M")),
+    );
+  });
+
+  test("falls back on bad values and swaps a reversed range", () => {
+    const filters = parseFilters({ sort: "cheap", min: "x", featured: "yes" });
+    expect(filters.sort).toBe("newest");
+    expect(filters.priceMin).toBe(0);
+    expect(filters.featured).toBe(false);
+    const swapped = parseFilters({ min: "80", max: "20" });
+    expect([swapped.priceMin, swapped.priceMax]).toEqual([2000, 8000]);
+    expect(parseFilters({ max: "2000000" }).priceMax).toBe(0);
+  });
+
+  test("ignores reserved keys and invalid options", () => {
+    const filters = parseFilters({
+      page: "2",
+      q: "shoe",
+      variant: "abc",
+      "": "x",
+      size: "",
+      "a:b": "c",
+      [`${"x".repeat(21)}`]: "y",
+    });
+    expect(filters.options).toEqual([]);
+  });
+
+  test("caps the option count at the API limit", () => {
+    const params = new URLSearchParams();
+    for (let i = 0; i < 25; i++) params.append("size", String(i));
+    expect(parseFilters(params).options).toHaveLength(20);
+  });
+
+  test("round trips through the URL", () => {
+    const filters = parseFilters(
+      new URLSearchParams("sort=price_asc&min=19.99&color=Rust&size=M"),
+    );
+    expect(filtersToSearch(filters)).toBe(
+      "sort=price_asc&min=19.99&color=Rust&size=M",
+    );
+    expect(parseFilters(new URLSearchParams(filtersToSearch(filters)))).toEqual(
+      filters,
+    );
+    expect(filtersToSearch(DEFAULT_FILTERS)).toBe("");
+  });
+
+  test("API query leaves defaults out", () => {
+    expect(listingQuery(DEFAULT_FILTERS, 1)).toEqual({ page: 1 });
+    expect(
+      listingQuery(
+        {
+          ...DEFAULT_FILTERS,
+          sort: "price_asc",
+          featured: true,
+          priceMax: 500,
+          options: ["size:M"],
+        },
+        3,
+      ),
+    ).toEqual({
+      page: 3,
+      sort: "price_asc",
+      featured: true,
+      price_max: 500,
+      option: ["size:M"],
+    });
+  });
+
+  test("toggle, count and clear", () => {
+    const on = toggleOption(DEFAULT_FILTERS, "size", "M");
+    expect(on.options).toEqual(["size:M"]);
+    expect(toggleOption(on, "size", "M").options).toEqual([]);
+    const busy = {
+      ...on,
+      priceMin: 100,
+      featured: true,
+      sort: "price_desc" as const,
+    };
+    expect(activeFilterCount(busy)).toBe(3);
+    expect(clearFilters(busy)).toEqual({
+      ...DEFAULT_FILTERS,
+      sort: "price_desc",
+    });
+  });
+
+  test("option values sort like a size chart", () => {
+    expect(["L", "XS", "M", "XL", "S"].sort(compareOptionValues)).toEqual([
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL",
+    ]);
+    expect(["42", "40", "9"].sort(compareOptionValues)).toEqual([
+      "9",
+      "40",
+      "42",
+    ]);
+    expect(["Rust", "Azure"].sort(compareOptionValues)).toEqual([
+      "Azure",
+      "Rust",
+    ]);
+  });
+});
+
+describe("cloudinary loader", () => {
+  const base = "https://res.cloudinary.com/demo/image/upload";
+
+  test("adds the resize before the public ID", () => {
+    expect(cloudinaryLoader({ src: `${base}/shirt.jpg`, width: 640 })).toBe(
+      `${base}/f_auto,q_auto,c_limit,w_640/shirt.jpg`,
     );
     expect(
-      withParams("/c/x", { min: "10" }, { sort: "price_asc", max: "" }),
-    ).toBe("/c/x?min=10&sort=price_asc");
+      cloudinaryLoader({
+        src: `${base}/samples/ecommerce/shoes.jpg`,
+        width: 320,
+        quality: 60,
+      }),
+    ).toBe(`${base}/f_auto,q_60,c_limit,w_320/samples/ecommerce/shoes.jpg`);
+  });
+
+  test("keeps existing transformations first", () => {
+    expect(
+      cloudinaryLoader({
+        src: `${base}/c_crop,g_center,w_0.5,h_0.5/c_fill,g_auto,ar_4:5/docs/blue_sweater.jpg`,
+        width: 828,
+      }),
+    ).toBe(
+      `${base}/c_crop,g_center,w_0.5,h_0.5/c_fill,g_auto,ar_4:5/f_auto,q_auto,c_limit,w_828/docs/blue_sweater.jpg`,
+    );
+  });
+
+  test("leaves other URLs alone", () => {
+    expect(cloudinaryLoader({ src: "/logo.png", width: 64 })).toBe("/logo.png");
+    expect(
+      cloudinaryLoader({ src: "https://example.com/a.jpg", width: 64 }),
+    ).toBe("https://example.com/a.jpg");
+  });
+});
+
+describe("swatches", () => {
+  test("known colours map, unknown ones don't", () => {
+    expect(swatchColor(" Rust ")).toMatch(/^oklch/);
+    expect(swatchColor("Mustard")).toMatch(/^oklch/);
+    expect(swatchColor("Moonbeam")).toBeNull();
   });
 });
 
@@ -139,16 +280,17 @@ const variant = (
   sku: null,
   stock: 1,
   images: [],
-  image_public_ids: [],
   selling_price: 100,
   offer_price: null,
-  is_default: id === "1",
-  is_active: true,
-  created_at: "2026-01-01T00:00:00Z",
-  updated_at: "2026-01-01T00:00:00Z",
-  option_combination_key: "",
+  price: 100,
   offer_expires_at: null,
-  options: Object.entries(options).map(([name, value]) => ({ name, value })),
+  is_default: id === "1",
+  created_at: "2026-01-01T00:00:00Z",
+  options: Object.entries(options).map(([name, value]) => ({
+    name,
+    value,
+    type: name === "color" ? ("color" as const) : ("text" as const),
+  })),
 });
 
 describe("variants", () => {
@@ -158,10 +300,11 @@ describe("variants", () => {
     variant("3", { color: "Blue", size: "M" }),
   ];
 
-  test("groups options", () => {
-    expect(optionGroups(variants)).toEqual([
-      { name: "color", values: ["Red", "Blue"] },
-      { name: "size", values: ["M", "L"] },
+  test("groups options: colours first, values in shopper order", () => {
+    const sizeFirst = [variant("1", { size: "L", color: "Red" }), ...variants];
+    expect(optionGroups(sizeFirst)).toEqual([
+      { name: "color", type: "color", values: ["Blue", "Red"] },
+      { name: "size", type: "text", values: ["M", "L"] },
     ]);
     expect(optionGroups([variant("1", {})])).toEqual([]);
   });

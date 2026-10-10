@@ -1,18 +1,25 @@
-import type { StorefrontVariant } from "@repo/types";
+import type { OptionType, StorefrontVariant } from "@repo/types";
+import { compareOptionValues } from "./option-order";
 
-export type OptionGroup = { name: string; values: string[] };
+export type OptionGroup = { name: string; type: OptionType; values: string[] };
 
-/** Option names in first-seen order, each with its distinct values. */
+/**
+ * Each option with its distinct values in shopper order (XS before S).
+ * Colour options come first, then the rest in first-seen order.
+ */
 export function optionGroups(variants: StorefrontVariant[]): OptionGroup[] {
-  const groups = new Map<string, string[]>();
+  const groups = new Map<string, OptionGroup>();
   for (const variant of variants) {
-    for (const { name, value } of variant.options) {
-      const values = groups.get(name) ?? [];
-      if (!values.includes(value)) values.push(value);
-      groups.set(name, values);
+    for (const { name, value, type } of variant.options) {
+      const group = groups.get(name) ?? { name, type, values: [] };
+      if (type === "color") group.type = "color";
+      if (!group.values.includes(value)) group.values.push(value);
+      groups.set(name, group);
     }
   }
-  return [...groups].map(([name, values]) => ({ name, values }));
+  return [...groups.values()]
+    .map((g) => ({ ...g, values: [...g.values].sort(compareOptionValues) }))
+    .sort((a, b) => Number(b.type === "color") - Number(a.type === "color"));
 }
 
 export type Selection = Record<string, string>;

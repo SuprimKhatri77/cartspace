@@ -1,17 +1,26 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { EmptyState } from "@/components/feedback/empty-state";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 export default function ShopError({ reset }: { reset: () => void }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 py-24 text-center">
-      <h1 className="text-2xl font-semibold">Something went wrong</h1>
-      <p className="text-sm text-muted-foreground">
-        The store couldn&apos;t load this page. Please try again.
-      </p>
-      <Button variant="outline" onClick={reset}>
-        Try again
-      </Button>
-    </div>
+    <EmptyState
+      className="flex-1"
+      eyebrow="Something went wrong"
+      title="We dropped a stitch."
+      action={
+        <>
+          <Button onClick={reset}>Try again</Button>
+          <Link href="/" className={buttonVariants({ variant: "outline" })}>
+            Home
+          </Link>
+        </>
+      }
+    >
+      The store couldn&apos;t load this page. It&apos;s usually temporary, so
+      please try again.
+    </EmptyState>
   );
 }
