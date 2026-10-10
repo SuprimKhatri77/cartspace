@@ -11,6 +11,7 @@ const signedOutLinks = [
 const signedInLinks = [
   { label: "Your account", href: "/account" },
   { label: "Orders", href: "/account/orders" },
+  { label: "Wishlist", href: "/account/wishlist" },
   { label: "Your bag", href: "/cart" },
 ];
 

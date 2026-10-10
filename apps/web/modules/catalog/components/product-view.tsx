@@ -18,6 +18,7 @@ import { EASE_OUT } from "@/lib/motion";
 import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { AddToBag } from "@/modules/cart/components/add-to-bag";
+import { WishlistButton } from "@/modules/wishlist/components/wishlist-button";
 import { optionGroups, pickOption, selectionOf } from "../lib/variants";
 import { Price } from "./price";
 import { ProductGallery } from "./product-gallery";
@@ -129,10 +130,17 @@ export function ProductView({
         )}
 
         <div className="space-y-4">
-          <AddToBag
-            variantId={variant?.id ?? product.variant_id}
-            stock={stock}
-          />
+          <div className="flex gap-2">
+            <AddToBag
+              variantId={variant?.id ?? product.variant_id}
+              stock={stock}
+            />
+            <WishlistButton
+              productId={product.id}
+              name={product.name}
+              variant="outline"
+            />
+          </div>
           <StockLine stock={stock} />
         </div>
 

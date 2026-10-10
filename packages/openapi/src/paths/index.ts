@@ -5,6 +5,7 @@ import { registerCheckoutPaths } from "./checkout.ts";
 import { registerHealthPaths } from "./health.ts";
 import { registerProductPaths } from "./products.ts";
 import { registerVariantPaths } from "./variants.ts";
+import { registerWishlistPaths } from "./wishlist.ts";
 
 export function registerPaths() {
   registerHealthPaths();
@@ -14,4 +15,5 @@ export function registerPaths() {
   registerVariantPaths();
   registerCartPaths();
   registerCheckoutPaths();
+  registerWishlistPaths();
 }
