@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'WISHLIST_FULL';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -194,6 +194,14 @@ export type ProductWithPrice = {
     created_at: string;
     updated_at: string;
     /**
+     * Published reviews
+     */
+    rating_count: number;
+    /**
+     * Their average, to one decimal; 0 without reviews
+     */
+    rating_avg: number;
+    /**
      * The default variant
      */
     variant_id: string;
@@ -259,6 +267,14 @@ export type ProductDetail = {
     is_featured: boolean;
     created_at: string;
     updated_at: string;
+    /**
+     * Published reviews
+     */
+    rating_count: number;
+    /**
+     * Their average, to one decimal; 0 without reviews
+     */
+    rating_avg: number;
     /**
      * The default variant
      */
@@ -335,6 +351,14 @@ export type AdminProduct = {
     is_featured: boolean;
     created_at: string;
     updated_at: string;
+    /**
+     * Published reviews
+     */
+    rating_count: number;
+    /**
+     * Their average, to one decimal; 0 without reviews
+     */
+    rating_avg: number;
     category_name: string | null;
 };
 
@@ -360,6 +384,14 @@ export type Product = {
     is_featured: boolean;
     created_at: string;
     updated_at: string;
+    /**
+     * Published reviews
+     */
+    rating_count: number;
+    /**
+     * Their average, to one decimal; 0 without reviews
+     */
+    rating_avg: number;
 };
 
 /**
@@ -730,6 +762,14 @@ export type WishlistProduct = {
     created_at: string;
     updated_at: string;
     /**
+     * Published reviews
+     */
+    rating_count: number;
+    /**
+     * Their average, to one decimal; 0 without reviews
+     */
+    rating_avg: number;
+    /**
      * The default variant
      */
     variant_id: string;
@@ -752,6 +792,83 @@ export type WishlistIdsResponse = {
      * Newest first, at most 200
      */
     data: Array<string>;
+};
+
+export type ReviewListResponse = {
+    success: true;
+    message: string;
+    data: {
+        summary: ReviewSummary;
+        /**
+         * Newest first
+         */
+        reviews: Array<PublicReview>;
+    };
+    meta: PaginationMeta;
+};
+
+export type ReviewSummary = {
+    average: number;
+    count: number;
+    /**
+     * Reviews per star: [1★, 2★, 3★, 4★, 5★]
+     */
+    distribution: Array<number>;
+};
+
+export type PublicReview = {
+    id: string;
+    rating: number;
+    title: string;
+    body: string;
+    /**
+     * First name and last initial: "Ada L."
+     */
+    author: string;
+    created_at: string;
+    updated_at: string;
+};
+
+export type MyReviewResponse = {
+    success: true;
+    message: string;
+    data: {
+        /**
+         * A paid order of the user's holds the product
+         */
+        can_review: boolean;
+        review: Review;
+    };
+};
+
+/**
+ * A review as its author sees it.
+ */
+export type Review = {
+    id: string;
+    product_id: string;
+    user_id: string;
+    rating: number;
+    title: string;
+    body: string;
+    /**
+     * hidden: taken down by an admin
+     */
+    status: 'published' | 'hidden';
+    created_at: string;
+    updated_at: string;
+} | null;
+
+export type ReviewResponse = {
+    success: true;
+    message: string;
+    data: Review;
+};
+
+export type ReviewBody = {
+    rating: number;
+    title: string;
+    body: string;
 };
 
 export type GetHealthData = {
@@ -2321,3 +2438,153 @@ export type AddToWishlistResponses = {
 };
 
 export type AddToWishlistResponse = AddToWishlistResponses[keyof AddToWishlistResponses];
+
+export type DeleteReviewData = {
+    body?: never;
+    path: {
+        productSlug: string;
+    };
+    query?: never;
+    url: '/api/v1/products/{productSlug}/reviews';
+};
+
+export type DeleteReviewErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * No such product, or no review of yours (PRODUCT_NOT_FOUND, REVIEW_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type DeleteReviewError = DeleteReviewErrors[keyof DeleteReviewErrors];
+
+export type DeleteReviewResponses = {
+    /**
+     * Review deleted
+     */
+    200: MessageResponse;
+};
+
+export type DeleteReviewResponse = DeleteReviewResponses[keyof DeleteReviewResponses];
+
+export type ListReviewsData = {
+    body?: never;
+    path: {
+        productSlug: string;
+    };
+    query?: {
+        page?: number;
+    };
+    url: '/api/v1/products/{productSlug}/reviews';
+};
+
+export type ListReviewsErrors = {
+    /**
+     * Invalid page (INVALID_PAGE_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * No such product on sale (PRODUCT_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type ListReviewsError = ListReviewsErrors[keyof ListReviewsErrors];
+
+export type ListReviewsResponses = {
+    /**
+     * Reviews fetched
+     */
+    200: ReviewListResponse;
+};
+
+export type ListReviewsResponse = ListReviewsResponses[keyof ListReviewsResponses];
+
+export type WriteReviewData = {
+    body: ReviewBody;
+    path: {
+        productSlug: string;
+    };
+    query?: never;
+    url: '/api/v1/products/{productSlug}/reviews';
+};
+
+export type WriteReviewErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * No paid order of yours holds this product (NOT_VERIFIED_BUYER)
+     */
+    403: ApiError;
+    /**
+     * No such product on sale (PRODUCT_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type WriteReviewError = WriteReviewErrors[keyof WriteReviewErrors];
+
+export type WriteReviewResponses = {
+    /**
+     * Review saved
+     */
+    200: ReviewResponse;
+};
+
+export type WriteReviewResponse = WriteReviewResponses[keyof WriteReviewResponses];
+
+export type GetMyReviewData = {
+    body?: never;
+    path: {
+        productSlug: string;
+    };
+    query?: never;
+    url: '/api/v1/products/{productSlug}/reviews/mine';
+};
+
+export type GetMyReviewErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * No such product on sale (PRODUCT_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type GetMyReviewError = GetMyReviewErrors[keyof GetMyReviewErrors];
+
+export type GetMyReviewResponses = {
+    /**
+     * Review fetched
+     */
+    200: MyReviewResponse;
+};
+
+export type GetMyReviewResponse = GetMyReviewResponses[keyof GetMyReviewResponses];

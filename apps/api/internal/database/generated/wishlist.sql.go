@@ -80,7 +80,7 @@ func (q *Queries) ListWishlistIDs(ctx context.Context, userID pgtype.UUID) ([]pg
 }
 
 const listWishlistProducts = `-- name: ListWishlistProducts :many
-SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.variant_id, sp.selling_price, sp.offer_price, sp.price, w.created_at AS saved_at
+SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.rating_count, sp.rating_avg, sp.variant_id, sp.selling_price, sp.offer_price, sp.price, w.created_at AS saved_at
 FROM wishlist_items w
 JOIN storefront_products sp ON sp.id = w.product_id
 WHERE w.user_id = $1
@@ -107,6 +107,8 @@ type ListWishlistProductsRow struct {
 	IsFeatured     bool               `json:"is_featured"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	RatingCount    int32              `json:"rating_count"`
+	RatingAvg      float32            `json:"rating_avg"`
 	VariantID      pgtype.UUID        `json:"variant_id"`
 	SellingPrice   int32              `json:"selling_price"`
 	OfferPrice     pgtype.Int4        `json:"offer_price"`
@@ -136,6 +138,8 @@ func (q *Queries) ListWishlistProducts(ctx context.Context, arg ListWishlistProd
 			&i.IsFeatured,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RatingCount,
+			&i.RatingAvg,
 			&i.VariantID,
 			&i.SellingPrice,
 			&i.OfferPrice,

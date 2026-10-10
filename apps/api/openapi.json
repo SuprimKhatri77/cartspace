@@ -120,7 +120,9 @@
           "INVALID_ORDER_NUMBER",
           "ADDRESS_NOT_FOUND",
           "INVALID_ADDRESS_ID",
-          "WISHLIST_FULL"
+          "WISHLIST_FULL",
+          "NOT_VERIFIED_BUYER",
+          "REVIEW_NOT_FOUND"
         ],
         "description": "Machine-readable failure code."
       },
@@ -616,6 +618,17 @@
             "type": "string",
             "format": "date-time"
           },
+          "rating_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Published reviews"
+          },
+          "rating_avg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 5,
+            "description": "Their average, to one decimal; 0 without reviews"
+          },
           "variant_id": {
             "type": "string",
             "format": "uuid",
@@ -652,6 +665,8 @@
           "is_featured",
           "created_at",
           "updated_at",
+          "rating_count",
+          "rating_avg",
           "variant_id",
           "selling_price",
           "offer_price",
@@ -796,6 +811,17 @@
             "type": "string",
             "format": "date-time"
           },
+          "rating_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Published reviews"
+          },
+          "rating_avg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 5,
+            "description": "Their average, to one decimal; 0 without reviews"
+          },
           "variant_id": {
             "type": "string",
             "format": "uuid",
@@ -843,6 +869,8 @@
           "is_featured",
           "created_at",
           "updated_at",
+          "rating_count",
+          "rating_avg",
           "variant_id",
           "selling_price",
           "offer_price",
@@ -1043,6 +1071,17 @@
             "type": "string",
             "format": "date-time"
           },
+          "rating_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Published reviews"
+          },
+          "rating_avg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 5,
+            "description": "Their average, to one decimal; 0 without reviews"
+          },
           "category_name": {
             "type": [
               "string",
@@ -1063,6 +1102,8 @@
           "is_featured",
           "created_at",
           "updated_at",
+          "rating_count",
+          "rating_avg",
           "category_name"
         ],
         "description": "A row of the admin products table."
@@ -1148,6 +1189,17 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "rating_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Published reviews"
+          },
+          "rating_avg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 5,
+            "description": "Their average, to one decimal; 0 without reviews"
           }
         },
         "required": [
@@ -1162,7 +1214,9 @@
           "is_active",
           "is_featured",
           "created_at",
-          "updated_at"
+          "updated_at",
+          "rating_count",
+          "rating_avg"
         ]
       },
       "ProductBody": {
@@ -2312,6 +2366,17 @@
             "type": "string",
             "format": "date-time"
           },
+          "rating_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Published reviews"
+          },
+          "rating_avg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 5,
+            "description": "Their average, to one decimal; 0 without reviews"
+          },
           "variant_id": {
             "type": "string",
             "format": "uuid",
@@ -2352,6 +2417,8 @@
           "is_featured",
           "created_at",
           "updated_at",
+          "rating_count",
+          "rating_avg",
           "variant_id",
           "selling_price",
           "offer_price",
@@ -2385,6 +2452,257 @@
           "success",
           "message",
           "data"
+        ]
+      },
+      "ReviewListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "summary": {
+                "$ref": "#/components/schemas/ReviewSummary"
+              },
+              "reviews": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PublicReview"
+                },
+                "description": "Newest first"
+              }
+            },
+            "required": [
+              "summary",
+              "reviews"
+            ]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "meta"
+        ]
+      },
+      "ReviewSummary": {
+        "type": "object",
+        "properties": {
+          "average": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "distribution": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "Reviews per star: [1★, 2★, 3★, 4★, 5★]"
+          }
+        },
+        "required": [
+          "average",
+          "count",
+          "distribution"
+        ]
+      },
+      "PublicReview": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string",
+            "description": "First name and last initial: \"Ada L.\""
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "rating",
+          "title",
+          "body",
+          "author",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "MyReviewResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "can_review": {
+                "type": "boolean",
+                "description": "A paid order of the user's holds the product"
+              },
+              "review": {
+                "$ref": "#/components/schemas/Review"
+              }
+            },
+            "required": [
+              "can_review",
+              "review"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "Review": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "hidden"
+            ],
+            "description": "hidden: taken down by an admin"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "product_id",
+          "user_id",
+          "rating",
+          "title",
+          "body",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "description": "A review as its author sees it."
+      },
+      "ReviewResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Review"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "ReviewBody": {
+        "type": "object",
+        "properties": {
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "rating",
+          "title",
+          "body"
         ]
       }
     },
@@ -5517,6 +5835,304 @@
           },
           "401": {
             "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/{productSlug}/reviews": {
+      "get": {
+        "operationId": "listReviews",
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "A product's reviews",
+        "description": "Published reviews, newest first, 10 per page, with a summary (average, count, per-star counts).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "productSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reviews fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid page (INVALID_PAGE_PARAMETER)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such product on sale (PRODUCT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "writeReview",
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "Write or edit my review",
+        "description": "One review per buyer and product; writing again edits it. A review an admin hid stays hidden.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "productSlug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Review saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No paid order of yours holds this product (NOT_VERIFIED_BUYER)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such product on sale (PRODUCT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteReview",
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "Delete my review",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "productSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Review deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such product, or no review of yours (PRODUCT_NOT_FOUND, REVIEW_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/products/{productSlug}/reviews/mine": {
+      "get": {
+        "operationId": "getMyReview",
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "My review of a product",
+        "description": "Whether I may review it (I bought it) and my review, hidden or not.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "productSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Review fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyReviewResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such product on sale (PRODUCT_NOT_FOUND)",
             "content": {
               "application/json": {
                 "schema": {

@@ -14,7 +14,7 @@ import (
 
 const adminProductsList = `-- name: AdminProductsList :many
 SELECT 
-    p.id, p.name, p.slug, p.category_id, p.description, p.features, p.images, p.image_public_ids, p.is_active, p.is_featured, p.created_at, p.updated_at,
+    p.id, p.name, p.slug, p.category_id, p.description, p.features, p.images, p.image_public_ids, p.is_active, p.is_featured, p.created_at, p.updated_at, p.rating_count, p.rating_avg,
     c.name AS category_name
 FROM products p
 LEFT JOIN categories c ON p.category_id = c.id
@@ -40,6 +40,8 @@ type AdminProductsListRow struct {
 	IsFeatured     bool               `json:"is_featured"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	RatingCount    int32              `json:"rating_count"`
+	RatingAvg      float32            `json:"rating_avg"`
 	CategoryName   pgtype.Text        `json:"category_name"`
 }
 
@@ -65,6 +67,8 @@ func (q *Queries) AdminProductsList(ctx context.Context, arg AdminProductsListPa
 			&i.IsFeatured,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RatingCount,
+			&i.RatingAvg,
 			&i.CategoryName,
 		); err != nil {
 			return nil, err
@@ -132,7 +136,7 @@ func (q *Queries) CountStorefrontProducts(ctx context.Context, arg CountStorefro
 const createProduct = `-- name: CreateProduct :one
 INSERT INTO products (name, slug, category_id, description, features, images, image_public_ids, is_active, is_featured)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, name, slug, category_id, description, features, images, image_public_ids, is_active, is_featured, created_at, updated_at
+RETURNING id, name, slug, category_id, description, features, images, image_public_ids, is_active, is_featured, created_at, updated_at, rating_count, rating_avg
 `
 
 type CreateProductParams struct {
@@ -173,6 +177,8 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 		&i.IsFeatured,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RatingCount,
+		&i.RatingAvg,
 	)
 	return i, err
 }
@@ -186,7 +192,7 @@ func (q *Queries) DeleteProduct(ctx context.Context, id pgtype.UUID) (pgconn.Com
 }
 
 const getProductByID = `-- name: GetProductByID :one
-SELECT id, name, slug, category_id, description, features, images, image_public_ids, is_active, is_featured, created_at, updated_at FROM products WHERE id = $1
+SELECT id, name, slug, category_id, description, features, images, image_public_ids, is_active, is_featured, created_at, updated_at, rating_count, rating_avg FROM products WHERE id = $1
 `
 
 func (q *Queries) GetProductByID(ctx context.Context, id pgtype.UUID) (Product, error) {
@@ -205,12 +211,14 @@ func (q *Queries) GetProductByID(ctx context.Context, id pgtype.UUID) (Product, 
 		&i.IsFeatured,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RatingCount,
+		&i.RatingAvg,
 	)
 	return i, err
 }
 
 const getProductBySlug = `-- name: GetProductBySlug :one
-SELECT id, name, slug, category_id, description, features, images, image_public_ids, is_active, is_featured, created_at, updated_at FROM products WHERE slug = $1
+SELECT id, name, slug, category_id, description, features, images, image_public_ids, is_active, is_featured, created_at, updated_at, rating_count, rating_avg FROM products WHERE slug = $1
 `
 
 func (q *Queries) GetProductBySlug(ctx context.Context, slug string) (Product, error) {
@@ -229,13 +237,15 @@ func (q *Queries) GetProductBySlug(ctx context.Context, slug string) (Product, e
 		&i.IsFeatured,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RatingCount,
+		&i.RatingAvg,
 	)
 	return i, err
 }
 
 const getProductWithDefaultVariantBySlug = `-- name: GetProductWithDefaultVariantBySlug :one
 SELECT
-    sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.variant_id, sp.selling_price, sp.offer_price, sp.price,
+    sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.rating_count, sp.rating_avg, sp.variant_id, sp.selling_price, sp.offer_price, sp.price,
     pv.stock,
     pv.images AS variant_images
 FROM storefront_products sp
@@ -256,6 +266,8 @@ type GetProductWithDefaultVariantBySlugRow struct {
 	IsFeatured     bool               `json:"is_featured"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	RatingCount    int32              `json:"rating_count"`
+	RatingAvg      float32            `json:"rating_avg"`
 	VariantID      pgtype.UUID        `json:"variant_id"`
 	SellingPrice   int32              `json:"selling_price"`
 	OfferPrice     pgtype.Int4        `json:"offer_price"`
@@ -280,6 +292,8 @@ func (q *Queries) GetProductWithDefaultVariantBySlug(ctx context.Context, slug s
 		&i.IsFeatured,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RatingCount,
+		&i.RatingAvg,
 		&i.VariantID,
 		&i.SellingPrice,
 		&i.OfferPrice,
@@ -302,7 +316,7 @@ func (q *Queries) GetProductsCount(ctx context.Context) (int64, error) {
 }
 
 const getRelatedProducts = `-- name: GetRelatedProducts :many
-SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.variant_id, sp.selling_price, sp.offer_price, sp.price
+SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.rating_count, sp.rating_avg, sp.variant_id, sp.selling_price, sp.offer_price, sp.price
 FROM storefront_products sp
 WHERE sp.category_id = (SELECT pr.category_id FROM products pr WHERE pr.slug = $1)
 AND sp.slug != $1
@@ -332,6 +346,8 @@ func (q *Queries) GetRelatedProducts(ctx context.Context, slug string) ([]Storef
 			&i.IsFeatured,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RatingCount,
+			&i.RatingAvg,
 			&i.VariantID,
 			&i.SellingPrice,
 			&i.OfferPrice,
@@ -523,7 +539,7 @@ WITH RECURSIVE subtree AS (
     UNION
     SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
 )
-SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.variant_id, sp.selling_price, sp.offer_price, sp.price
+SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.rating_count, sp.rating_avg, sp.variant_id, sp.selling_price, sp.offer_price, sp.price
 FROM storefront_products sp
 WHERE ($1::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
 AND (NOT $2::bool OR sp.is_featured)
@@ -608,6 +624,8 @@ func (q *Queries) ListStorefrontProducts(ctx context.Context, arg ListStorefront
 			&i.IsFeatured,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RatingCount,
+			&i.RatingAvg,
 			&i.VariantID,
 			&i.SellingPrice,
 			&i.OfferPrice,
@@ -648,7 +666,7 @@ UPDATE products SET
     is_featured = $9,
     category_id = $10
 WHERE id = $1
-RETURNING id, name, slug, category_id, description, features, images, image_public_ids, is_active, is_featured, created_at, updated_at
+RETURNING id, name, slug, category_id, description, features, images, image_public_ids, is_active, is_featured, created_at, updated_at, rating_count, rating_avg
 `
 
 type UpdateProductParams struct {
@@ -691,6 +709,8 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (P
 		&i.IsFeatured,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RatingCount,
+		&i.RatingAvg,
 	)
 	return i, err
 }
