@@ -5,7 +5,7 @@ ENV_FILE ?= ../../.env.local
 # secrets is never expanded by make. The server loads ENV_FILE itself.
 DB_URL = $${DATABASE_URL:-$$(sed -n "s/^DATABASE_URL=//p" $(ENV_FILE) 2>/dev/null | sed "s/^['\"]//; s/['\"]\$$//")}
 
-.PHONY: migrate-up migrate-down sqlc run build lint test deps
+.PHONY: migrate-up migrate-down sqlc seed run build lint test deps
 migrate-up:
 	migrate -path migrations -database "$(DB_URL)" up
 migrate-down:
@@ -13,6 +13,9 @@ migrate-down:
 
 sqlc:
 	sqlc generate
+
+seed:
+	go run ./cmd/seed
 
 run:
 	go run ./cmd/server

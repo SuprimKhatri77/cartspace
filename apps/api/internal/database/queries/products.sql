@@ -49,6 +49,24 @@ DELETE FROM products WHERE id = $1;
 -- name: GetProductsCount :one
 SELECT COUNT(*) FROM products;
 
+-- name: CountActiveProducts :one
+-- must match the joins and filters of ListActiveProducts
+SELECT COUNT(*)
+FROM products p
+JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE
+WHERE p.is_active = TRUE;
+
+-- name: CountProductsByCategory :one
+-- must match the joins and filters of ListProductsByCategory*
+SELECT COUNT(*)
+FROM products p
+JOIN product_variants pv ON pv.product_id = p.id AND pv.is_default = TRUE
+JOIN categories c ON c.id = p.category_id
+WHERE p.is_active = TRUE
+AND c.slug = $1
+AND ($2::int = 0 OR pv.selling_price >= $2::int)
+AND ($3::int = 0 OR pv.selling_price <= $3::int);
+
 
 -- name: AdminProductsList :many
 SELECT 
@@ -74,7 +92,8 @@ GROUP BY po.name, pov.value
 ORDER BY po.name, pov.value;
 
 -- name: GetMinMaxSellingPrice :one
-SELECT MIN(selling_price)::int, MAX(selling_price)::int
+-- COALESCE: MIN/MAX are NULL when the category has no active products
+SELECT COALESCE(MIN(selling_price), 0)::int AS min_price, COALESCE(MAX(selling_price), 0)::int AS max_price
 FROM product_variants pv
 JOIN products p ON p.id = pv.product_id
 JOIN categories c ON p.category_id = c.id

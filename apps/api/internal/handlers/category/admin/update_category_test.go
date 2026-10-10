@@ -61,8 +61,8 @@ func TestUpdateCategory_WithParentID(t *testing.T) {
 	_, categoryID := getRandomUUID()
 	_, parentID := getRandomUUID()
 	w := makeRequest(t, router, "PUT", fmt.Sprintf("/api/category/%s", categoryID), map[string]string{
-		"name":     "fake category",
-		"parentID": parentID,
+		"name":      "fake category",
+		"parent_id": parentID,
 	})
 
 	if w.Code != http.StatusOK {
@@ -172,8 +172,8 @@ func TestUpdateCategory_SelfReferencingParentID(t *testing.T) {
 	})
 
 	w := makeRequest(t, router, "PUT", fmt.Sprintf("/api/category/%s", categoryID), map[string]string{
-		"name":     "new category name",
-		"parentID": categoryID,
+		"name":      "new category name",
+		"parent_id": categoryID,
 	})
 
 	if w.Code != http.StatusBadRequest {
@@ -208,8 +208,8 @@ func TestUpdateCategory_ShallowCyclicReference(t *testing.T) {
 	})
 
 	w := makeRequest(t, router, "PUT", fmt.Sprintf("/api/category/%s", categoryID), map[string]string{
-		"name":     "new category name",
-		"parentID": parentID,
+		"name":      "new category name",
+		"parent_id": parentID,
 	})
 
 	if w.Code != http.StatusBadRequest {

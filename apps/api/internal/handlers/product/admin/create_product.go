@@ -1,13 +1,13 @@
 package admin
 
 import (
-	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
@@ -18,15 +18,8 @@ func CreateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		var createProductRequest types.CreateProduct
-		if err := c.ShouldBindJSON(&createProductRequest); err != nil {
-			slog.Error("Invalid request body", "error", err)
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid request data",
-				Code:    constants.ValidationFailed,
-				Errors:  validator.Parse(err, createProductRequest),
-			})
+		createProductRequest, ok := validator.BindJSON[types.CreateProduct](c)
+		if !ok {
 			return
 		}
 
@@ -39,14 +32,14 @@ func CreateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 			return
 		}
 
-		utils.TrimStruct(&createProductRequest)
+		utils.TrimStruct(createProductRequest)
 
 		slug := utils.Slugify(createProductRequest.Name)
 
 		slugExists, err := queries.ProductSlugExists(ctx, slug)
 
 		if err != nil {
-			slog.Error("failed to check existing prod slug in db", "error", err)
+			rlog.Error(c, "failed to check existing prod slug in db", err)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",
@@ -58,7 +51,7 @@ func CreateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 		if slugExists {
 			slug, err = utils.SlugWithSuffix(slug)
 			if err != nil {
-				slog.Debug("failed to slugify the slug", "error", err)
+				rlog.Error(c, "failed to generate slug suffix", err)
 				c.JSON(http.StatusInternalServerError, types.APIResponse{
 					Success: false,
 					Message: "Failed to generate slug",
@@ -70,7 +63,7 @@ func CreateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 
 		categoryID, err := utils.ConvertToUUID(createProductRequest.CategoryID)
 		if err != nil {
-			slog.Error("failed to parse the category ID", "error", err)
+			rlog.Error(c, "failed to parse the category ID", err)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to parse the category ID",
@@ -94,7 +87,7 @@ func CreateProduct(queries repository.ProductRepository) gin.HandlerFunc {
 		})
 
 		if err != nil {
-			slog.Error("failed to insert product in db", "error", err)
+			rlog.Error(c, "failed to insert product in db", err)
 
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,

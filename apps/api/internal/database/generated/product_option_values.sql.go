@@ -18,7 +18,7 @@ RETURNING id, option_id, value
 `
 
 type CreateProductOptionValueParams struct {
-	OptionID pgtype.UUID `json:"optionId"`
+	OptionID pgtype.UUID `json:"option_id"`
 	Value    string      `json:"value"`
 }
 
@@ -56,7 +56,7 @@ SELECT id, option_id, value FROM product_option_values WHERE option_id = $1 AND 
 `
 
 type GetOptionValueByValueParams struct {
-	OptionID pgtype.UUID `json:"optionId"`
+	OptionID pgtype.UUID `json:"option_id"`
 	Value    string      `json:"value"`
 }
 
@@ -78,7 +78,7 @@ func (q *Queries) GetOptionValuesByOption(ctx context.Context, optionID pgtype.U
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ProductOptionValue
+	items := []ProductOptionValue{}
 	for rows.Next() {
 		var i ProductOptionValue
 		if err := rows.Scan(&i.ID, &i.OptionID, &i.Value); err != nil {

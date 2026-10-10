@@ -2,7 +2,9 @@ package validator
 
 import (
 	"regexp"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
@@ -24,6 +26,15 @@ func Init() {
 
 		_ = v.RegisterValidation("alphaspace", func(fl validator.FieldLevel) bool {
 			return alphaSpaceRe.MatchString(fl.Field().String())
+		})
+
+		_ = v.RegisterValidation("date_format", func(fl validator.FieldLevel) bool {
+			_, err := time.Parse("2006-01-02", fl.Field().String())
+			return err == nil
+		})
+
+		_ = v.RegisterValidation("not_blank", func(fl validator.FieldLevel) bool {
+			return strings.TrimSpace(fl.Field().String()) != ""
 		})
 	})
 }

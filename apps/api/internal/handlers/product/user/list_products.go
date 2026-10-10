@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
@@ -37,9 +38,10 @@ func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 			return
 		}
 
-		total, err := queries.GetProductsCount(ctx)
+		total, err := queries.CountActiveProducts(ctx)
 
 		if err != nil {
+			rlog.Error(c, "failed to count products", err)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to fetch products",
@@ -53,6 +55,7 @@ func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 				Success: true,
 				Message: "No products found",
 				Data:    []db.ListActiveProductsRow{},
+				Meta:    types.NewPaginationMeta(total, page, pageLimit),
 			})
 			return
 		}
@@ -87,6 +90,7 @@ func ListProducts(queries repository.ProductRepository) gin.HandlerFunc {
 			Success: true,
 			Message: "Products fetched",
 			Data:    products,
+			Meta:    types.NewPaginationMeta(total, page, pageLimit),
 		})
 
 	}

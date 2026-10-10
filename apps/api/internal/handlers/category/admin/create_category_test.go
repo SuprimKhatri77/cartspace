@@ -45,8 +45,8 @@ func TestCreateCategory_ValidationFails(t *testing.T) {
 	})
 
 	w := makeRequest(t, router, "POST", "/api/category", map[string]string{
-		"name":     "X",
-		"parentID": "invalid_parent_id",
+		"name":      "X",
+		"parent_id": "invalid_parent_id",
 	})
 
 	if w.Code != http.StatusBadRequest {
@@ -116,8 +116,8 @@ func TestCreateCategory_ParentNotFound(t *testing.T) {
 
 	_, str := getRandomUUID()
 	w := makeRequest(t, router, "POST", "/api/category", map[string]string{
-		"name":     "fake category",
-		"parentID": str,
+		"name":      "fake category",
+		"parent_id": str,
 	})
 
 	if w.Code != http.StatusNotFound {
@@ -134,8 +134,8 @@ func TestCreateCategory_InvalidParentID(t *testing.T) {
 	})
 
 	w := makeRequest(t, router, "POST", "/api/category", map[string]string{
-		"name":     "fake category",
-		"parentID": "invalid_parent_id",
+		"name":      "fake category",
+		"parent_id": "invalid_parent_id",
 	})
 
 	if w.Code != http.StatusBadRequest {
@@ -162,8 +162,8 @@ func TestCreateCategory_WithParentID(t *testing.T) {
 
 	_, str := getRandomUUID()
 	w := makeRequest(t, router, "POST", "/api/category", map[string]string{
-		"name":     "fake category",
-		"parentID": str,
+		"name":      "fake category",
+		"parent_id": str,
 	})
 
 	if w.Code != http.StatusCreated {

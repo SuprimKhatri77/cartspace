@@ -18,6 +18,15 @@ services:
       - /app/tmp
     networks:
       - app-network
+    healthcheck:
+      test:
+        ["CMD", "wget", "--spider", "-q", "http://localhost:5000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # first start compiles the api with air, so allow time and poll fast meanwhile
+      start_period: 120s
+      start_interval: 2s
 
   web:
     build:
@@ -29,7 +38,8 @@ services:
     env_file:
       - .env.local
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     volumes:
       - ./apps/web:/app/apps/web
       - ./packages:/app/packages

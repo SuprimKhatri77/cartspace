@@ -59,7 +59,7 @@ RETURNING id, name, slug, parent_id, created_at, updated_at
 type CreateSubCategoryParams struct {
 	Name     string      `json:"name"`
 	Slug     string      `json:"slug"`
-	ParentID pgtype.UUID `json:"parentId"`
+	ParentID pgtype.UUID `json:"parent_id"`
 }
 
 func (q *Queries) CreateSubCategory(ctx context.Context, arg CreateSubCategoryParams) (Category, error) {
@@ -94,7 +94,7 @@ func (q *Queries) GetAllCategories(ctx context.Context) ([]Category, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Category
+	items := []Category{}
 	for rows.Next() {
 		var i Category
 		if err := rows.Scan(
@@ -157,9 +157,9 @@ type GetCategoryAncestorsRow struct {
 	ID        pgtype.UUID        `json:"id"`
 	Name      string             `json:"name"`
 	Slug      string             `json:"slug"`
-	ParentID  pgtype.UUID        `json:"parentId"`
-	CreatedAt pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt pgtype.Timestamptz `json:"updatedAt"`
+	ParentID  pgtype.UUID        `json:"parent_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 func (q *Queries) GetCategoryAncestors(ctx context.Context, id pgtype.UUID) ([]GetCategoryAncestorsRow, error) {
@@ -168,7 +168,7 @@ func (q *Queries) GetCategoryAncestors(ctx context.Context, id pgtype.UUID) ([]G
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetCategoryAncestorsRow
+	items := []GetCategoryAncestorsRow{}
 	for rows.Next() {
 		var i GetCategoryAncestorsRow
 		if err := rows.Scan(
@@ -258,9 +258,9 @@ type GetCategoryTreeRow struct {
 	ID        pgtype.UUID        `json:"id"`
 	Name      string             `json:"name"`
 	Slug      string             `json:"slug"`
-	ParentID  pgtype.UUID        `json:"parentId"`
-	CreatedAt pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt pgtype.Timestamptz `json:"updatedAt"`
+	ParentID  pgtype.UUID        `json:"parent_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	Depth     int32              `json:"depth"`
 }
 
@@ -270,7 +270,7 @@ func (q *Queries) GetCategoryTree(ctx context.Context) ([]GetCategoryTreeRow, er
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetCategoryTreeRow
+	items := []GetCategoryTreeRow{}
 	for rows.Next() {
 		var i GetCategoryTreeRow
 		if err := rows.Scan(
@@ -302,7 +302,7 @@ func (q *Queries) GetChildCategories(ctx context.Context, parentID pgtype.UUID) 
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Category
+	items := []Category{}
 	for rows.Next() {
 		var i Category
 		if err := rows.Scan(
@@ -338,7 +338,7 @@ func (q *Queries) GetPaginatedCategories(ctx context.Context, arg GetPaginatedCa
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Category
+	items := []Category{}
 	for rows.Next() {
 		var i Category
 		if err := rows.Scan(
@@ -369,7 +369,7 @@ func (q *Queries) GetRootCategories(ctx context.Context) ([]Category, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Category
+	items := []Category{}
 	for rows.Next() {
 		var i Category
 		if err := rows.Scan(
@@ -400,7 +400,7 @@ RETURNING id, name, slug, parent_id, created_at, updated_at
 type UpdateCategoryParams struct {
 	Name     string      `json:"name"`
 	Slug     string      `json:"slug"`
-	ParentID pgtype.UUID `json:"parentId"`
+	ParentID pgtype.UUID `json:"parent_id"`
 	ID       pgtype.UUID `json:"id"`
 }
 

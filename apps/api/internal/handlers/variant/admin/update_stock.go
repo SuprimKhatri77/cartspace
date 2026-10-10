@@ -37,14 +37,8 @@ func UpdateVariantStock(queries repository.VariantRepository) gin.HandlerFunc {
 			return
 		}
 
-		var req types.UpdateStock
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid request data",
-				Code:    constants.ValidationFailed,
-				Errors:  validator.Parse(err, req),
-			})
+		req, ok := validator.BindJSON[types.UpdateStock](c)
+		if !ok {
 			return
 		}
 

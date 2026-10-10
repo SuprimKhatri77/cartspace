@@ -15,14 +15,14 @@ import (
 const createRefreshToken = `-- name: CreateRefreshToken :one
 INSERT INTO refresh_tokens (user_id, token_hash, expires_at, session_id)
 VALUES ($1, $2, $3, $4)
-RETURNING id, user_id, token_hash, session_id, revoked_at, expires_at, created_at
+RETURNING id, user_id, token_hash, expires_at, created_at, session_id, revoked_at
 `
 
 type CreateRefreshTokenParams struct {
-	UserID    pgtype.UUID        `json:"userId"`
-	TokenHash string             `json:"tokenHash"`
-	ExpiresAt pgtype.Timestamptz `json:"expiresAt"`
-	SessionID pgtype.UUID        `json:"sessionId"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	TokenHash string             `json:"token_hash"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	SessionID pgtype.UUID        `json:"session_id"`
 }
 
 func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
@@ -37,21 +37,21 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 		&i.ID,
 		&i.UserID,
 		&i.TokenHash,
-		&i.SessionID,
-		&i.RevokedAt,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.SessionID,
+		&i.RevokedAt,
 	)
 	return i, err
 }
 
 const getRefreshToken = `-- name: GetRefreshToken :one
-SELECT id, user_id, token_hash, session_id, revoked_at, expires_at, created_at FROM refresh_tokens WHERE token_hash = $1 AND session_id = $2 AND revoked_at IS NULL AND expires_at > NOW()
+SELECT id, user_id, token_hash, expires_at, created_at, session_id, revoked_at FROM refresh_tokens WHERE token_hash = $1 AND session_id = $2 AND revoked_at IS NULL AND expires_at > NOW()
 `
 
 type GetRefreshTokenParams struct {
-	TokenHash string      `json:"tokenHash"`
-	SessionID pgtype.UUID `json:"sessionId"`
+	TokenHash string      `json:"token_hash"`
+	SessionID pgtype.UUID `json:"session_id"`
 }
 
 func (q *Queries) GetRefreshToken(ctx context.Context, arg GetRefreshTokenParams) (RefreshToken, error) {
@@ -61,10 +61,10 @@ func (q *Queries) GetRefreshToken(ctx context.Context, arg GetRefreshTokenParams
 		&i.ID,
 		&i.UserID,
 		&i.TokenHash,
-		&i.SessionID,
-		&i.RevokedAt,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.SessionID,
+		&i.RevokedAt,
 	)
 	return i, err
 }
@@ -85,8 +85,8 @@ WHERE token_hash = $1 AND session_id = $2
 `
 
 type RevokeRefreshTokenParams struct {
-	TokenHash string      `json:"tokenHash"`
-	SessionID pgtype.UUID `json:"sessionId"`
+	TokenHash string      `json:"token_hash"`
+	SessionID pgtype.UUID `json:"session_id"`
 }
 
 func (q *Queries) RevokeRefreshToken(ctx context.Context, arg RevokeRefreshTokenParams) (pgconn.CommandTag, error) {

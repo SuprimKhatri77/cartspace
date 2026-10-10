@@ -76,6 +76,7 @@ api docs are available at `http://localhost:5000/docs` once the api is running.
 | `bun run dev`                          | run api + web                                                 |
 | `bun run db:migrate` / `db:migrate:down` | apply / roll back migrations (`N=1` for down)               |
 | `bun run db:sqlc`                      | regenerate sqlc code                                          |
+| `bun run db:seed`                      | create the seed admin + customer (see `.env.example`)         |
 | `bun run generate`                     | regenerate openapi.json                                       |
 | `bun run lint` / `lint:go`             | lint js/ts / go                                               |
 | `bun run test:go`                      | go tests                                                      |

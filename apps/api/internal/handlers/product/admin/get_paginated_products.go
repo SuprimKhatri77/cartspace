@@ -54,6 +54,7 @@ func GetPaginatedProducts(queries repository.ProductRepository) gin.HandlerFunc 
 				Success: true,
 				Message: "No products created yet",
 				Data:    []db.AdminProductsListRow{},
+				Meta:    types.NewPaginationMeta(total, page, pageLimit),
 			})
 			return
 		}
@@ -88,6 +89,7 @@ func GetPaginatedProducts(queries repository.ProductRepository) gin.HandlerFunc 
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
 			Data:    products,
+			Meta:    types.NewPaginationMeta(total, page, pageLimit),
 		})
 	}
 }

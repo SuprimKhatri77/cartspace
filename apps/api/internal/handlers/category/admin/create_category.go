@@ -2,8 +2,6 @@ package admin
 
 import (
 	"errors"
-	"log"
-	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
@@ -22,25 +21,17 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		var createCategoryRequest types.CreateCategory
-
-		if err := c.ShouldBindJSON(&createCategoryRequest); err != nil {
-			slog.Error("validation failed", "error", err)
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid request data",
-				Errors:  validator.Parse(err, createCategoryRequest),
-				Code:    constants.ValidationFailed,
-			})
+		createCategoryRequest, ok := validator.BindJSON[types.CreateCategory](c)
+		if !ok {
 			return
 		}
 
-		utils.TrimStruct(&createCategoryRequest)
+		utils.TrimStruct(createCategoryRequest)
 		slug := utils.Slugify(createCategoryRequest.Name)
 
 		slugExists, err := queries.CategorySlugExists(ctx, slug)
 		if err != nil {
-			slog.Error("failed to query the db for slug check", "error", err)
+			rlog.Error(c, "failed to query the db for slug check", err)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",
@@ -68,7 +59,7 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 			var parentID pgtype.UUID
 
 			if err := parentID.Scan(createCategoryRequest.ParentID); err != nil {
-				slog.Error("invalid parent id", "error", err)
+				rlog.Warn(c, "invalid parent id", "error", err)
 				c.JSON(http.StatusBadRequest, types.APIResponse{
 					Success: false,
 					Message: "Invalid parent category ID",
@@ -81,7 +72,7 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 
 			if err != nil {
 				if errors.Is(err, pgx.ErrNoRows) {
-					log.Println("no rows found err will be triggered")
+					rlog.Warn(c, "parent category not found", "parent_id", parentID)
 					c.JSON(http.StatusNotFound, types.APIResponse{
 						Success: false,
 						Message: "Parent not found",
@@ -89,7 +80,7 @@ func CreateCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 					})
 					return
 				}
-				log.Println("is this the error that is being triggered")
+				rlog.Error(c, "failed to fetch parent category", err, "parent_id", parentID)
 				c.JSON(http.StatusInternalServerError, types.APIResponse{
 					Success: false,
 					Message: "Failed to process request",

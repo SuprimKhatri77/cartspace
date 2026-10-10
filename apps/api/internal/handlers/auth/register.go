@@ -67,7 +67,7 @@ func RegisterUser(queries repository.AuthRepository, cfg *config.Config) gin.Han
 			Name:         registerRequest.Name,
 			Email:        registerRequest.Email,
 			PasswordHash: string(hashedPassword),
-			Role:         "customer",
+			Role:         constants.RoleCustomer,
 		})
 
 		if err != nil {

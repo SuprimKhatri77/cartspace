@@ -17,11 +17,14 @@ SELECT
     p.name AS product_name,
     pv.selling_price,
     pv.stock,
-    pv.images[1] AS image
+    COALESCE(pv.images[1], '')::text AS image
+-- inner joins: a cart with no items returns no rows (LEFT JOIN returned a
+-- phantom all-NULL item for an emptied cart)
 FROM carts c
-LEFT JOIN cart_items ci ON ci.cart_id = c.id
-LEFT JOIN product_variants pv ON pv.id = ci.variant_id
-LEFT JOIN products p ON p.id = pv.product_id
-WHERE c.user_id = $1;
+JOIN cart_items ci ON ci.cart_id = c.id
+JOIN product_variants pv ON pv.id = ci.variant_id
+JOIN products p ON p.id = pv.product_id
+WHERE c.user_id = $1
+ORDER BY ci.created_at ASC;
 
 

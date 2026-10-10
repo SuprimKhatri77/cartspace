@@ -10,83 +10,83 @@ import (
 
 type Cart struct {
 	ID        pgtype.UUID        `json:"id"`
-	UserID    pgtype.UUID        `json:"userId"`
-	CreatedAt pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt pgtype.Timestamptz `json:"updatedAt"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type CartItem struct {
 	ID        pgtype.UUID        `json:"id"`
-	CartID    pgtype.UUID        `json:"cartId"`
-	VariantID pgtype.UUID        `json:"variantId"`
+	CartID    pgtype.UUID        `json:"cart_id"`
+	VariantID pgtype.UUID        `json:"variant_id"`
 	Quantity  int32              `json:"quantity"`
-	UnitPrice int32              `json:"unitPrice"`
-	CreatedAt pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt pgtype.Timestamptz `json:"updatedAt"`
+	UnitPrice int32              `json:"unit_price"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Category struct {
 	ID        pgtype.UUID        `json:"id"`
 	Name      string             `json:"name"`
 	Slug      string             `json:"slug"`
-	ParentID  pgtype.UUID        `json:"parentId"`
-	CreatedAt pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt pgtype.Timestamptz `json:"updatedAt"`
+	ParentID  pgtype.UUID        `json:"parent_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Product struct {
 	ID             pgtype.UUID        `json:"id"`
 	Name           string             `json:"name"`
 	Slug           string             `json:"slug"`
-	CategoryID     pgtype.UUID        `json:"categoryId"`
+	CategoryID     pgtype.UUID        `json:"category_id"`
 	Description    pgtype.Text        `json:"description"`
 	Features       []string           `json:"features"`
 	Images         []string           `json:"images"`
-	ImagePublicIds []string           `json:"imagePublicIds"`
-	IsActive       bool               `json:"isActive"`
-	IsFeatured     bool               `json:"isFeatured"`
-	CreatedAt      pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt      pgtype.Timestamptz `json:"updatedAt"`
+	ImagePublicIds []string           `json:"image_public_ids"`
+	IsActive       bool               `json:"is_active"`
+	IsFeatured     bool               `json:"is_featured"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ProductOption struct {
 	ID        pgtype.UUID `json:"id"`
-	ProductID pgtype.UUID `json:"productId"`
+	ProductID pgtype.UUID `json:"product_id"`
 	Name      string      `json:"name"`
 	Type      string      `json:"type"`
 }
 
 type ProductOptionValue struct {
 	ID       pgtype.UUID `json:"id"`
-	OptionID pgtype.UUID `json:"optionId"`
+	OptionID pgtype.UUID `json:"option_id"`
 	Value    string      `json:"value"`
 }
 
 type ProductVariant struct {
 	ID                   pgtype.UUID        `json:"id"`
-	ProductID            pgtype.UUID        `json:"productId"`
+	ProductID            pgtype.UUID        `json:"product_id"`
 	Sku                  pgtype.Text        `json:"sku"`
 	Stock                int32              `json:"stock"`
 	Images               []string           `json:"images"`
-	ImagePublicIds       []string           `json:"imagePublicIds"`
-	SellingPrice         int32              `json:"sellingPrice"`
-	OfferPrice           pgtype.Int4        `json:"offerPrice"`
-	OfferExpiresAt       pgtype.Timestamptz `json:"offerExpiresAt"`
-	IsDefault            bool               `json:"isDefault"`
-	IsActive             bool               `json:"isActive"`
-	OptionCombinationKey string             `json:"optionCombinationKey"`
-	CreatedAt            pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt            pgtype.Timestamptz `json:"updatedAt"`
+	ImagePublicIds       []string           `json:"image_public_ids"`
+	SellingPrice         int32              `json:"selling_price"`
+	OfferPrice           pgtype.Int4        `json:"offer_price"`
+	IsDefault            bool               `json:"is_default"`
+	IsActive             bool               `json:"is_active"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	OptionCombinationKey string             `json:"option_combination_key"`
+	OfferExpiresAt       pgtype.Timestamptz `json:"offer_expires_at"`
 }
 
 type RefreshToken struct {
 	ID        pgtype.UUID        `json:"id"`
-	UserID    pgtype.UUID        `json:"userId"`
-	TokenHash string             `json:"tokenHash"`
-	SessionID pgtype.UUID        `json:"sessionId"`
-	RevokedAt pgtype.Timestamptz `json:"revokedAt"`
-	ExpiresAt pgtype.Timestamptz `json:"expiresAt"`
-	CreatedAt pgtype.Timestamptz `json:"createdAt"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	TokenHash string             `json:"token_hash"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	SessionID pgtype.UUID        `json:"session_id"`
+	RevokedAt pgtype.Timestamptz `json:"revoked_at"`
 }
 
 type User struct {
@@ -95,12 +95,12 @@ type User struct {
 	Email        string             `json:"email"`
 	PasswordHash string             `json:"-"`
 	Role         string             `json:"role"`
-	ImageUrl     pgtype.Text        `json:"imageUrl"`
-	CreatedAt    pgtype.Timestamptz `json:"createdAt"`
-	UpdatedAt    pgtype.Timestamptz `json:"updatedAt"`
+	ImageUrl     pgtype.Text        `json:"image_url"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type VariantOptionValue struct {
-	VariantID     pgtype.UUID `json:"variantId"`
-	OptionValueID pgtype.UUID `json:"optionValueId"`
+	VariantID     pgtype.UUID `json:"variant_id"`
+	OptionValueID pgtype.UUID `json:"option_value_id"`
 }

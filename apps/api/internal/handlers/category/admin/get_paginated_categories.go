@@ -53,6 +53,7 @@ func GetPaginatedCategories(queries repository.CategoryRepository) gin.HandlerFu
 				Success: true,
 				Message: "No categories found",
 				Data:    []db.Category{},
+				Meta:    types.NewPaginationMeta(total, page, pageLimit),
 			})
 			return
 		}
@@ -60,7 +61,12 @@ func GetPaginatedCategories(queries repository.CategoryRepository) gin.HandlerFu
 		totalPages := (total + pageLimit - 1) / pageLimit
 
 		if page > int(totalPages) {
-			page = int(totalPages)
+			c.JSON(http.StatusBadRequest, types.APIResponse{
+				Success: false,
+				Message: "Invalid page parameter",
+				Code:    constants.InvalidPageParam,
+			})
+			return
 		}
 
 		offset := (page - 1) * int(pageLimit)
@@ -81,6 +87,7 @@ func GetPaginatedCategories(queries repository.CategoryRepository) gin.HandlerFu
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
 			Data:    categories,
+			Meta:    types.NewPaginationMeta(total, page, pageLimit),
 		})
 
 	}

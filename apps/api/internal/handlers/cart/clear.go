@@ -15,7 +15,7 @@ func ClearCartItems(queries repository.CartRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		userIDFromContext := c.MustGet("userID").(string)
+		userIDFromContext := c.MustGet(constants.UserIDKey).(string)
 		userID, err := utils.ConvertToUUID(userIDFromContext)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, types.APIResponse{

@@ -56,33 +56,36 @@ SELECT
     p.name AS product_name,
     pv.selling_price,
     pv.stock,
-    pv.images[1] AS image
+    COALESCE(pv.images[1], '')::text AS image
 FROM carts c
-LEFT JOIN cart_items ci ON ci.cart_id = c.id
-LEFT JOIN product_variants pv ON pv.id = ci.variant_id
-LEFT JOIN products p ON p.id = pv.product_id
+JOIN cart_items ci ON ci.cart_id = c.id
+JOIN product_variants pv ON pv.id = ci.variant_id
+JOIN products p ON p.id = pv.product_id
 WHERE c.user_id = $1
+ORDER BY ci.created_at ASC
 `
 
 type GetUserCartRow struct {
-	CartID       pgtype.UUID `json:"cartId"`
-	CartItemID   pgtype.UUID `json:"cartItemId"`
-	VariantID    pgtype.UUID `json:"variantId"`
-	Quantity     pgtype.Int4 `json:"quantity"`
-	UnitPrice    pgtype.Int4 `json:"unitPrice"`
-	ProductName  pgtype.Text `json:"productName"`
-	SellingPrice pgtype.Int4 `json:"sellingPrice"`
-	Stock        pgtype.Int4 `json:"stock"`
-	Image        interface{} `json:"image"`
+	CartID       pgtype.UUID `json:"cart_id"`
+	CartItemID   pgtype.UUID `json:"cart_item_id"`
+	VariantID    pgtype.UUID `json:"variant_id"`
+	Quantity     int32       `json:"quantity"`
+	UnitPrice    int32       `json:"unit_price"`
+	ProductName  string      `json:"product_name"`
+	SellingPrice int32       `json:"selling_price"`
+	Stock        int32       `json:"stock"`
+	Image        string      `json:"image"`
 }
 
+// inner joins: a cart with no items returns no rows (LEFT JOIN returned a
+// phantom all-NULL item for an emptied cart)
 func (q *Queries) GetUserCart(ctx context.Context, userID pgtype.UUID) ([]GetUserCartRow, error) {
 	rows, err := q.db.Query(ctx, getUserCart, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetUserCartRow
+	items := []GetUserCartRow{}
 	for rows.Next() {
 		var i GetUserCartRow
 		if err := rows.Scan(

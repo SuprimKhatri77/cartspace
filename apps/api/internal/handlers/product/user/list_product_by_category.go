@@ -1,17 +1,23 @@
 package user
 
 import (
-	"log/slog"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"golang.org/x/sync/errgroup"
 )
+
+// maxPriceFilter bounds price_min/price_max (whole currency units) so the
+// cents conversion fits in int32; it matches the max variant price.
+const maxPriceFilter = 1_000_000
 
 func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -44,27 +50,50 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 		}
 
 		priceMin, err := strconv.Atoi(priceMinStr)
-		if err != nil || priceMin < 0 {
+		if err != nil || priceMin < 0 || priceMin > maxPriceFilter {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
-				Message: "Invalid page parameter",
-				Code:    constants.InvalidPageParam,
+				Message: "Invalid price filter",
+				Code:    constants.InvalidPriceFilter,
 			})
 			return
 		}
 
 		priceMax, err := strconv.Atoi(priceMaxStr)
-		if err != nil || priceMax < 0 {
+		if err != nil || priceMax < 0 || priceMax > maxPriceFilter {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
-				Message: "Invalid page parameter",
-				Code:    constants.InvalidPageParam,
+				Message: "Invalid price filter",
+				Code:    constants.InvalidPriceFilter,
 			})
 			return
 		}
 
-		total, err := queries.GetProductsCount(ctx)
+		if _, err := queries.GetCategoryBySlug(ctx, slug); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				c.JSON(http.StatusNotFound, types.APIResponse{
+					Success: false,
+					Message: "Category not found",
+					Code:    constants.CategoryNotFound,
+				})
+				return
+			}
+			rlog.Error(c, "failed to fetch category", err, "slug", slug)
+			c.JSON(http.StatusInternalServerError, types.APIResponse{
+				Success: false,
+				Message: "Failed to process request",
+				Code:    constants.InternalServerError,
+			})
+			return
+		}
+
+		total, err := queries.CountProductsByCategory(ctx, db.CountProductsByCategoryParams{
+			Slug:    slug,
+			Column2: int32(priceMin * 100),
+			Column3: int32(priceMax * 100),
+		})
 		if err != nil {
+			rlog.Error(c, "failed to count products", err)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to fetch products",
@@ -73,15 +102,8 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 			return
 		}
 
-		if total == 0 {
-			c.JSON(http.StatusOK, types.APIResponse{
-				Success: true,
-				Data:    []db.Product{},
-			})
-			return
-		}
-
-		totalPages := (total + pageLimit - 1) / pageLimit
+		// an empty result still has page 1 (with filter options and price range)
+		totalPages := max((total+pageLimit-1)/pageLimit, 1)
 		if page > int(totalPages) {
 			c.JSON(http.StatusBadRequest, types.APIResponse{
 				Success: false,
@@ -93,14 +115,6 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 
 		offset := pageLimit * (page - 1)
 
-		slog.Debug("query params",
-			"slug", slug,
-			"priceMin", priceMin,
-			"priceMax", priceMax,
-			"offset", offset,
-			"limit", pageLimit,
-		)
-
 		g, ctx := errgroup.WithContext(ctx)
 
 		var filterOptions []db.GetCategoryFilterOptionsRow
@@ -110,15 +124,16 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 		g.Go(func() error {
 			switch sort {
 			case "price_asc":
-				rows, err2 := queries.ListProductsByCategoryPriceAsc(ctx, db.ListProductsByCategoryPriceAscParams{
+				rows, err := queries.ListProductsByCategoryPriceAsc(ctx, db.ListProductsByCategoryPriceAscParams{
 					Slug:    slug,
 					Limit:   pageLimit,
 					Offset:  int32(offset),
 					Column2: int32(priceMin * 100),
 					Column3: int32(priceMax * 100),
 				})
-				err = err2
-
+				if err != nil {
+					return err
+				}
 				for _, r := range rows {
 					products = append(products, db.ListProductsByCategoryRow{
 						ID:           r.ID,
@@ -132,14 +147,16 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 					})
 				}
 			case "price_desc":
-				rows, err2 := queries.ListProductsByCategoryPriceDesc(ctx, db.ListProductsByCategoryPriceDescParams{
+				rows, err := queries.ListProductsByCategoryPriceDesc(ctx, db.ListProductsByCategoryPriceDescParams{
 					Slug:    slug,
 					Limit:   pageLimit,
 					Offset:  int32(offset),
 					Column2: int32(priceMin * 100),
 					Column3: int32(priceMax * 100),
 				})
-				err = err2
+				if err != nil {
+					return err
+				}
 				for _, r := range rows {
 					products = append(products, db.ListProductsByCategoryRow{
 						ID:           r.ID,
@@ -153,7 +170,7 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 					})
 				}
 			default:
-				slog.Debug("i am being triggered")
+				var err error
 				products, err = queries.ListProductsByCategory(ctx, db.ListProductsByCategoryParams{
 					Slug:    slug,
 					Limit:   pageLimit,
@@ -161,21 +178,27 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 					Column2: int32(priceMin * 100),
 					Column3: int32(priceMax * 100),
 				})
+				if err != nil {
+					return err
+				}
 			}
-			return err
+			return nil
 		})
 
 		g.Go(func() error {
+			var err error
 			filterOptions, err = queries.GetCategoryFilterOptions(ctx, slug)
 			return err
 		})
 
 		g.Go(func() error {
+			var err error
 			priceRange, err = queries.GetMinMaxSellingPrice(ctx, slug)
 			return err
 		})
 
 		if err := g.Wait(); err != nil {
+			rlog.Error(c, "failed to list category products", err, "slug", slug)
 			c.JSON(http.StatusInternalServerError, types.APIResponse{
 				Success: false,
 				Message: "Failed to process request",
@@ -195,6 +218,7 @@ func ListProductByCategory(queries repository.ProductRepository) gin.HandlerFunc
 				FilterOptions: filterOptions,
 				PriceRange:    priceRange,
 			},
+			Meta: types.NewPaginationMeta(total, page, pageLimit),
 		})
 
 	}
