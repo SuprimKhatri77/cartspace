@@ -2,92 +2,49 @@ package admin
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
 
-const pageLimit int64 = 20
-
-// this is for /admin/products route to display products on the table
+// GetPaginatedProducts lists every product (active or not) for the admin table.
 func GetPaginatedProducts(queries repository.ProductRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
-
-		if err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid page parameter",
-				Code:    constants.InvalidPageParam,
-			})
+		page, ok := httpx.ParsePage(c)
+		if !ok {
 			return
-		}
-
-		if page <= 0 {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Page number must be greater than 0",
-				Code:    constants.InvalidPageParam,
-			})
-			return
-
 		}
 
 		total, err := queries.GetProductsCount(ctx)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to fetch products",
-				Code:    constants.InternalServerError,
-			})
+			httpx.Internal(c, "failed to count products", err)
 			return
 		}
 
-		if total == 0 {
-			c.JSON(http.StatusOK, types.APIResponse{
-				Success: true,
-				Message: "No products created yet",
-				Data:    []db.AdminProductsListRow{},
-				Meta:    types.NewPaginationMeta(total, page, pageLimit),
-			})
-			return
-		}
-		pageCount := (total + pageLimit - 1) / pageLimit
-
-		if int64(page) > pageCount {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Page out of range",
-				Code:    constants.InvalidPageParam,
-			})
+		if !httpx.CheckPageInRange(c, page, total, pageLimit) {
 			return
 		}
 
-		offset := pageLimit * int64(page-1)
-
-		products, err := queries.AdminProductsList(ctx, db.AdminProductsListParams{
-			Limit:  int32(pageLimit),
-			Offset: int32(offset),
-		})
-
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to process request",
-				Code:    constants.InternalServerError,
+		products := []db.AdminProductsListRow{}
+		if total > 0 {
+			products, err = queries.AdminProductsList(ctx, db.AdminProductsListParams{
+				Limit:  int32(pageLimit),
+				Offset: httpx.Offset(page, pageLimit),
 			})
-
-			return
+			if err != nil {
+				httpx.Internal(c, "failed to list products", err)
+				return
+			}
 		}
 
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
+			Message: "Products fetched",
 			Data:    products,
 			Meta:    types.NewPaginationMeta(total, page, pageLimit),
 		})

@@ -65,11 +65,16 @@ func (q *Queries) CreateProductVariant(ctx context.Context, arg CreateProductVar
 }
 
 const deleteVariant = `-- name: DeleteVariant :execresult
-DELETE FROM product_variants WHERE id = $1
+DELETE FROM product_variants WHERE id = $1 AND product_id = $2
 `
 
-func (q *Queries) DeleteVariant(ctx context.Context, id pgtype.UUID) (pgconn.CommandTag, error) {
-	return q.db.Exec(ctx, deleteVariant, id)
+type DeleteVariantParams struct {
+	ID        pgtype.UUID `json:"id"`
+	ProductID pgtype.UUID `json:"product_id"`
+}
+
+func (q *Queries) DeleteVariant(ctx context.Context, arg DeleteVariantParams) (pgconn.CommandTag, error) {
+	return q.db.Exec(ctx, deleteVariant, arg.ID, arg.ProductID)
 }
 
 const fetchExistingProductOptionValues = `-- name: FetchExistingProductOptionValues :many
@@ -164,6 +169,40 @@ func (q *Queries) GetDefaultVariant(ctx context.Context, productID pgtype.UUID) 
 	return i, err
 }
 
+const getProductVariant = `-- name: GetProductVariant :one
+SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at FROM product_variants
+WHERE id = $1 AND product_id = $2
+`
+
+type GetProductVariantParams struct {
+	ID        pgtype.UUID `json:"id"`
+	ProductID pgtype.UUID `json:"product_id"`
+}
+
+// Admin routes address a variant through its product, so a variant id from
+// another product is not found.
+func (q *Queries) GetProductVariant(ctx context.Context, arg GetProductVariantParams) (ProductVariant, error) {
+	row := q.db.QueryRow(ctx, getProductVariant, arg.ID, arg.ProductID)
+	var i ProductVariant
+	err := row.Scan(
+		&i.ID,
+		&i.ProductID,
+		&i.Sku,
+		&i.Stock,
+		&i.Images,
+		&i.ImagePublicIds,
+		&i.SellingPrice,
+		&i.OfferPrice,
+		&i.IsDefault,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.OptionCombinationKey,
+		&i.OfferExpiresAt,
+	)
+	return i, err
+}
+
 const getVariantByID = `-- name: GetVariantByID :one
 SELECT id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at FROM product_variants
 WHERE id = $1
@@ -234,36 +273,32 @@ func (q *Queries) GetVariantsByProduct(ctx context.Context, productID pgtype.UUI
 
 const updateVariant = `-- name: UpdateVariant :one
 UPDATE product_variants SET
-    sku = $2,
-    stock = $3,
-    images = $4,
-    image_public_ids = $5,
-    selling_price = $6,
-    offer_price = $7,
-    is_default = $8,
-    is_active = $9,
-    option_combination_key = $10
-WHERE id = $1
+    stock = $1,
+    images = $2,
+    image_public_ids = $3,
+    selling_price = $4,
+    offer_price = $5,
+    is_default = $6,
+    is_active = $7
+WHERE id = $8 AND product_id = $9
 RETURNING id, product_id, sku, stock, images, image_public_ids, selling_price, offer_price, is_default, is_active, created_at, updated_at, option_combination_key, offer_expires_at
 `
 
 type UpdateVariantParams struct {
-	ID                   pgtype.UUID `json:"id"`
-	Sku                  pgtype.Text `json:"sku"`
-	Stock                int32       `json:"stock"`
-	Images               []string    `json:"images"`
-	ImagePublicIds       []string    `json:"image_public_ids"`
-	SellingPrice         int32       `json:"selling_price"`
-	OfferPrice           pgtype.Int4 `json:"offer_price"`
-	IsDefault            bool        `json:"is_default"`
-	IsActive             bool        `json:"is_active"`
-	OptionCombinationKey string      `json:"option_combination_key"`
+	Stock          int32       `json:"stock"`
+	Images         []string    `json:"images"`
+	ImagePublicIds []string    `json:"image_public_ids"`
+	SellingPrice   int32       `json:"selling_price"`
+	OfferPrice     pgtype.Int4 `json:"offer_price"`
+	IsDefault      bool        `json:"is_default"`
+	IsActive       bool        `json:"is_active"`
+	ID             pgtype.UUID `json:"id"`
+	ProductID      pgtype.UUID `json:"product_id"`
 }
 
+// sku and option_combination_key are set at creation and never change here.
 func (q *Queries) UpdateVariant(ctx context.Context, arg UpdateVariantParams) (ProductVariant, error) {
 	row := q.db.QueryRow(ctx, updateVariant,
-		arg.ID,
-		arg.Sku,
 		arg.Stock,
 		arg.Images,
 		arg.ImagePublicIds,
@@ -271,7 +306,8 @@ func (q *Queries) UpdateVariant(ctx context.Context, arg UpdateVariantParams) (P
 		arg.OfferPrice,
 		arg.IsDefault,
 		arg.IsActive,
-		arg.OptionCombinationKey,
+		arg.ID,
+		arg.ProductID,
 	)
 	var i ProductVariant
 	err := row.Scan(

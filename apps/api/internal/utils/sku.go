@@ -9,7 +9,7 @@ import (
 
 func GenerateSKU(productName string, variantOptions []string) string {
 	trimmedName := strings.TrimSpace(productName)
-	prefix := strings.ToUpper(strings.ReplaceAll(trimmedName[:min(3, len(trimmedName))], " ", ""))
+	prefix := strings.ToUpper(strings.ReplaceAll(firstRunes(trimmedName, 3), " ", ""))
 	if prefix == "" {
 		prefix = "SKU"
 	}
@@ -17,7 +17,7 @@ func GenerateSKU(productName string, variantOptions []string) string {
 	var optionParts []string
 	for _, opt := range variantOptions {
 		if len(opt) > 0 {
-			optionParts = append(optionParts, strings.ToUpper(opt[:min(3, len(opt))]))
+			optionParts = append(optionParts, strings.ToUpper(firstRunes(opt, 3)))
 		}
 	}
 
@@ -29,4 +29,11 @@ func GenerateSKU(productName string, variantOptions []string) string {
 		return fmt.Sprintf("%s-%s-%s", prefix, suffix, random)
 	}
 	return fmt.Sprintf("%s-%s", prefix, random)
+}
+
+// firstRunes returns the first n runes of s, so multibyte names are never cut
+// mid-character.
+func firstRunes(s string, n int) string {
+	r := []rune(s)
+	return string(r[:min(n, len(r))])
 }

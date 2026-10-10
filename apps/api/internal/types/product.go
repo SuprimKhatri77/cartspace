@@ -2,26 +2,20 @@ package types
 
 import db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 
+// CreateProduct is also the update body (update replaces every field).
+// Features may be omitted or empty.
 type CreateProduct struct {
-	Name           string   `json:"name"            binding:"required,min=2,max=50"`
-	Images         []string `json:"images"          binding:"required,min=1,max=5,dive,url"`
-	ImagePublicIDs []string `json:"image_public_ids"  binding:"required,min=1,max=5,dive,required"`
-	Description    string   `json:"description"     binding:"required"`
-	Features       []string `json:"features"        binding:"omitempty,min=1,max=7,dive"`
-	CategoryID     string   `json:"category_id"      binding:"required,uuid"`
-	IsActive       *bool    `json:"is_active"        binding:"required"`
-	IsFeatured     *bool    `json:"is_featured"      binding:"required"`
+	Name           string   `json:"name" binding:"required,min=2,max=50"`
+	Images         []string `json:"images" binding:"required,min=1,max=5,dive,url"`
+	ImagePublicIDs []string `json:"image_public_ids" label:"Image public IDs" binding:"required,min=1,max=5,samelen=Images,dive,required" msg_samelen:"Provide one public ID per image"`
+	Description    string   `json:"description" binding:"required,max=5000"`
+	Features       []string `json:"features" binding:"max=7,dive,required,max=100"`
+	CategoryID     string   `json:"category_id" label:"Category" binding:"required,uuid"`
+	IsActive       *bool    `json:"is_active" binding:"required"`
+	IsFeatured     *bool    `json:"is_featured" binding:"required"`
 }
-type UpdateProduct struct {
-	Name           string   `json:"name"            binding:"required,min=2,max=50"`
-	Images         []string `json:"images"          binding:"required,min=1,max=5,dive,url"`
-	ImagePublicIDs []string `json:"image_public_ids"  binding:"required,min=1,max=5,dive,required"`
-	Description    string   `json:"description"     binding:"required"`
-	Features       []string `json:"features"        binding:"omitempty,min=1,max=7,dive"`
-	CategoryID     string   `json:"category_id"      binding:"required,uuid"`
-	IsActive       *bool    `json:"is_active"        binding:"required"`
-	IsFeatured     *bool    `json:"is_featured"      binding:"required"`
-}
+
+type UpdateProduct CreateProduct
 
 type ListProductsByCategoryResponse struct {
 	FilterOptions []db.GetCategoryFilterOptionsRow `json:"filter_options"`

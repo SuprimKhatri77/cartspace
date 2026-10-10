@@ -19,10 +19,10 @@ type VariantRepository interface {
 	CreateVariantOptionValue(ctx context.Context, params db.CreateVariantOptionValueParams) error
 	GetProductOptionByName(ctx context.Context, params db.GetProductOptionByNameParams) (db.ProductOption, error)
 	GetOptionValueByValue(ctx context.Context, params db.GetOptionValueByValueParams) (db.ProductOptionValue, error)
-	GetVariantByID(ctx context.Context, id pgtype.UUID) (db.ProductVariant, error)
+	GetProductVariant(ctx context.Context, params db.GetProductVariantParams) (db.ProductVariant, error)
 	UpdateVariant(ctx context.Context, params db.UpdateVariantParams) (db.ProductVariant, error)
 	DeleteVariantOptionValues(ctx context.Context, id pgtype.UUID) error
-	DeleteVariant(ctx context.Context, id pgtype.UUID) (pgconn.CommandTag, error)
+	DeleteVariant(ctx context.Context, params db.DeleteVariantParams) (pgconn.CommandTag, error)
 	UpdateVariantStock(ctx context.Context, params db.UpdateVariantStockParams) (db.ProductVariant, error)
 	FetchExistingProductOptions(ctx context.Context, params db.FetchExistingProductOptionsParams) ([]db.ProductOption, error)
 	FetchExistingProductOptionValues(ctx context.Context, params db.FetchExistingProductOptionValuesParams) ([]db.ProductOptionValue, error)
@@ -76,8 +76,8 @@ func (r *variantRepository) GetOptionValueByValue(ctx context.Context, params db
 	return r.queries.GetOptionValueByValue(ctx, params)
 }
 
-func (r *variantRepository) GetVariantByID(ctx context.Context, id pgtype.UUID) (db.ProductVariant, error) {
-	return r.queries.GetVariantByID(ctx, id)
+func (r *variantRepository) GetProductVariant(ctx context.Context, params db.GetProductVariantParams) (db.ProductVariant, error) {
+	return r.queries.GetProductVariant(ctx, params)
 }
 
 func (r *variantRepository) UpdateVariant(ctx context.Context, params db.UpdateVariantParams) (db.ProductVariant, error) {
@@ -88,8 +88,8 @@ func (r *variantRepository) DeleteVariantOptionValues(ctx context.Context, id pg
 	return r.queries.DeleteVariantOptionValues(ctx, id)
 }
 
-func (r *variantRepository) DeleteVariant(ctx context.Context, id pgtype.UUID) (pgconn.CommandTag, error) {
-	return r.queries.DeleteVariant(ctx, id)
+func (r *variantRepository) DeleteVariant(ctx context.Context, params db.DeleteVariantParams) (pgconn.CommandTag, error) {
+	return r.queries.DeleteVariant(ctx, params)
 }
 
 func (r *variantRepository) UpdateVariantStock(ctx context.Context, params db.UpdateVariantStockParams) (db.ProductVariant, error) {

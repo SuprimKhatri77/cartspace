@@ -5,41 +5,28 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
-	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 )
 
+// DeleteCategory deletes a category; its subcategories and products keep
+// existing with a NULL parent/category (ON DELETE SET NULL).
 func DeleteCategory(queries repository.CategoryRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx := c.Request.Context()
-
-		categoryID, err := utils.ConvertToUUID(c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid category ID",
-				Code:    constants.InvalidCategoryID,
-			})
+		categoryID, ok := httpx.PathUUID(c, "id", constants.InvalidCategoryID, "category ID")
+		if !ok {
 			return
 		}
 
-		result, err := queries.DeleteCategory(ctx, categoryID)
+		result, err := queries.DeleteCategory(c.Request.Context(), categoryID)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to delete category",
-				Code:    constants.InternalServerError,
-			})
+			httpx.Internal(c, "failed to delete category", err, "category_id", categoryID)
 			return
 		}
 
 		if result.RowsAffected() == 0 {
-			c.JSON(http.StatusNotFound, types.APIResponse{
-				Success: false,
-				Message: "Category not found",
-				Code:    constants.CategoryNotFound,
-			})
+			httpx.Fail(c, http.StatusNotFound, constants.CategoryNotFound, "Category not found")
 			return
 		}
 

@@ -63,7 +63,8 @@ WITH RECURSIVE ancestors AS (
   FROM categories c
   WHERE c.id = $1
 
-  UNION ALL
+  -- UNION (not ALL) stops at a repeated row, so a corrupt cycle can't recurse forever
+  UNION
 
   SELECT
     c.id,
@@ -78,10 +79,18 @@ WITH RECURSIVE ancestors AS (
 SELECT * FROM ancestors ORDER BY created_at;
 
 -- name: UpdateCategory :one
-UPDATE categories 
+-- Takes the category-tree advisory lock (see the categories_no_cycle trigger,
+-- migration 000004) before the row lock: the trigger alone would take it after
+-- the row is locked, and two concurrent moves (A under B, B under A) deadlock.
+-- The UPDATE can't produce its row without reading tree_lock first.
+WITH tree_lock AS (
+    SELECT pg_advisory_xact_lock(hashtext('categories_tree'))
+)
+UPDATE categories
 SET name = $1, slug = $2, parent_id = $3
-WHERE id = $4 
-RETURNING *;
+FROM tree_lock
+WHERE id = $4
+RETURNING categories.id, categories.name, categories.slug, categories.parent_id, categories.created_at, categories.updated_at;
 
 -- name: DeleteCategory :execresult
 DELETE FROM categories WHERE id = $1;
@@ -93,7 +102,7 @@ SELECT EXISTS (
 
 
 -- name: GetPaginatedCategories :many
-SELECT * FROM categories ORDER BY created_at DESC LIMIT $1 OFFSET $2;
+SELECT * FROM categories ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2;
 
 
 -- name: GetCategoriesCount :one

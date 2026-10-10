@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
@@ -21,14 +22,8 @@ func CreateCart(queries repository.CartRepository, pool *pgxpool.Pool) gin.Handl
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		userIDFromContext := c.MustGet(constants.UserIDKey)
-
-		userID, err := utils.ConvertToUUID(userIDFromContext.(string))
-		if err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid ID format",
-			})
+		userID, ok := httpx.UserID(c)
+		if !ok {
 			return
 		}
 
@@ -201,6 +196,7 @@ func CreateCart(queries repository.CartRepository, pool *pgxpool.Pool) gin.Handl
 
 		c.JSON(http.StatusCreated, types.APIResponse{
 			Success: true,
+			Message: "Item added to cart",
 			Data:    cartItem,
 		})
 

@@ -2,11 +2,10 @@ package admin
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 )
@@ -17,78 +16,38 @@ func GetPaginatedCategories(queries repository.CategoryRepository) gin.HandlerFu
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
-		if err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid page parameter",
-				Code:    constants.InvalidPageParam,
-			})
-			return
-		}
-
-		if page <= 0 {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid page parameter",
-				Code:    constants.InvalidPageParam,
-			})
-
+		page, ok := httpx.ParsePage(c)
+		if !ok {
 			return
 		}
 
 		total, err := queries.GetCategoriesCount(ctx)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to process request",
-				Code:    constants.InternalServerError,
-			})
-
+			httpx.Internal(c, "failed to count categories", err)
 			return
 		}
 
-		if total == 0 {
-			c.JSON(http.StatusOK, types.APIResponse{
-				Success: true,
-				Message: "No categories found",
-				Data:    []db.Category{},
-				Meta:    types.NewPaginationMeta(total, page, pageLimit),
-			})
+		if !httpx.CheckPageInRange(c, page, total, pageLimit) {
 			return
 		}
 
-		totalPages := (total + pageLimit - 1) / pageLimit
-
-		if page > int(totalPages) {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid page parameter",
-				Code:    constants.InvalidPageParam,
+		categories := []db.Category{}
+		if total > 0 {
+			categories, err = queries.GetPaginatedCategories(ctx, db.GetPaginatedCategoriesParams{
+				Limit:  int32(pageLimit),
+				Offset: httpx.Offset(page, pageLimit),
 			})
-			return
-		}
-
-		offset := (page - 1) * int(pageLimit)
-
-		categories, err := queries.GetPaginatedCategories(ctx, db.GetPaginatedCategoriesParams{
-			Limit:  int32(pageLimit),
-			Offset: int32(offset),
-		})
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to process request",
-				Code:    constants.InternalServerError,
-			})
-			return
+			if err != nil {
+				httpx.Internal(c, "failed to list categories", err)
+				return
+			}
 		}
 
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
+			Message: "Categories fetched",
 			Data:    categories,
 			Meta:    types.NewPaginationMeta(total, page, pageLimit),
 		})
-
 	}
 }

@@ -9,9 +9,9 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
-	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 )
 
@@ -19,56 +19,18 @@ func UpdateQuantity(queries repository.CartRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		userIDFromContext := c.MustGet(constants.UserIDKey).(string)
-		userID, err := utils.ConvertToUUID(userIDFromContext)
-
-		if err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid ID format",
-				Code:    constants.InvalidIDFormat,
-			})
+		userID, ok := httpx.UserID(c)
+		if !ok {
 			return
 		}
 
-		cartIDFromParam := c.Param("cartID")
-		if cartIDFromParam == "" {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Missing cart ID",
-				Code:    constants.MissingCartID,
-			})
+		cartID, ok := httpx.PathUUID(c, "cartID", constants.InvalidCartID, "cart ID")
+		if !ok {
 			return
 		}
 
-		cartID, err := utils.ConvertToUUID(cartIDFromParam)
-
-		if err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid cart ID format",
-				Code:    constants.InvalidIDFormat,
-			})
-			return
-		}
-		variantIDFromParam := c.Param("variantID")
-		if variantIDFromParam == "" {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Missing variant ID",
-				Code:    constants.MissingCartID,
-			})
-			return
-		}
-
-		variantID, err := utils.ConvertToUUID(variantIDFromParam)
-
-		if err != nil {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Invalid variant ID format",
-				Code:    constants.InvalidIDFormat,
-			})
+		variantID, ok := httpx.PathUUID(c, "variantID", constants.InvalidVariantID, "variant ID")
+		if !ok {
 			return
 		}
 
@@ -87,11 +49,7 @@ func UpdateQuantity(queries repository.CartRepository) gin.HandlerFunc {
 				})
 				return
 			}
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to process request",
-				Code:    constants.InternalServerError,
-			})
+			httpx.Internal(c, "failed to update cart item", err)
 			return
 		}
 
@@ -114,11 +72,7 @@ func UpdateQuantity(queries repository.CartRepository) gin.HandlerFunc {
 
 			if err != nil {
 
-				c.JSON(http.StatusInternalServerError, types.APIResponse{
-					Success: false,
-					Message: "Failed to process request",
-					Code:    constants.InternalServerError,
-				})
+				httpx.Internal(c, "failed to update cart item", err)
 				return
 			}
 
@@ -162,17 +116,18 @@ func UpdateQuantity(queries repository.CartRepository) gin.HandlerFunc {
 					})
 					return
 				}
-				c.JSON(http.StatusInternalServerError, types.APIResponse{
-					Success: false,
-					Message: "Failed to process request",
-					Code:    constants.InternalServerError,
-				})
+				httpx.Internal(c, "failed to update cart item", err)
 				return
 			}
 		}
 
+		message := "Cart item updated"
+		if req.Quantity == 0 {
+			message = "Cart item removed"
+		}
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
+			Message: message,
 		})
 
 	}

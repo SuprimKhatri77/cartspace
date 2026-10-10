@@ -8,26 +8,20 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/repository"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"golang.org/x/sync/errgroup"
 )
 
+// GetProduct returns a visible product's detail page: the product with its
+// default variant, its active variants and up to 8 related products.
 func GetProduct(queries repository.ProductRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
 		productSlug := c.Param("productSlug")
-
-		if productSlug == "" {
-			c.JSON(http.StatusBadRequest, types.APIResponse{
-				Success: false,
-				Message: "Missing product slug",
-				Code:    constants.MissingProductSlug,
-			})
-			return
-		}
 
 		g, ctx := errgroup.WithContext(ctx)
 
@@ -57,24 +51,16 @@ func GetProduct(queries repository.ProductRepository) gin.HandlerFunc {
 		if err := g.Wait(); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				rlog.Warn(c, "product not found", "slug", productSlug)
-				c.JSON(http.StatusNotFound, types.APIResponse{
-					Success: false,
-					Message: "Product not found",
-					Code:    constants.ProductNotFound,
-				})
+				httpx.Fail(c, http.StatusNotFound, constants.ProductNotFound, "Product not found")
 				return
 			}
-			rlog.Error(c, "failed to fetch product", err, "slug", productSlug)
-			c.JSON(http.StatusInternalServerError, types.APIResponse{
-				Success: false,
-				Message: "Failed to process request",
-				Code:    constants.InternalServerError,
-			})
+			httpx.Internal(c, "failed to fetch product", err, "slug", productSlug)
 			return
 		}
 
 		c.JSON(http.StatusOK, types.APIResponse{
 			Success: true,
+			Message: "Product fetched",
 			Data: types.GetProductDetailResponse{
 				ProductDetail:   productDetail,
 				Variants:        variants,

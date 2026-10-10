@@ -138,7 +138,8 @@ WITH RECURSIVE ancestors AS (
   FROM categories c
   WHERE c.id = $1
 
-  UNION ALL
+  -- UNION (not ALL) stops at a repeated row, so a corrupt cycle can't recurse forever
+  UNION
 
   SELECT
     c.id,
@@ -324,7 +325,7 @@ func (q *Queries) GetChildCategories(ctx context.Context, parentID pgtype.UUID) 
 }
 
 const getPaginatedCategories = `-- name: GetPaginatedCategories :many
-SELECT id, name, slug, parent_id, created_at, updated_at FROM categories ORDER BY created_at DESC LIMIT $1 OFFSET $2
+SELECT id, name, slug, parent_id, created_at, updated_at FROM categories ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2
 `
 
 type GetPaginatedCategoriesParams struct {
@@ -391,10 +392,14 @@ func (q *Queries) GetRootCategories(ctx context.Context) ([]Category, error) {
 }
 
 const updateCategory = `-- name: UpdateCategory :one
-UPDATE categories 
+WITH tree_lock AS (
+    SELECT pg_advisory_xact_lock(hashtext('categories_tree'))
+)
+UPDATE categories
 SET name = $1, slug = $2, parent_id = $3
-WHERE id = $4 
-RETURNING id, name, slug, parent_id, created_at, updated_at
+FROM tree_lock
+WHERE id = $4
+RETURNING categories.id, categories.name, categories.slug, categories.parent_id, categories.created_at, categories.updated_at
 `
 
 type UpdateCategoryParams struct {
@@ -404,6 +409,10 @@ type UpdateCategoryParams struct {
 	ID       pgtype.UUID `json:"id"`
 }
 
+// Takes the category-tree advisory lock (see the categories_no_cycle trigger,
+// migration 000004) before the row lock: the trigger alone would take it after
+// the row is locked, and two concurrent moves (A under B, B under A) deadlock.
+// The UPDATE can't produce its row without reading tree_lock first.
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
 	row := q.db.QueryRow(ctx, updateCategory,
 		arg.Name,

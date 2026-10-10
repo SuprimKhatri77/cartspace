@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
@@ -35,6 +36,16 @@ func Init() {
 
 		_ = v.RegisterValidation("not_blank", func(fl validator.FieldLevel) bool {
 			return strings.TrimSpace(fl.Field().String()) != ""
+		})
+
+		// samelen=Other: this slice has as many items as the sibling field Other
+		// (e.g. one Cloudinary public ID per image URL).
+		_ = v.RegisterValidation("samelen", func(fl validator.FieldLevel) bool {
+			other := reflect.Indirect(fl.Parent()).FieldByName(fl.Param())
+			if !other.IsValid() || other.Kind() != reflect.Slice || fl.Field().Kind() != reflect.Slice {
+				return false
+			}
+			return fl.Field().Len() == other.Len()
 		})
 	})
 }

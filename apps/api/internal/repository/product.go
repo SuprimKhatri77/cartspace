@@ -26,8 +26,6 @@ type ProductRepository interface {
 	// for /category/:slug route
 	GetCategoryFilterOptions(ctx context.Context, slug string) ([]db.GetCategoryFilterOptionsRow, error)
 	ListProductsByCategory(ctx context.Context, params db.ListProductsByCategoryParams) ([]db.ListProductsByCategoryRow, error)
-	ListProductsByCategoryPriceAsc(ctx context.Context, params db.ListProductsByCategoryPriceAscParams) ([]db.ListProductsByCategoryPriceAscRow, error)
-	ListProductsByCategoryPriceDesc(ctx context.Context, params db.ListProductsByCategoryPriceDescParams) ([]db.ListProductsByCategoryPriceDescRow, error)
 	GetMinMaxSellingPrice(ctx context.Context, slug string) (db.GetMinMaxSellingPriceRow, error)
 
 	// for /products/:slug
