@@ -4,16 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate": "tsx src/generate.ts"
+    "generate": "tsx src/generate.ts",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@asteasolutions/zod-to-openapi": "9.1.0",
     "@repo/types": "*",
-    "zod": "^4.3.6",
-    "zod-openapi": "^5.4.6"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@repo/typescript-config": "*",
-    "@types/node": "^25.6.0",
+    "@types/node": "^22.15.3",
     "tsx": "^4.19.2",
     "typescript": "5.9.2"
   }

@@ -1,16 +1,17 @@
-import { writeFileSync, mkdirSync } from "fs";
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { generateOpenAPIDocument } from "./schema";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { generateOpenAPIDocument } from "./schema.ts";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-const outPath = `${__dirname}/../../../apps/api/openapi.json`;
-
-const doc = generateOpenAPIDocument();
-const json = JSON.stringify(doc, null, 2);
+const outPath = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../../apps/api/openapi.json",
+);
 
 mkdirSync(dirname(outPath), { recursive: true });
-writeFileSync(outPath, json, "utf-8");
+writeFileSync(
+  outPath,
+  `${JSON.stringify(generateOpenAPIDocument(), null, 2)}\n`,
+);
 
-console.log("Generated openapi.json at", outPath);
+console.log("Generated", outPath);

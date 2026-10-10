@@ -1,0 +1,149 @@
+import { z } from "zod";
+import { Uuid } from "@repo/types";
+import { schemas } from "../schemas.ts";
+import { body, operation } from "./shared.ts";
+
+const tag = "Products";
+const productParam = z.object({ productID: Uuid });
+const pageQuery = z.object({
+  page: z
+    .int()
+    .min(1)
+    .max(100_000)
+    .optional()
+    .openapi({ description: "1-based page number (default 1)" }),
+});
+
+export function registerProductPaths() {
+  operation({
+    method: "get",
+    path: "/api/v1/products",
+    operationId: "listProducts",
+    tag,
+    summary: "List products",
+    description:
+      "Visible products (active, with an active default variant), 20 per page, newest first, priced by their default variant.",
+    request: { query: pageQuery },
+    success: {
+      status: 200,
+      description: "Products fetched",
+      schema: schemas.ProductListResponseSchema,
+    },
+    errors: { 400: "Invalid or out-of-range page (INVALID_PAGE_PARAMETER)" },
+  });
+
+  operation({
+    method: "get",
+    path: "/api/v1/products/{productSlug}",
+    operationId: "getProductBySlug",
+    tag,
+    summary: "Get a product page",
+    description:
+      "The product with its default variant, its active variants and related products.",
+    request: { params: z.object({ productSlug: z.string() }) },
+    success: {
+      status: 200,
+      description: "Product fetched",
+      schema: schemas.ProductPageResponseSchema,
+    },
+    errors: { 404: "No visible product with this slug (PRODUCT_NOT_FOUND)" },
+  });
+
+  operation({
+    method: "get",
+    path: "/api/v1/admin/products",
+    operationId: "adminListProducts",
+    tag,
+    summary: "List all products",
+    description: "Every product, active or not, 20 per page, newest first.",
+    auth: "admin",
+    request: { query: pageQuery },
+    success: {
+      status: 200,
+      description: "Products fetched",
+      schema: schemas.AdminProductListResponseSchema,
+    },
+    errors: { 400: "Invalid or out-of-range page (INVALID_PAGE_PARAMETER)" },
+  });
+
+  operation({
+    method: "post",
+    path: "/api/v1/admin/products",
+    operationId: "adminCreateProduct",
+    tag,
+    summary: "Create a product",
+    description:
+      "The slug comes from the name, with a random suffix when it is taken.",
+    auth: "admin",
+    request: body(schemas.ProductBodySchema),
+    success: {
+      status: 201,
+      description: "Product created",
+      schema: schemas.ProductResponseSchema,
+    },
+    errors: {
+      400: "Invalid body (VALIDATION_FAILED)",
+      404: "Category not found (CATEGORY_NOT_FOUND)",
+    },
+  });
+
+  operation({
+    method: "get",
+    path: "/api/v1/admin/products/{productID}",
+    operationId: "adminGetProduct",
+    tag,
+    summary: "Get a product",
+    auth: "admin",
+    request: { params: productParam },
+    success: {
+      status: 200,
+      description: "Product fetched",
+      schema: schemas.ProductResponseSchema,
+    },
+    errors: {
+      400: "Invalid id (INVALID_PRODUCT_ID)",
+      404: "Product not found (PRODUCT_NOT_FOUND)",
+    },
+  });
+
+  operation({
+    method: "put",
+    path: "/api/v1/admin/products/{productID}",
+    operationId: "adminUpdateProduct",
+    tag,
+    summary: "Update a product",
+    description:
+      "Replaces every field. The slug only changes when the name does.",
+    auth: "admin",
+    request: { params: productParam, ...body(schemas.ProductBodySchema) },
+    success: {
+      status: 200,
+      description: "Product updated",
+      schema: schemas.ProductResponseSchema,
+    },
+    errors: {
+      400: "Invalid id or body (INVALID_PRODUCT_ID, VALIDATION_FAILED)",
+      404: "Product or category not found (PRODUCT_NOT_FOUND, CATEGORY_NOT_FOUND)",
+    },
+  });
+
+  operation({
+    method: "delete",
+    path: "/api/v1/admin/products/{productID}",
+    operationId: "adminDeleteProduct",
+    tag,
+    summary: "Delete a product",
+    description: "Also deletes its variants, options and cart items.",
+    auth: "admin",
+    request: { params: productParam },
+    success: {
+      status: 200,
+      description: "Product deleted",
+      schema: schemas.MessageResponseSchema,
+    },
+    errors: {
+      400: "Invalid id (INVALID_PRODUCT_ID)",
+      404: "Product not found (PRODUCT_NOT_FOUND)",
+    },
+  });
+}
