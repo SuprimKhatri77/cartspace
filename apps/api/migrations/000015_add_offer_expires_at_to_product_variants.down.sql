@@ -1,1 +1,0 @@
-ALTER TABLE product_variants DROP COLUMN IF EXISTS offer_expires_at;

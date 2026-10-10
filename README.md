@@ -56,7 +56,12 @@ bun run docker:dev:up     # api :5000, web :3000, postgres :5432
 bun run docker:dev:down
 ```
 
-migrations run automatically when the api container starts.
+migrations run automatically when the api container starts. to wipe the dev database and start over (e.g. after migrations were rewritten):
+
+```sh
+bun run docker:dev:reset                         # deletes the db volume, rebuilds and starts the stack
+docker exec cartspace-api go run ./cmd/seed      # recreate the seed admin + customer
+```
 
 ### run locally
 
@@ -75,6 +80,7 @@ api docs are available at `http://localhost:5000/docs` once the api is running.
 | -------------------------------------- | ------------------------------------------------------------- |
 | `bun run dev`                          | run api + web                                                 |
 | `bun run db:migrate` / `db:migrate:down` | apply / roll back migrations (`N=1` for down)               |
+| `bun run docker:dev:reset`             | drop the dev db volume and restart the docker stack           |
 | `bun run db:sqlc`                      | regenerate sqlc code                                          |
 | `bun run db:seed`                      | create the seed admin + customer (see `.env.example`)         |
 | `bun run generate`                     | regenerate openapi.json                                       |

@@ -9,3 +9,7 @@ CREATE TABLE cart_items (
     CONSTRAINT cart_items_cart_variant_unique UNIQUE (cart_id, variant_id),
     CONSTRAINT cart_items_quantity_positive CHECK (quantity > 0)
 );
+
+CREATE TRIGGER cart_items_updated_at
+BEFORE UPDATE ON cart_items
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();

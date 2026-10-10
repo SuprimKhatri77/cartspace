@@ -17,6 +17,7 @@
     "db:seed": "cd apps/api && make seed",
     "docker:dev:up": "docker compose --env-file .env.local -f docker-compose.dev.yml up --build",
     "docker:dev:down": "docker compose --env-file .env.local -f docker-compose.dev.yml down",
+    "docker:dev:reset": "docker compose --env-file .env.local -f docker-compose.dev.yml down -v && bun run docker:dev:up",
     "prepush": "bun run check-types && bun run lint:go && bun run test:go && bun run build",
     "ci": "bun run db:sqlc:check && bun run check-types && bun run lint && bun run lint:go && bun run test:go && bun run build",
     "prepare": "husky"
