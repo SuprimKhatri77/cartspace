@@ -3,7 +3,9 @@ import { SHIPPING_COUNTRIES } from "@repo/types";
 import { COUNTRY_NAMES, countryName } from "@/modules/checkout/lib/countries";
 import {
   formatOrderDate,
+  formatShortDate,
   orderLabel,
+  stepDate,
   timelineStep,
 } from "@/modules/checkout/lib/orders";
 
@@ -26,5 +28,17 @@ describe("orders", () => {
       expect(COUNTRY_NAMES[code]).toBeTruthy();
     }
     expect(countryName("XX")).toBe("XX");
+  });
+
+  test("step dates", () => {
+    const order = {
+      paid_at: "2026-10-10T09:00:00Z",
+      shipped_at: "2026-10-11T23:30:00Z",
+      delivered_at: null,
+    };
+    expect(stepDate(order, "paid")).toBe(order.paid_at);
+    expect(stepDate(order, "delivered")).toBeNull();
+    expect(stepDate(order, "pending")).toBeNull();
+    expect(formatShortDate(order.shipped_at)).toBe("11 Oct");
   });
 });

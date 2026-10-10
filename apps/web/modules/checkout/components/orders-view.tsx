@@ -18,6 +18,8 @@ import {
   orderLabel,
   STATUS_LABELS,
   TIMELINE,
+  formatShortDate,
+  stepDate,
   timelineStep,
 } from "../lib/orders";
 import { useOrder, useOrders } from "../queries";
@@ -248,6 +250,7 @@ export function OrderView({ number }: { number: number }) {
                 {i <= step && <CheckIcon weight="bold" className="size-3" />}
                 {STATUS_LABELS[status]}
               </p>
+              <StepDate iso={stepDate(order, status)} />
             </li>
           ))}
         </ol>
@@ -256,7 +259,7 @@ export function OrderView({ number }: { number: number }) {
           {order.status === "cancelled"
             ? "This order was cancelled before payment. Nothing was charged."
             : order.status === "refunded"
-              ? "This order was refunded."
+              ? `This order was refunded${order.refunded_at ? ` on ${formatOrderDate(order.refunded_at)}` : ""}. The money goes back to the card it was paid with.`
               : "Waiting for payment to be confirmed."}
         </p>
       )}
@@ -325,9 +328,26 @@ export function OrderView({ number }: { number: number }) {
               {countryName(a.country)}
             </p>
           </div>
+          {order.tracking_number && (
+            <div>
+              <p className="eyebrow mb-2">Tracking number</p>
+              <p className="font-mono text-xs break-all select-all">
+                {order.tracking_number}
+              </p>
+            </div>
+          )}
           <OrderTotals order={order} />
         </aside>
       </div>
     </div>
+  );
+}
+
+function StepDate({ iso }: { iso: string | null }) {
+  if (!iso) return null;
+  return (
+    <p className="text-[0.6875rem] text-muted-foreground tabular-nums">
+      {formatShortDate(iso)}
+    </p>
   );
 }

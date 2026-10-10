@@ -1,4 +1,8 @@
 import type { AdminProductFilters } from "./lib/filters";
+import type {
+  AdminOrderFilters,
+  AdminReviewFilters,
+} from "./lib/order-filters";
 
 // Admin data is the same for every admin, so the keys carry no user id.
 export const adminKeys = {
@@ -12,4 +16,11 @@ export const adminKeys = {
   variants: (productId: string) =>
     [...adminKeys.products(), "variants", productId] as const,
   categories: () => [...adminKeys.all, "categories"] as const,
+  orders: () => [...adminKeys.all, "orders"] as const,
+  orderList: (filters: AdminOrderFilters) =>
+    [...adminKeys.orders(), "list", filters] as const,
+  order: (number: number) => [...adminKeys.orders(), "detail", number] as const,
+  reviews: () => [...adminKeys.all, "reviews"] as const,
+  reviewList: (filters: AdminReviewFilters) =>
+    [...adminKeys.reviews(), "list", filters] as const,
 };

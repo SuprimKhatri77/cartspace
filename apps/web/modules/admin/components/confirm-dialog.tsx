@@ -18,7 +18,10 @@ export function ConfirmDialog({
   description,
   confirmLabel,
   pending,
+  pendingLabel = "Deleting…",
+  tone = "destructive",
   onConfirm,
+  children,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -26,7 +29,12 @@ export function ConfirmDialog({
   description: React.ReactNode;
   confirmLabel: string;
   pending: boolean;
+  pendingLabel?: string;
+  /** destructive for deletes and refunds, default for the rest. */
+  tone?: "destructive" | "default";
   onConfirm: () => void;
+  /** Extra fields, between the description and the buttons. */
+  children?: React.ReactNode;
 }) {
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
@@ -39,6 +47,7 @@ export function ConfirmDialog({
             {description}
           </DialogDescription>
         </DialogHeader>
+        {children}
         <DialogFooter>
           <Button
             variant="outline"
@@ -47,8 +56,8 @@ export function ConfirmDialog({
           >
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={pending}>
-            {pending ? "Deleting…" : confirmLabel}
+          <Button variant={tone} onClick={onConfirm} disabled={pending}>
+            {pending ? pendingLabel : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
