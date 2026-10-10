@@ -458,7 +458,7 @@ func (q *Queries) GetOrderForUpdate(ctx context.Context, id pgtype.UUID) (Order,
 }
 
 const getOrderItems = `-- name: GetOrderItems :many
-SELECT id, order_id, variant_id, product_id, product_name, product_slug, sku, options, image, unit_price, quantity, line_total FROM order_items WHERE order_id = $1 ORDER BY product_name, id
+SELECT id, order_id, variant_id, product_id, product_name, product_slug, sku, options, image, unit_price, quantity, line_total, stock_shortfall FROM order_items WHERE order_id = $1 ORDER BY product_name, id
 `
 
 func (q *Queries) GetOrderItems(ctx context.Context, orderID pgtype.UUID) ([]OrderItem, error) {
@@ -483,6 +483,7 @@ func (q *Queries) GetOrderItems(ctx context.Context, orderID pgtype.UUID) ([]Ord
 			&i.UnitPrice,
 			&i.Quantity,
 			&i.LineTotal,
+			&i.StockShortfall,
 		); err != nil {
 			return nil, err
 		}
@@ -784,12 +785,13 @@ func (q *Queries) RemoveOrderedCartLines(ctx context.Context, arg RemoveOrderedC
 
 const restoreStock = `-- name: RestoreStock :exec
 UPDATE product_variants pv
-SET stock = pv.stock + oi.quantity
+SET stock = pv.stock + oi.quantity - oi.stock_shortfall
 FROM order_items oi
 WHERE oi.order_id = $1 AND pv.id = oi.variant_id
 `
 
-// Returns a released order's stock (variants deleted since are skipped).
+// Returns an order's stock: the units it took, so not those it was short
+// of (variants deleted since are skipped).
 func (q *Queries) RestoreStock(ctx context.Context, orderID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, restoreStock, orderID)
 	return err
@@ -807,32 +809,53 @@ taken AS (
     SET stock = GREATEST(pv.stock - w.quantity, 0)
     FROM want w, product_variants before
     WHERE pv.id = w.variant_id AND before.id = pv.id
-    RETURNING pv.id, before.stock < w.quantity AS short
+    RETURNING pv.id, GREATEST(w.quantity - before.stock, 0)::int AS shortfall
 )
-SELECT id FROM taken WHERE short
+SELECT id, shortfall FROM taken WHERE shortfall > 0
 `
+
+type RetakeStockRow struct {
+	ID        pgtype.UUID `json:"id"`
+	Shortfall int32       `json:"shortfall"`
+}
 
 // Takes stock again for an order paid after it was released (stock can't
 // go below 0, so a shortfall means oversold units; returns the variants
-// that came up short).
-func (q *Queries) RetakeStock(ctx context.Context, orderID pgtype.UUID) ([]pgtype.UUID, error) {
+// that came up short, and by how much).
+func (q *Queries) RetakeStock(ctx context.Context, orderID pgtype.UUID) ([]RetakeStockRow, error) {
 	rows, err := q.db.Query(ctx, retakeStock, orderID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []pgtype.UUID{}
+	items := []RetakeStockRow{}
 	for rows.Next() {
-		var id pgtype.UUID
-		if err := rows.Scan(&id); err != nil {
+		var i RetakeStockRow
+		if err := rows.Scan(&i.ID, &i.Shortfall); err != nil {
 			return nil, err
 		}
-		items = append(items, id)
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	return items, nil
+}
+
+const setItemShortfall = `-- name: SetItemShortfall :exec
+UPDATE order_items SET stock_shortfall = $1
+WHERE order_id = $2 AND variant_id = $3
+`
+
+type SetItemShortfallParams struct {
+	Shortfall int32       `json:"-"`
+	OrderID   pgtype.UUID `json:"order_id"`
+	VariantID pgtype.UUID `json:"variant_id"`
+}
+
+func (q *Queries) SetItemShortfall(ctx context.Context, arg SetItemShortfallParams) error {
+	_, err := q.db.Exec(ctx, setItemShortfall, arg.Shortfall, arg.OrderID, arg.VariantID)
+	return err
 }
 
 const setOrderSession = `-- name: SetOrderSession :exec

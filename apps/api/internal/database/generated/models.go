@@ -73,18 +73,19 @@ type Order struct {
 }
 
 type OrderItem struct {
-	ID          pgtype.UUID     `json:"id"`
-	OrderID     pgtype.UUID     `json:"order_id"`
-	VariantID   pgtype.UUID     `json:"variant_id"`
-	ProductID   pgtype.UUID     `json:"product_id"`
-	ProductName string          `json:"product_name"`
-	ProductSlug string          `json:"product_slug"`
-	Sku         pgtype.Text     `json:"sku"`
-	Options     json.RawMessage `json:"options"`
-	Image       string          `json:"image"`
-	UnitPrice   int32           `json:"unit_price"`
-	Quantity    int32           `json:"quantity"`
-	LineTotal   int32           `json:"line_total"`
+	ID             pgtype.UUID     `json:"id"`
+	OrderID        pgtype.UUID     `json:"order_id"`
+	VariantID      pgtype.UUID     `json:"variant_id"`
+	ProductID      pgtype.UUID     `json:"product_id"`
+	ProductName    string          `json:"product_name"`
+	ProductSlug    string          `json:"product_slug"`
+	Sku            pgtype.Text     `json:"sku"`
+	Options        json.RawMessage `json:"options"`
+	Image          string          `json:"image"`
+	UnitPrice      int32           `json:"unit_price"`
+	Quantity       int32           `json:"quantity"`
+	LineTotal      int32           `json:"line_total"`
+	StockShortfall int32           `json:"-"`
 }
 
 type Payment struct {

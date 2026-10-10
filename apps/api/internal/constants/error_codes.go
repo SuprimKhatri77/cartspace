@@ -60,6 +60,7 @@ const (
 	InvalidAddressID        = "INVALID_ADDRESS_ID"
 	InvalidOrderTransition  = "INVALID_ORDER_TRANSITION"
 	OrderAlreadyPaid        = "ORDER_ALREADY_PAID"
+	RefundRefused           = "REFUND_REFUSED"
 
 	// wishlist
 	WishlistFull = "WISHLIST_FULL"

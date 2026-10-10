@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/payments"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 )
 
@@ -33,6 +35,10 @@ var from = map[Action][]string{
 	Cancel:  {"pending"},
 	Refund:  {"paid", "shipped", "delivered"},
 }
+
+// refundTimeout bounds a refund, Stripe's answer included (the order row
+// stays locked meanwhile).
+const refundTimeout = 45 * time.Second
 
 var done = map[Action]string{Ship: "shipped", Deliver: "delivered", Cancel: "cancelled", Refund: "refunded"}
 
@@ -57,6 +63,10 @@ var (
 		"This order has just been paid, so it can't be cancelled. Refund it instead."}
 	errStripe = &Refusal{http.StatusBadGateway, constants.PaymentProviderError,
 		"Stripe didn't answer, so nothing was changed. Try again."}
+	errProcessing = &Refusal{http.StatusConflict, constants.InvalidOrderTransition,
+		"Stripe is still processing this order's payment. Try again once it settles."}
+	errOpening = &Refusal{http.StatusConflict, constants.InvalidOrderTransition,
+		"This checkout is still opening. Try again in a minute."}
 	errNoPayment = &Refusal{http.StatusConflict, constants.InvalidOrderTransition,
 		"No payment is recorded for this order, so there is nothing to refund"}
 )
@@ -114,6 +124,13 @@ func (s *Service) CancelPending(ctx context.Context, number int64) (db.Order, er
 		return db.Order{}, errTransition(Cancel, order.Status)
 	}
 
+	// A pending order without a Stripe page is either still opening one
+	// (Start sets it after its transaction) or failed to: cancelling now
+	// could leave a payable page behind, so wait until the reservation runs out.
+	if !order.StripeSessionID.Valid && s.now().Sub(order.CreatedAt.Time) < ReservationTTL {
+		return db.Order{}, errOpening
+	}
+
 	if order.StripeSessionID.Valid && s.provider != nil {
 		if err := s.provider.ExpireSession(ctx, order.StripeSessionID.String); err != nil {
 			// Expiring fails for a page that is already complete or expired.
@@ -128,8 +145,9 @@ func (s *Service) CancelPending(ctx context.Context, number int64) (db.Order, er
 				}
 				return db.Order{}, errAlreadyPaid
 			case !session.Expired:
-				slog.Error("checkout: cancel: expire session", "order", number, "err", err)
-				return db.Order{}, errStripe
+				// Complete but unpaid: a delayed payment method is settling.
+				slog.Warn("checkout: cancel: session not expirable", "order", number, "err", err)
+				return db.Order{}, errProcessing
 			}
 		}
 	}
@@ -147,6 +165,10 @@ func (s *Service) CancelPending(ctx context.Context, number int64) (db.Order, er
 // The order stays locked across the Stripe call, and the refund is keyed by
 // the order, so a retry after a failure here can't refund twice.
 func (s *Service) RefundPaid(ctx context.Context, number int64, restock bool) (db.Order, error) {
+	// Once Stripe is asked, finish recording the answer even if the admin's
+	// request goes away: a refund Stripe made must not stay "paid" here.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), refundTimeout)
+	defer cancel()
 	return s.change(ctx, number, Refund, func(qtx *db.Queries, order db.Order) (db.Order, error) {
 		payment, err := qtx.GetOrderPayment(ctx, order.ID)
 		if errors.Is(err, pgx.ErrNoRows) || (err == nil && !payment.StripePaymentIntentID.Valid) {
@@ -157,6 +179,11 @@ func (s *Service) RefundPaid(ctx context.Context, number int64, restock bool) (d
 		}
 
 		refundID, err := s.provider.Refund(ctx, payment.StripePaymentIntentID.String, "refund-"+utils.UUIDToString(order.ID))
+		var refused *payments.RefusedError
+		if errors.As(err, &refused) {
+			return db.Order{}, &Refusal{http.StatusConflict, constants.RefundRefused,
+				"Stripe refused the refund: " + refused.Message}
+		}
 		if err != nil {
 			slog.Error("checkout: refund", "order", number, "err", err)
 			return db.Order{}, errStripe

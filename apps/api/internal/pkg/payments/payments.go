@@ -11,6 +11,12 @@ import (
 // ErrInvalidSignature means a webhook's signature didn't verify.
 var ErrInvalidSignature = errors.New("payments: invalid webhook signature")
 
+// RefusedError is the provider declining a request (a disputed charge, a
+// short balance): retrying won't help, unlike an error reaching it.
+type RefusedError struct{ Message string }
+
+func (e *RefusedError) Error() string { return "payments: refused: " + e.Message }
+
 // LineItem is one priced line of a hosted checkout page.
 type LineItem struct {
 	Name       string
@@ -75,7 +81,9 @@ type Provider interface {
 	GetSession(ctx context.Context, id string) (Session, error)
 	ExpireSession(ctx context.Context, id string) error
 	// Refund returns a payment in full and gives the refund's id. The
-	// idempotency key makes a retry return the same refund, not a second one.
+	// idempotency key makes a retry return the same refund, not a second one;
+	// a payment refunded already (a retry after the key expired) gives the
+	// existing refund. A refusal is a *RefusedError.
 	Refund(ctx context.Context, paymentIntentID, idempotencyKey string) (string, error)
 	ParseEvent(payload []byte, signature string) (Event, error)
 }

@@ -144,7 +144,7 @@ export function registerAdminPaths() {
     },
     errors: {
       ...orderErrors,
-      409: "Not pending, or just paid (INVALID_ORDER_TRANSITION, ORDER_ALREADY_PAID)",
+      409: "Not pending, still opening its checkout or settling a payment, or just paid (INVALID_ORDER_TRANSITION, ORDER_ALREADY_PAID)",
       502: "Stripe didn't answer; nothing changed (PAYMENT_PROVIDER_ERROR)",
     },
   });
@@ -167,7 +167,7 @@ export function registerAdminPaths() {
     errors: {
       400: "Invalid order number or body (INVALID_ORDER_NUMBER, VALIDATION_FAILED)",
       404: orderErrors[404],
-      409: "Not refundable in its status, or no payment recorded (INVALID_ORDER_TRANSITION)",
+      409: "Not refundable in its status, no payment recorded, or Stripe declined it (INVALID_ORDER_TRANSITION, REFUND_REFUSED)",
       502: "Stripe didn't answer; nothing changed (PAYMENT_PROVIDER_ERROR)",
       503: "Payments aren't set up (PAYMENTS_UNAVAILABLE)",
     },

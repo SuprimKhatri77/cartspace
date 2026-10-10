@@ -21,7 +21,7 @@ import (
 
 const (
 	ordersPageSize  int64 = 20
-	maxOrdersSearch       = 100
+	maxOrdersSearch int   = 100
 )
 
 var orderStatuses = map[string]bool{

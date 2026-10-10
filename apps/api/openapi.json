@@ -119,6 +119,7 @@
           "ORDER_NOT_FOUND",
           "INVALID_ORDER_TRANSITION",
           "ORDER_ALREADY_PAID",
+          "REFUND_REFUSED",
           "INVALID_ORDER_NUMBER",
           "ADDRESS_NOT_FOUND",
           "INVALID_ADDRESS_ID",
@@ -7725,7 +7726,7 @@
             }
           },
           "409": {
-            "description": "Not pending, or just paid (INVALID_ORDER_TRANSITION, ORDER_ALREADY_PAID)",
+            "description": "Not pending, still opening its checkout or settling a payment, or just paid (INVALID_ORDER_TRANSITION, ORDER_ALREADY_PAID)",
             "content": {
               "application/json": {
                 "schema": {
@@ -7843,7 +7844,7 @@
             }
           },
           "409": {
-            "description": "Not refundable in its status, or no payment recorded (INVALID_ORDER_TRANSITION)",
+            "description": "Not refundable in its status, no payment recorded, or Stripe declined it (INVALID_ORDER_TRANSITION, REFUND_REFUSED)",
             "content": {
               "application/json": {
                 "schema": {

@@ -14,6 +14,9 @@ sql:
         overrides:
           - column: "users.password_hash"
             go_struct_tag: 'json:"-"'
+          # bookkeeping for restocks, not part of what was bought
+          - column: "order_items.stock_shortfall"
+            go_struct_tag: 'json:"-"'
           # active_offer_price returns NULL without an active offer; sqlc
           # can't infer a function's nullability.
           - column: "storefront_products.offer_price"

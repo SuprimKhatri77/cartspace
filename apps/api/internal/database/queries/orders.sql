@@ -22,7 +22,7 @@ WHERE pv.id = x.id;
 -- name: RetakeStock :many
 -- Takes stock again for an order paid after it was released (stock can't
 -- go below 0, so a shortfall means oversold units; returns the variants
--- that came up short).
+-- that came up short, and by how much).
 WITH want AS (
     SELECT oi.variant_id, oi.quantity
     FROM order_items oi
@@ -34,14 +34,19 @@ taken AS (
     SET stock = GREATEST(pv.stock - w.quantity, 0)
     FROM want w, product_variants before
     WHERE pv.id = w.variant_id AND before.id = pv.id
-    RETURNING pv.id, before.stock < w.quantity AS short
+    RETURNING pv.id, GREATEST(w.quantity - before.stock, 0)::int AS shortfall
 )
-SELECT id FROM taken WHERE short;
+SELECT id, shortfall FROM taken WHERE shortfall > 0;
+
+-- name: SetItemShortfall :exec
+UPDATE order_items SET stock_shortfall = @shortfall
+WHERE order_id = @order_id AND variant_id = @variant_id;
 
 -- name: RestoreStock :exec
--- Returns a released order's stock (variants deleted since are skipped).
+-- Returns an order's stock: the units it took, so not those it was short
+-- of (variants deleted since are skipped).
 UPDATE product_variants pv
-SET stock = pv.stock + oi.quantity
+SET stock = pv.stock + oi.quantity - oi.stock_shortfall
 FROM order_items oi
 WHERE oi.order_id = $1 AND pv.id = oi.variant_id;
 
