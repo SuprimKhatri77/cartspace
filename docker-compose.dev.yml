@@ -37,6 +37,8 @@ services:
       - "3000:3000"
     env_file:
       - .env.local
+    environment:
+      NEXT_DIST_DIR: .next-docker
     depends_on:
       api:
         condition: service_healthy
@@ -45,7 +47,7 @@ services:
       - ./packages:/app/packages
       - ./turbo.json:/app/turbo.json
       - /app/apps/web/node_modules
-      - /app/apps/web/.next
+      - /app/apps/web/.next-docker
     networks:
       - app-network
 
