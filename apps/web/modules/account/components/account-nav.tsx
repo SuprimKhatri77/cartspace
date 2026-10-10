@@ -6,10 +6,10 @@ import { SignOutIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useLogout } from "@/modules/auth/hooks/mutations/use-logout";
 
-// The wishlist joins this list when it lands.
 const links = [
   { label: "Overview", href: "/account" },
   { label: "Orders", href: "/account/orders" },
+  { label: "Wishlist", href: "/account/wishlist" },
 ];
 
 export function AccountNav() {

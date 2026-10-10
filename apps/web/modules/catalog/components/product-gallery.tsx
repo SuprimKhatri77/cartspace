@@ -55,6 +55,9 @@ export function ProductGallery({
                   alt=""
                   fill
                   sizes="72px"
+                  // Lazy, though the first shares its src with the main image:
+                  // Next's dev LCP check matches by src and may then warn
+                  // (a false positive). Eager would preload a hidden file.
                   className="object-cover"
                 />
                 <span

@@ -72,7 +72,7 @@ export function AddToBag({
   return (
     <Button
       size="lg"
-      className="relative w-full overflow-hidden"
+      className="relative w-full min-w-0 shrink overflow-hidden"
       disabled={soldOut || add.isPending}
       onClick={onClick}
       aria-live="polite"
