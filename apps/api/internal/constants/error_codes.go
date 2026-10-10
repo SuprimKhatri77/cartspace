@@ -58,4 +58,7 @@ const (
 	InvalidOrderNumber      = "INVALID_ORDER_NUMBER"
 	AddressNotFound         = "ADDRESS_NOT_FOUND"
 	InvalidAddressID        = "INVALID_ADDRESS_ID"
+
+	// wishlist
+	WishlistFull = "WISHLIST_FULL"
 )

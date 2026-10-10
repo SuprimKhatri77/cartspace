@@ -56,6 +56,8 @@ export const ErrorCodeSchema = z
     "INVALID_ORDER_NUMBER",
     "ADDRESS_NOT_FOUND",
     "INVALID_ADDRESS_ID",
+    // wishlist
+    "WISHLIST_FULL",
   ])
   .meta({ id: "ErrorCode", description: "Machine-readable failure code." });
 

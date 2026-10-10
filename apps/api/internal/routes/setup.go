@@ -34,4 +34,5 @@ func Setup(r *gin.Engine, cfg config.Config) {
 	setupVariantRoutes(router, cfg)
 	setupCartRoutes(router, cfg)
 	setupCheckoutRoutes(router, cfg)
+	setupWishlistRoutes(router, cfg)
 }

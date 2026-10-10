@@ -213,3 +213,9 @@ type VariantPrice struct {
 	OfferPrice   pgtype.Int4 `json:"offer_price"`
 	Price        int32       `json:"price"`
 }
+
+type WishlistItem struct {
+	UserID    pgtype.UUID        `json:"user_id"`
+	ProductID pgtype.UUID        `json:"product_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}

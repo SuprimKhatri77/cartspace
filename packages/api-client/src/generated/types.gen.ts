@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'WISHLIST_FULL';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -701,6 +701,57 @@ export type Address = {
     postal_code: string;
     country: Country;
     created_at: string;
+};
+
+export type WishlistResponse = {
+    success: true;
+    message: string;
+    data: Array<WishlistProduct>;
+    meta: PaginationMeta;
+};
+
+/**
+ * A saved product, still on sale.
+ */
+export type WishlistProduct = {
+    id: string;
+    name: string;
+    slug: string;
+    /**
+     * null once its category is deleted
+     */
+    category_id: string | null;
+    description: string | null;
+    features: Array<string>;
+    images: Array<string>;
+    image_public_ids: Array<string>;
+    is_active: boolean;
+    is_featured: boolean;
+    created_at: string;
+    updated_at: string;
+    /**
+     * The default variant
+     */
+    variant_id: string;
+    selling_price: number;
+    /**
+     * The active offer, or null
+     */
+    offer_price: number | null;
+    /**
+     * What the customer pays: the active offer, else the selling price
+     */
+    price: number;
+    saved_at: string;
+};
+
+export type WishlistIdsResponse = {
+    success: true;
+    message: string;
+    /**
+     * Newest first, at most 200
+     */
+    data: Array<string>;
 };
 
 export type GetHealthData = {
@@ -2128,3 +2179,145 @@ export type DeleteAddressResponses = {
 };
 
 export type DeleteAddressResponse = DeleteAddressResponses[keyof DeleteAddressResponses];
+
+export type ListWishlistData = {
+    body?: never;
+    path?: never;
+    query?: {
+        page?: number;
+    };
+    url: '/api/v1/wishlist';
+};
+
+export type ListWishlistErrors = {
+    /**
+     * Invalid page (INVALID_PAGE_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type ListWishlistError = ListWishlistErrors[keyof ListWishlistErrors];
+
+export type ListWishlistResponses = {
+    /**
+     * Wishlist fetched
+     */
+    200: WishlistResponse;
+};
+
+export type ListWishlistResponse = ListWishlistResponses[keyof ListWishlistResponses];
+
+export type ListWishlistIdsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/wishlist/ids';
+};
+
+export type ListWishlistIdsErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type ListWishlistIdsError = ListWishlistIdsErrors[keyof ListWishlistIdsErrors];
+
+export type ListWishlistIdsResponses = {
+    /**
+     * Wishlist fetched
+     */
+    200: WishlistIdsResponse;
+};
+
+export type ListWishlistIdsResponse = ListWishlistIdsResponses[keyof ListWishlistIdsResponses];
+
+export type RemoveFromWishlistData = {
+    body?: never;
+    path: {
+        productID: string;
+    };
+    query?: never;
+    url: '/api/v1/wishlist/{productID}';
+};
+
+export type RemoveFromWishlistErrors = {
+    /**
+     * Invalid id (INVALID_PRODUCT_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type RemoveFromWishlistError = RemoveFromWishlistErrors[keyof RemoveFromWishlistErrors];
+
+export type RemoveFromWishlistResponses = {
+    /**
+     * Removed
+     */
+    200: MessageResponse;
+};
+
+export type RemoveFromWishlistResponse = RemoveFromWishlistResponses[keyof RemoveFromWishlistResponses];
+
+export type AddToWishlistData = {
+    body?: never;
+    path: {
+        productID: string;
+    };
+    query?: never;
+    url: '/api/v1/wishlist/{productID}';
+};
+
+export type AddToWishlistErrors = {
+    /**
+     * Invalid id (INVALID_PRODUCT_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * No such product on sale (PRODUCT_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * 200 products saved already (WISHLIST_FULL)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AddToWishlistError = AddToWishlistErrors[keyof AddToWishlistErrors];
+
+export type AddToWishlistResponses = {
+    /**
+     * Saved
+     */
+    200: MessageResponse;
+};
+
+export type AddToWishlistResponse = AddToWishlistResponses[keyof AddToWishlistResponses];
