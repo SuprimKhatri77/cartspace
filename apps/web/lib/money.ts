@@ -1,0 +1,22 @@
+// Prices travel as integer cents. One currency until checkout decides it.
+export const CURRENCY = "USD";
+
+const formatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: CURRENCY,
+});
+
+export function formatPrice(cents: number): string {
+  return formatter.format(cents / 100);
+}
+
+/** "12.5" → 1250; null for anything that isn't a non-negative amount. */
+export function toCents(amount: string): number | null {
+  if (!/^\d+(\.\d{1,2})?$/.test(amount.trim())) return null;
+  return Math.round(Number(amount) * 100);
+}
+
+/** 1250 → "12.5", for prefilling an amount input. */
+export function fromCents(cents: number): string {
+  return String(cents / 100);
+}
