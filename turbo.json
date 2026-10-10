@@ -1,14 +1,15 @@
 {
-  "$schema": "https://v2-9-6.turborepo.dev/schema.json",
+  "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "server"]
+      "outputs": [".next/**", "!.next/cache/**", "server"],
+      "env": ["NODE_ENV", "NEXT_PUBLIC_API_URL", "COOKIE_DOMAIN"]
     },
     "generate": {
-      "outputs": ["../../apps/backend/openapi.json"],
+      "dependsOn": ["^generate"],
       "cache": false
     },
     "lint": {
@@ -19,7 +20,8 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": ["INTERNAL_API_URL", "NEXT_PUBLIC_API_URL"]
     }
   }
 }

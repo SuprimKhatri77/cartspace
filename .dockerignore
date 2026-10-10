@@ -1,0 +1,8 @@
+apps/web/.next/
+apps/web/node_modules/
+apps/api/tmp/
+apps/api/*.exe
+node_modules/
+.git/
+**/.env*
+**/README.md
