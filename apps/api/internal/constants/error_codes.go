@@ -22,6 +22,8 @@ const (
 	UserNotFound        = "USER_NOT_FOUND"
 	MissingAccessToken  = "MISSING_ACCESS_TOKEN"
 	InvalidAccessToken  = "INVALID_ACCESS_TOKEN"
+	InvalidResetToken   = "INVALID_RESET_TOKEN"
+	MailUnavailable     = "MAIL_UNAVAILABLE"
 
 	// product
 	ProductNotFound  = "PRODUCT_NOT_FOUND"

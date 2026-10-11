@@ -31,6 +31,22 @@ export const RegisterBodySchema = z
   .meta({ id: "RegisterBody" });
 export type RegisterBody = z.infer<typeof RegisterBodySchema>;
 
+export const ForgotPasswordBodySchema = z
+  .object({ email })
+  .meta({ id: "ForgotPasswordBody" });
+export type ForgotPasswordBody = z.infer<typeof ForgotPasswordBodySchema>;
+
+export const ResetPasswordBodySchema = z
+  .object({
+    token: z.string().min(1, "This reset link is incomplete").max(100),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .max(72, "Password cannot exceed 72 characters"),
+  })
+  .meta({ id: "ResetPasswordBody" });
+export type ResetPasswordBody = z.infer<typeof ResetPasswordBodySchema>;
+
 export const LoginBodySchema = z
   .object({
     email,

@@ -240,6 +240,14 @@ export function AuthForm(props: AuthFormProps) {
           </div>,
           isRegister ? "8 to 72 characters." : undefined,
         )}
+        {!isRegister && (
+          <Link
+            href="/auth/forgot"
+            className="-mt-3 self-end text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Forgot password?
+          </Link>
+        )}
 
         <Button
           className="mt-2 w-full"

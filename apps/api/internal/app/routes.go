@@ -11,6 +11,7 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	"github.com/suprimkhatri77/cartspace/backend/internal/database"
 	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/emails"
 	"github.com/suprimkhatri77/cartspace/backend/internal/middleware"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/cloudinary"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
@@ -27,6 +28,7 @@ func buildRouter(
 	db *database.DB,
 	provider payments.Provider,
 	checkoutSvc *checkout.Service,
+	mailer emails.Sender,
 ) (*gin.Engine, error) {
 	r := gin.New()
 	// Only listed proxies may set X-Forwarded-For; otherwise ClientIP() is
@@ -58,6 +60,7 @@ func buildRouter(
 		CartRepo:    repository.NewCartRepository(queries),
 		Payments:    provider,
 		Checkout:    checkoutSvc,
+		Mailer:      mailer,
 	})
 	return r, nil
 }

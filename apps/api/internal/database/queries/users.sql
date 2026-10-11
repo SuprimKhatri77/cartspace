@@ -12,3 +12,6 @@ SELECT * FROM users WHERE id = $1;
 -- name: UpdateUserImage :one
 UPDATE users SET image_url = $2 WHERE id = $1
 RETURNING *;
+
+-- name: UpdateUserPassword :exec
+UPDATE users SET password_hash = $2 WHERE id = $1;
