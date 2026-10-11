@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { CategoryNode, StorefrontVariant } from "@repo/types";
 import { formatPrice, fromCents, toCents } from "@/lib/money";
+import { activeNav } from "@/lib/nav";
 import {
   buildCategoryTree,
   categoryPath,
@@ -397,5 +398,22 @@ describe("search", () => {
     const many = addRecent(["a", "b", "c", "d", "e"], "f");
     expect(many).toHaveLength(MAX_RECENT);
     expect(many[0]).toBe("f");
+  });
+});
+
+describe("active nav", () => {
+  const categories = [
+    { slug: "home", children: [{ slug: "decor" }, { slug: "kitchen" }] },
+    { slug: "clothing", children: [{ slug: "tops" }] },
+  ];
+  test("marks the section a page belongs to", () => {
+    expect(activeNav("/shop", false, categories)).toBe("shop");
+    expect(activeNav("/shop", true, categories)).toBe("featured");
+    expect(activeNav("/categories/home", false, categories)).toBe("home");
+    expect(activeNav("/categories/decor", false, categories)).toBe("home");
+    expect(activeNav("/categories/tops", false, categories)).toBe("clothing");
+    expect(activeNav("/categories/unknown", false, categories)).toBeNull();
+    expect(activeNav("/products/tee", false, categories)).toBeNull();
+    expect(activeNav("/", false, categories)).toBeNull();
   });
 });

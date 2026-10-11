@@ -24,11 +24,12 @@ export function QuantityStepper({
   className?: string;
 }) {
   const button =
-    "flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-30";
+    // 44px on touch screens, the smallest comfortable tap target.
+    "flex size-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-30 pointer-coarse:size-11";
   return (
     <div
       className={cn(
-        "inline-flex h-8 items-center overflow-hidden rounded-control border border-border",
+        "inline-flex h-8 items-center overflow-hidden rounded-control border border-border pointer-coarse:h-11",
         className,
       )}
       role="group"

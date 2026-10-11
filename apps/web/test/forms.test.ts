@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { AddressInputSchema, ReviewBodySchema } from "@repo/types";
+import {
+  AddressInputSchema,
+  RegisterBodySchema,
+  ReviewBodySchema,
+} from "@repo/types";
 import { friendlyFieldErrors } from "@/lib/forms";
 
 describe("friendly form errors", () => {
@@ -41,5 +45,33 @@ describe("friendly form errors", () => {
         country: "Choose a country",
       },
     );
+  });
+});
+
+describe("register name", () => {
+  const valid = (name: string) =>
+    RegisterBodySchema.safeParse({
+      name,
+      email: "a@example.org",
+      password: "long-enough",
+    }).success;
+
+  test("accepts real names, like the API's personname rule", () => {
+    for (const name of [
+      "Ada Lovelace",
+      "José Álvarez",
+      "O'Brien",
+      "O’Brien",
+      "Mary-Jane",
+      "J. R. Tolkien",
+      "Nguyễn Văn An",
+      "सुप्रिम खत्री",
+      "李小龙",
+    ]) {
+      expect(valid(name)).toBe(true);
+    }
+    for (const name of ["-Ann", "Ann2", "Ann_Lee", "Ann\tLee", "<b>"]) {
+      expect(valid(name)).toBe(false);
+    }
   });
 });

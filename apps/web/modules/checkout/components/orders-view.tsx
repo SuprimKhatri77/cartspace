@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useInView } from "@/hooks/use-in-view";
+import { getApiError } from "@/lib/api/errors";
 import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { optionSummary } from "@/modules/cart/lib/cart-math";
@@ -192,6 +193,21 @@ export function OrderView({ number }: { number: number }) {
 
   if (query.isPending) {
     return <Skeleton className="h-96" />;
+  }
+  // Only "no such order" is final; anything else (a network blip) may pass.
+  const code = getApiError(query.error)?.code;
+  if (!order && code !== "ORDER_NOT_FOUND" && code !== "INVALID_ORDER_NUMBER") {
+    return (
+      <EmptyState
+        eyebrow="Something went wrong"
+        title="We couldn't load this order."
+        action={
+          <Button variant="outline" onClick={() => void query.refetch()}>
+            Try again
+          </Button>
+        }
+      />
+    );
   }
   if (!order) {
     return (

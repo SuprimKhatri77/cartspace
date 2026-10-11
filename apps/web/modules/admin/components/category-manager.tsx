@@ -45,7 +45,7 @@ import { friendlyFieldErrors } from "@/lib/forms";
 import { useAdminMutation } from "../hooks/use-admin-mutation";
 import { categoryPath, orderTree, subtreeIds } from "../lib/categories";
 import { useCategoryTree } from "../queries";
-import { ConfirmDialog } from "./confirm-dialog";
+import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 
 const ROOT = "root";
 

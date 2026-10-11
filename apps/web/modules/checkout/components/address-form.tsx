@@ -79,8 +79,13 @@ export function AddressForm({
           value={values[name]}
           onChange={(e) => onChange(name, e.target.value)}
           aria-invalid={Boolean(errors[name])}
+          aria-describedby={errors[name] ? `${id}-error` : undefined}
         />
-        <FieldError key={errors[name]} className="animate-rise">
+        <FieldError
+          key={errors[name]}
+          id={`${id}-error`}
+          className="animate-rise"
+        >
           {errors[name]}
         </FieldError>
       </Field>
@@ -116,7 +121,14 @@ export function AddressForm({
           onValueChange={(value) => value && onChange("country", value)}
           items={countryItems}
         >
-          <SelectTrigger id="address-country" className="h-10 w-full">
+          <SelectTrigger
+            id="address-country"
+            className="h-10 w-full"
+            aria-invalid={Boolean(errors.country)}
+            aria-describedby={
+              errors.country ? "address-country-error" : undefined
+            }
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -127,7 +139,7 @@ export function AddressForm({
             ))}
           </SelectContent>
         </Select>
-        <FieldError>{errors.country}</FieldError>
+        <FieldError id="address-country-error">{errors.country}</FieldError>
       </Field>
       {text("phone", "Phone", "shipping tel", {
         type: "tel",

@@ -51,7 +51,7 @@ import {
   type AdminProductFilters,
 } from "../lib/filters";
 import { useAdminProducts, useCategoryTree } from "../queries";
-import { ConfirmDialog } from "./confirm-dialog";
+import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { PageNav } from "./page-nav";
 import { ActiveBadge } from "./status-badge";
 

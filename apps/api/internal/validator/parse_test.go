@@ -216,3 +216,34 @@ func TestUUIDAcceptsEitherCase(t *testing.T) {
 		}
 	}
 }
+
+func TestPersonNameAcceptsRealNames(t *testing.T) {
+	Init()
+	type body struct {
+		Name string `binding:"personname"`
+	}
+	for name, want := range map[string]bool{
+		"Ada Lovelace":     true,
+		"José Álvarez":     true,
+		"O'Brien":          true,
+		"O’Brien":          true,
+		"Mary-Jane Watson": true,
+		"J. R. Tolkien":    true,
+		"Zoë":              true,
+		"Nguyễn Văn An":    true,
+		"सुप्रिम खत्री":    true, // Devanagari: letters plus combining marks
+		"李小龙":              true,
+		"-Ann":             false, // must start with a letter
+		"'quote":           false,
+		"Ann2":             false,
+		"Ann_Lee":          false,
+		"Ann\tLee":         false,
+		"Ann\nLee":         false,
+		"<script>":         false,
+	} {
+		err := binding.Validator.ValidateStruct(body{Name: name})
+		if (err == nil) != want {
+			t.Errorf("personname %q: err = %v, want valid %v", name, err, want)
+		}
+	}
+}

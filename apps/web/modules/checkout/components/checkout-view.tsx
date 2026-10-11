@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CheckIcon,
   LockSimpleIcon,
@@ -20,6 +20,7 @@ import {
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useFocusFirstError } from "@/hooks/use-focus-first-error";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { startCheckout } from "@/lib/api/client";
 import { getApiError, mapFieldErrors } from "@/lib/api/errors";
@@ -29,6 +30,7 @@ import { shippingFor } from "@/lib/shipping";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { CartTotals } from "@/modules/cart/components/cart-summary";
+import { cartKeys } from "@/modules/cart/keys";
 import { optionSummary } from "@/modules/cart/lib/cart-math";
 import { useCart } from "@/modules/cart/queries";
 import { countryName } from "../lib/countries";
@@ -47,6 +49,22 @@ export function CheckoutView({ seeded }: { seeded: boolean }) {
   const cartQuery = useCart();
   const cart = seeded || hydrated ? cartQuery.data : undefined;
   const addresses = useAddresses();
+
+  if (!cart && hydrated && cartQuery.isError) {
+    return (
+      <Shell>
+        <EmptyState
+          eyebrow="Something went wrong"
+          title="We couldn't load your bag."
+          action={
+            <Button variant="outline" onClick={() => void cartQuery.refetch()}>
+              Try again
+            </Button>
+          }
+        />
+      </Shell>
+    );
+  }
 
   if (!cart) {
     return (
@@ -117,14 +135,23 @@ function Shell({ children }: { children: React.ReactNode }) {
           {["Bag", "Details", "Payment"].map((step, i) => (
             <li key={step} className="flex items-center gap-3">
               {i > 0 && <span className="h-px w-6 bg-border" aria-hidden />}
-              <span
-                className={cn(
-                  i === 1 ? "text-foreground" : "text-muted-foreground",
-                )}
-                aria-current={i === 1 ? "step" : undefined}
-              >
-                {step}
-              </span>
+              {i === 0 ? (
+                <Link
+                  href="/cart"
+                  className="link-underline text-muted-foreground hover:text-foreground"
+                >
+                  {step}
+                </Link>
+              ) : (
+                <span
+                  className={cn(
+                    i === 1 ? "text-foreground" : "text-muted-foreground",
+                  )}
+                  aria-current={i === 1 ? "step" : undefined}
+                >
+                  {step}
+                </span>
+              )}
             </li>
           ))}
         </ol>
@@ -152,6 +179,8 @@ function CheckoutForm({
   const [save, setSave] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [redirecting, setRedirecting] = useState(false);
+  const { ref: formRef, focusFirstError } = useFocusFirstError();
+  const queryClient = useQueryClient();
 
   const checkout = useMutation({
     mutationFn: async (body: CheckoutBody) => {
@@ -164,6 +193,14 @@ function CheckoutForm({
     },
     onError: (error) => {
       const apiError = getApiError(error);
+      // Something sold out (or the bag emptied) since this page loaded:
+      // the fresh cart switches the page to "Review your bag".
+      if (
+        apiError?.code === "CART_HAS_ISSUES" ||
+        apiError?.code === "CART_EMPTY"
+      ) {
+        void queryClient.invalidateQueries({ queryKey: cartKeys.all });
+      }
       // Field errors come back as "address.city"; the form uses "city".
       const fields = mapFieldErrors(
         apiError?.errors?.map((e) => ({
@@ -172,6 +209,7 @@ function CheckoutForm({
         })),
       );
       setErrors(fields);
+      focusFirstError();
       toast.error(apiError?.message ?? "Couldn't start checkout. Try again.");
     },
   });
@@ -208,6 +246,7 @@ function CheckoutForm({
           country: "a country",
         }),
       );
+      focusFirstError();
       return;
     }
     setErrors({});
@@ -219,6 +258,7 @@ function CheckoutForm({
 
   return (
     <form
+      ref={formRef}
       onSubmit={submit}
       noValidate
       className="grid items-start gap-12 lg:grid-cols-[1fr_26rem] lg:gap-16"
@@ -314,7 +354,15 @@ function CheckoutForm({
         aria-label="Order summary"
         className="space-y-6 rounded-panel border border-border bg-surface/60 p-6 lg:sticky lg:top-24"
       >
-        <p className="eyebrow">Order summary</p>
+        <div className="flex items-baseline justify-between gap-4">
+          <p className="eyebrow">Order summary</p>
+          <Link
+            href="/cart"
+            className="link-underline text-xs text-muted-foreground hover:text-foreground"
+          >
+            Edit bag
+          </Link>
+        </div>
         <ul className="max-h-80 space-y-4 overflow-y-auto pr-1">
           {cart.items.map((line) => (
             <li key={line.variant_id} className="flex gap-4">
