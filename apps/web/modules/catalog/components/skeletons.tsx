@@ -4,7 +4,7 @@ import { GRID_CLASSES } from "./product-grid";
 function Block({ className }: { className?: string }) {
   return (
     <div
-      className={cn("shimmer rounded-media bg-muted", className)}
+      className={cn("skeleton-shimmer rounded-media bg-muted", className)}
       aria-hidden
     />
   );
