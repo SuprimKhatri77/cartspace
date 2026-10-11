@@ -11,3 +11,13 @@ type LoginRequest struct {
 	Email    string `json:"email" label:"Email" binding:"required,email,max=254" msg_email:"Enter a valid email address"`
 	Password string `json:"password" label:"Password" trim:"-" binding:"required,max=72"`
 }
+
+type ForgotPasswordRequest struct {
+	Email string `json:"email" label:"Email" binding:"required,email,max=254" msg_email:"Enter a valid email address"`
+}
+
+// Token is the one from the emailed link; it isn't trimmed or changed.
+type ResetPasswordRequest struct {
+	Token    string `json:"token" label:"Reset link" trim:"-" binding:"required,max=100"`
+	Password string `json:"password" label:"Password" trim:"-" binding:"required,min=8,max=72"`
+}

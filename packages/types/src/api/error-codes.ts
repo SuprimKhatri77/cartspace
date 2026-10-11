@@ -25,6 +25,8 @@ export const ErrorCodeSchema = z
     "USER_NOT_FOUND",
     "MISSING_ACCESS_TOKEN",
     "INVALID_ACCESS_TOKEN",
+    "INVALID_RESET_TOKEN",
+    "MAIL_UNAVAILABLE",
     // product
     "PRODUCT_NOT_FOUND",
     "INVALID_PRODUCT_ID",

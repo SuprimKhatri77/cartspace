@@ -16,6 +16,10 @@ export const ROLE_RULES: ReadonlyArray<{
 // Pages only for signed-out users; signed-in users are sent home.
 export const SIGNED_OUT_ONLY_PREFIXES = ["/auth"] as const;
 
+// Exceptions under /auth that anyone may open: a reset link from an email
+// must work even in a browser that is signed in.
+export const OPEN_AUTH_PATHS = ["/auth/reset"] as const;
+
 /** "/admin" matches "/admin" and "/admin/x", not "/administrator". */
 export function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -32,6 +36,9 @@ export function isProtectedPath(pathname: string): boolean {
 }
 
 export function isSignedOutOnlyPath(pathname: string): boolean {
+  if (OPEN_AUTH_PATHS.some((path) => matchesPrefix(pathname, path))) {
+    return false;
+  }
   return SIGNED_OUT_ONLY_PREFIXES.some((prefix) =>
     matchesPrefix(pathname, prefix),
   );

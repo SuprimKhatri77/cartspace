@@ -9,7 +9,8 @@ import (
 const sessionCleanupInterval = time.Hour
 
 // startSessionCleanup deletes expired sessions (and ones revoked over a week
-// ago) at startup and then every interval, until ctx is cancelled.
+// ago) and stale password reset links at startup and then every interval,
+// until ctx is cancelled.
 func (a *App) startSessionCleanup(ctx context.Context, interval time.Duration) {
 	go func() {
 		ticker := time.NewTicker(interval)
@@ -37,6 +38,17 @@ func (a *App) cleanupSessions(ctx context.Context) {
 	}
 	if deleted > 0 {
 		slog.Info("session cleanup", "deleted", deleted)
+	}
+	// Reset links a day past their expiry, on the same schedule.
+	resets, err := a.Queries.DeleteStalePasswordResets(ctx)
+	if err != nil {
+		if ctx.Err() == nil {
+			slog.Error("password reset cleanup failed", "err", err)
+		}
+		return
+	}
+	if resets > 0 {
+		slog.Info("password reset cleanup", "deleted", resets)
 	}
 }
 

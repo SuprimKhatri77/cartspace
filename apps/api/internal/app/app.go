@@ -57,7 +57,7 @@ func New(ctx context.Context) (*App, error) {
 	provider := initPayments(cfg)
 	checkoutSvc := checkout.NewService(db.Pool, queries, provider, cfg.FrontendURL)
 
-	r, err := buildRouter(cfg, queries, cldClient, db, provider, checkoutSvc)
+	r, err := buildRouter(cfg, queries, cldClient, db, provider, checkoutSvc, initMailer(cfg))
 	if err != nil {
 		db.Close()
 		return nil, err

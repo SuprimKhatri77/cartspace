@@ -53,7 +53,13 @@ func NewSMTP(cfg *config.Config) *SMTP {
 	default:
 		opts = append(opts, mail.WithTLSPolicy(mail.TLSMandatory))
 	}
-	if cfg.SMTPUsername != "" {
+	// Never send a login over an unencrypted connection: with SMTP_TLS=none
+	// (Mailpit in development) the credentials are left out, so a .env
+	// holding a real provider's login still reaches the local catcher.
+	if cfg.SMTPUsername != "" && cfg.SMTPTLS == config.SMTPNoTLS {
+		slog.Warn("SMTP_TLS=none: SMTP_USERNAME/SMTP_PASSWORD are not sent over an unencrypted connection")
+	}
+	if cfg.SMTPUsername != "" && cfg.SMTPTLS != config.SMTPNoTLS {
 		opts = append(opts,
 			mail.WithSMTPAuth(mail.SMTPAuthAutoDiscover),
 			mail.WithUsername(cfg.SMTPUsername),

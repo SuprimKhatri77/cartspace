@@ -94,6 +94,8 @@
           "USER_NOT_FOUND",
           "MISSING_ACCESS_TOKEN",
           "INVALID_ACCESS_TOKEN",
+          "INVALID_RESET_TOKEN",
+          "MAIL_UNAVAILABLE",
           "PRODUCT_NOT_FOUND",
           "INVALID_PRODUCT_ID",
           "VARIANT_NOT_FOUND",
@@ -277,6 +279,38 @@
         },
         "required": [
           "email",
+          "password"
+        ]
+      },
+      "ForgotPasswordBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ResetPasswordBody": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72
+          }
+        },
+        "required": [
+          "token",
           "password"
         ]
       },
@@ -3800,6 +3834,120 @@
           },
           "401": {
             "description": "Unknown email or wrong password (INVALID_CREDENTIALS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password/forgot": {
+      "post": {
+        "operationId": "forgotPassword",
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Email a password reset link",
+        "description": "Emails a link to choose a new password, valid once for an hour. Answers the same 202 whether or not the email has an account (the email goes out after the reply), and sends an account at most one link a minute.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "If the email has an account, a link is on its way",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Mail isn't configured on this server (MAIL_UNAVAILABLE)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/password/reset": {
+      "post": {
+        "operationId": "resetPassword",
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Set a new password from a reset link",
+        "description": "Sets the password with the token from the emailed link, uses the link up, and signs the account out of every session.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED), or an unknown, used or expired link (INVALID_RESET_TOKEN)",
             "content": {
               "application/json": {
                 "schema": {

@@ -248,3 +248,17 @@ func TestWorker(t *testing.T) {
 		})
 	}
 }
+
+func TestRenderPasswordReset(t *testing.T) {
+	r, err := RenderPasswordReset("Ada Lovelace", "tok+/=en", "https://shop.example/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	link := "https://shop.example/auth/reset?token=tok%2B%2F%3Den"
+	if !strings.Contains(r.Text, link) || !strings.Contains(r.HTML, link) {
+		t.Errorf("reset link missing or unescaped:\n%s", r.Text)
+	}
+	if !strings.Contains(r.Text, "Hi Ada,") || r.Subject != "Reset your cartspace password" {
+		t.Errorf("unexpected copy: %q / %q", r.Subject, r.Text)
+	}
+}

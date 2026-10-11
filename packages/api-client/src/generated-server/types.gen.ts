@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -71,6 +71,15 @@ export type RegisterBody = {
 
 export type LoginBody = {
     email: string;
+    password: string;
+};
+
+export type ForgotPasswordBody = {
+    email: string;
+};
+
+export type ResetPasswordBody = {
+    token: string;
     password: string;
 };
 
@@ -1247,6 +1256,68 @@ export type LoginResponses = {
 };
 
 export type LoginResponse = LoginResponses[keyof LoginResponses];
+
+export type ForgotPasswordData = {
+    body: ForgotPasswordBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/password/forgot';
+};
+
+export type ForgotPasswordErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+    /**
+     * Mail isn't configured on this server (MAIL_UNAVAILABLE)
+     */
+    503: ApiError;
+};
+
+export type ForgotPasswordError = ForgotPasswordErrors[keyof ForgotPasswordErrors];
+
+export type ForgotPasswordResponses = {
+    /**
+     * If the email has an account, a link is on its way
+     */
+    202: MessageResponse;
+};
+
+export type ForgotPasswordResponse = ForgotPasswordResponses[keyof ForgotPasswordResponses];
+
+export type ResetPasswordData = {
+    body: ResetPasswordBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/password/reset';
+};
+
+export type ResetPasswordErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED), or an unknown, used or expired link (INVALID_RESET_TOKEN)
+     */
+    400: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type ResetPasswordError = ResetPasswordErrors[keyof ResetPasswordErrors];
+
+export type ResetPasswordResponses = {
+    /**
+     * Password changed
+     */
+    200: MessageResponse;
+};
+
+export type ResetPasswordResponse = ResetPasswordResponses[keyof ResetPasswordResponses];
 
 export type LogoutData = {
     body?: never;

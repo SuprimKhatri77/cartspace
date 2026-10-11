@@ -66,6 +66,16 @@ func initEmails(cfg *config.Config, queries *dbgen.Queries) *emails.Worker {
 	return emails.NewWorker(queries, emails.NewSMTP(cfg), cfg.FrontendURL)
 }
 
+// initMailer returns the sender for emails sent straight from a request
+// (password reset links), or nil without SMTP_HOST. A nil interface, not a
+// nil *SMTP, so handlers can test it.
+func initMailer(cfg *config.Config) emails.Sender {
+	if !cfg.MailEnabled() {
+		return nil
+	}
+	return emails.NewSMTP(cfg)
+}
+
 func initLogger() {
 	var handler slog.Handler
 	if os.Getenv("GO_ENV") == "production" {

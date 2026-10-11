@@ -17,7 +17,7 @@ type Operation = {
   description?: string;
   auth?: Auth;
   request?: RouteConfig["request"];
-  success: { status: 200 | 201; description: string; schema: ZodType };
+  success: { status: 200 | 201 | 202; description: string; schema: ZodType };
   /** Endpoint-specific errors; auth and 500 errors are added from `auth`. */
   errors?: Partial<Record<400 | 401 | 403 | 404 | 409 | 502 | 503, string>>;
 };

@@ -46,6 +46,45 @@ export function registerAuthPaths() {
 
   operation({
     method: "post",
+    path: "/api/v1/auth/password/forgot",
+    operationId: "forgotPassword",
+    tag,
+    summary: "Email a password reset link",
+    description:
+      "Emails a link to choose a new password, valid once for an hour. Answers the same 202 whether or not the email has an account (the email goes out after the reply), and sends an account at most one link a minute.",
+    request: body(schemas.ForgotPasswordBodySchema),
+    success: {
+      status: 202,
+      description: "If the email has an account, a link is on its way",
+      schema: schemas.MessageResponseSchema,
+    },
+    errors: {
+      400: "Invalid body (VALIDATION_FAILED)",
+      503: "Mail isn't configured on this server (MAIL_UNAVAILABLE)",
+    },
+  });
+
+  operation({
+    method: "post",
+    path: "/api/v1/auth/password/reset",
+    operationId: "resetPassword",
+    tag,
+    summary: "Set a new password from a reset link",
+    description:
+      "Sets the password with the token from the emailed link, uses the link up, and signs the account out of every session.",
+    request: body(schemas.ResetPasswordBodySchema),
+    success: {
+      status: 200,
+      description: "Password changed",
+      schema: schemas.MessageResponseSchema,
+    },
+    errors: {
+      400: "Invalid body (VALIDATION_FAILED), or an unknown, used or expired link (INVALID_RESET_TOKEN)",
+    },
+  });
+
+  operation({
+    method: "post",
     path: "/api/v1/auth/logout",
     operationId: "logout",
     tag,

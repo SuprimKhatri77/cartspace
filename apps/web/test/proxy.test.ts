@@ -1,5 +1,6 @@
 import { beforeEach, expect, mock, test } from "bun:test";
 import { NextRequest } from "next/server";
+import { isSignedOutOnlyPath } from "@/lib/proxy/config";
 import { accessClaims, nowSec, token } from "./jwt";
 
 // Fake POST /auth/refresh: answers with `refreshReply`.
@@ -194,4 +195,10 @@ test("signed-out only: dead session shows the page and clears cookies", async ()
   const res = await handleSignedOutOnly(req("/auth/login", "refresh_token=r"));
   expect(location(res)).toBeNull();
   expect(res.headers.getSetCookie()).toEqual(["refresh_token=; Max-Age=0"]);
+});
+
+test("a password reset link opens signed in or out", () => {
+  expect(isSignedOutOnlyPath("/auth/reset")).toBe(false);
+  expect(isSignedOutOnlyPath("/auth/forgot")).toBe(true);
+  expect(isSignedOutOnlyPath("/auth/login")).toBe(true);
 });
