@@ -147,7 +147,7 @@ sequenceDiagram
 
 ## getting started
 
-**prerequisites**: [bun](https://bun.sh) 1.3, [go](https://go.dev) 1.24, docker. for work outside docker also [golang-migrate](https://github.com/golang-migrate/migrate), [sqlc](https://sqlc.dev) 1.30 and [golangci-lint](https://golangci-lint.run) v2. for payments, the [stripe cli](https://docs.stripe.com/stripe-cli).
+**prerequisites**: [bun](https://bun.sh) 1.3, [go](https://go.dev) 1.24, docker. for work outside docker also [sqlc](https://sqlc.dev) 1.30 and [golangci-lint](https://golangci-lint.run) v2. for payments, the [stripe cli](https://docs.stripe.com/stripe-cli).
 
 ```sh
 bun install
@@ -236,7 +236,7 @@ a theme is a `[data-theme="…"]` block of tokens in `apps/web/app/globals.css`:
 | `bun run build`                            | build everything                                                                  |
 | `bun run docker:dev:up` / `docker:dev:down` | start / stop the docker stack                                                     |
 | `bun run docker:dev:reset`                 | delete the database volume and start the stack again                              |
-| `bun run db:migrate` / `db:migrate:down`   | apply / roll back migrations (`N=1` for down)                                     |
+| `bun run db:migrate` / `db:migrate:down`   | apply / roll back migrations (`N=1` for down; `N` is required)                    |
 | `bun run db:sqlc`                          | regenerate the go query code                                                      |
 | `bun run db:seed`                          | create the seed admin and customer (`SEED_*` in `.env.local`)                     |
 | `bun run db:seed:catalog`                  | add demo categories and products through the running api as the seed admin       |
@@ -253,6 +253,31 @@ a theme is a `[data-theme="…"]` block of tokens in `apps/web/app/globals.css`:
 - **go**: unit and handler tests, including the order transition table, session rotation, validators, middleware and the contract test (`bun run test:go`).
 - **web**: bun tests for the proxy guards, the refresh interceptor, filter and url parsing, the image loader, cart and order helpers (`bun run test:web`).
 - **ci** (github actions, `.github/workflows/ci.yml`) runs the same steps as `bun run ci` on every pull request and on `main`. dependabot keeps the bun, go and actions dependencies current.
+
+## deploy
+
+the api migrates with its own binary, `cmd/migrate`, which has the sql compiled in. it runs everywhere the same way: the dev container's entrypoint, `bun run db:migrate`, and the deploy's start command. `migrate up` applies what's pending; `down N`, `version` and `force V` (after fixing a migration that failed halfway) cover the rest. new migration files are plain sql (`NNNNNN_name.up.sql` / `.down.sql`), so `migrate create` from the [golang-migrate cli](https://github.com/golang-migrate/migrate) is optional.
+
+**api on render** (go web service):
+
+| setting        | value                                                                 |
+| -------------- | --------------------------------------------------------------------- |
+| root directory | `apps/api` (the api serves `openapi.json` from its working directory) |
+| build command  | `go build -o main ./cmd/server && go build -o migrate ./cmd/migrate`  |
+| start command  | `./migrate up && ./main`                                              |
+| health check   | `/api/v1/health`                                                      |
+
+migrating in the start command works without a pre-deploy step (render's free plan has none). if a migration fails, `./main` never starts and the previous deploy keeps serving. several instances starting at once are fine: postgres advisory locks let one migrate while the others wait.
+
+env: `GIN_MODE=release`, `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, the `CLOUDINARY_*` keys, `FRONTEND_URL` (the storefront's https url), `COOKIE_DOMAIN`, `TRUSTED_PROXIES`, `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`, and for emails `SMTP_HOST`, `SMTP_PORT`, `SMTP_TLS`, `SMTP_USERNAME`, `SMTP_PASSWORD` and `MAIL_FROM` (see [emails](#emails)). `COOKIE_DOMAIN` and the `Secure` flag only apply in release mode.
+
+if order emails time out on render, its free instances may be blocking the standard smtp ports: resend also accepts `SMTP_PORT=2587` with `SMTP_TLS=starttls`.
+
+**web on vercel**: root directory `apps/web`, with `NEXT_PUBLIC_API_URL` and `INTERNAL_API_URL` (both the api's public url) and `FRONTEND_URL` (canonical urls, the sitemap and share images).
+
+**cookies**: put the api on a subdomain of the storefront, e.g. `shop.example.com` and `api.shop.example.com`, and set `COOKIE_DOMAIN=shop.example.com`. the auth cookies then reach both hosts, which `proxy.ts` needs to guard `/account` and `/admin`.
+
+**stripe**: add a live webhook endpoint at `https://<api host>/api/v1/webhooks/stripe` for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` and `checkout.session.expired`, and put its signing secret in `STRIPE_WEBHOOK_SECRET`.
 
 ## contributing
 

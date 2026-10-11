@@ -1,4 +1,7 @@
 /server
+# deploy builds (README: deploy)
+/main
+/migrate
 build-errors.log
 
 

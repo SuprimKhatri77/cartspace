@@ -6,10 +6,11 @@ ENV_FILE ?= ../../.env.local
 DB_URL = $${DATABASE_URL:-$$(sed -n "s/^DATABASE_URL=//p" $(ENV_FILE) 2>/dev/null | sed "s/^['\"]//; s/['\"]\$$//")}
 
 .PHONY: migrate-up migrate-down sqlc seed run build lint test deps
+# cmd/migrate: the same migrator deploys run (the SQL is compiled in).
 migrate-up:
-	migrate -path migrations -database "$(DB_URL)" up
+	DATABASE_URL="$(DB_URL)" go run ./cmd/migrate up
 migrate-down:
-	migrate -path migrations -database "$(DB_URL)" down $(N)
+	DATABASE_URL="$(DB_URL)" go run ./cmd/migrate down $(N)
 
 # clear old output first: sqlc never deletes files for removed query files
 sqlc:
@@ -23,6 +24,7 @@ run:
 	go run ./cmd/server
 build:
 	go build -o server ./cmd/server
+	go build -o migrate ./cmd/migrate
 
 lint:
 	golangci-lint run ./...
