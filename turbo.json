@@ -9,6 +9,7 @@
       "env": [
         "NODE_ENV",
         "NEXT_PUBLIC_API_URL",
+        "INTERNAL_API_URL",
         "COOKIE_DOMAIN",
         "STORE_THEME",
         "DEMO_THEME_PICKER",
