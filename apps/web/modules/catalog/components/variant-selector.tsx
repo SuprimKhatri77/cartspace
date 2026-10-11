@@ -134,8 +134,7 @@ function Swatch({
         selected
           ? "ring-[1.5px] ring-foreground"
           : "ring-1 ring-transparent hover:ring-border",
-        // A hairline keeps white swatches visible in light mode and black
-        // ones in dark mode.
+        // A hairline keeps white and cream swatches visible on paper.
         "shadow-[inset_0_0_0_1px_var(--border)]",
       )}
       style={{ background: color }}

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowUpRightIcon } from "@phosphor-icons/react/ssr";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { site } from "@/lib/site";
 import { AdminMobileNav } from "@/modules/admin/components/admin-mobile-nav";
 import { AdminAccount, AdminNav } from "@/modules/admin/components/admin-nav";
@@ -43,7 +42,7 @@ export default function AdminLayout({
               {site.name}
             </Link>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="-mr-3 flex items-center gap-1">
             <Link
               href="/"
               target="_blank"
@@ -52,7 +51,6 @@ export default function AdminLayout({
               View store
               <ArrowUpRightIcon className="size-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
             </Link>
-            <ThemeToggle />
           </div>
         </header>
         <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10 lg:py-10">

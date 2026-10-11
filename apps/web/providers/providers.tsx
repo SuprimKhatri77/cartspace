@@ -1,6 +1,5 @@
 "use client";
 
-import { ThemeProvider } from "next-themes";
 import type { PublicUser } from "@repo/types";
 import { MotionProvider } from "@/components/motion/motion-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -15,13 +14,11 @@ export function Providers({
   children: React.ReactNode;
 }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <ReactQueryProvider>
-        <AuthProvider user={user}>
-          <MotionProvider>{children}</MotionProvider>
-          <Toaster position="bottom-center" />
-        </AuthProvider>
-      </ReactQueryProvider>
-    </ThemeProvider>
+    <ReactQueryProvider>
+      <AuthProvider user={user}>
+        <MotionProvider>{children}</MotionProvider>
+        <Toaster position="bottom-center" />
+      </AuthProvider>
+    </ReactQueryProvider>
   );
 }

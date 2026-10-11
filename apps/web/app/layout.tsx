@@ -27,10 +27,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf8f4" },
-    { media: "(prefers-color-scheme: dark)", color: "#1c1a18" },
-  ],
+  themeColor: "#faf8f4",
 };
 
 export default async function RootLayout({
@@ -41,7 +38,6 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      suppressHydrationWarning
       className={cn(
         "h-full antialiased",
         geistSans.variable,
