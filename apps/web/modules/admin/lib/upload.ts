@@ -39,6 +39,7 @@ export function uploadImage(
     const form = new FormData();
     form.append("file", file);
     form.append("api_key", sig.api_key);
+    form.append("allowed_formats", sig.allowed_formats);
     form.append("timestamp", String(sig.timestamp));
     form.append("folder", sig.folder);
     form.append("signature", sig.signature);

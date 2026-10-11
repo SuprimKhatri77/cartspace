@@ -32,19 +32,27 @@ func New(cloudName, apiKey, apiSecret string) (*Client, error) {
 }
 
 // UploadSignature lets a browser upload straight to Cloudinary: the
-// signed parameters (folder and timestamp) plus what the upload form needs.
+// signed parameters (allowed formats, folder and timestamp) plus what the
+// upload form needs. The form must send every signed parameter as is.
 type UploadSignature struct {
-	CloudName string `json:"cloud_name"`
-	APIKey    string `json:"api_key"`
-	Folder    string `json:"folder"`
-	Timestamp int64  `json:"timestamp"`
-	Signature string `json:"signature"`
+	CloudName      string `json:"cloud_name"`
+	APIKey         string `json:"api_key"`
+	AllowedFormats string `json:"allowed_formats"`
+	Folder         string `json:"folder"`
+	Timestamp      int64  `json:"timestamp"`
+	Signature      string `json:"signature"`
 }
 
+// ProductFormats are the image formats an upload may have. Being signed,
+// Cloudinary enforces them, not just the admin's file picker.
+const ProductFormats = "jpg,png,webp,avif"
+
 // SignUpload signs an upload into folder at timestamp (Unix seconds);
-// Cloudinary rejects it an hour later.
+// Cloudinary rejects it an hour later, or if the file isn't one of
+// ProductFormats.
 func (c *Client) SignUpload(folder string, timestamp int64) (UploadSignature, error) {
 	params := url.Values{}
+	params.Set("allowed_formats", ProductFormats)
 	params.Set("folder", folder)
 	params.Set("timestamp", strconv.FormatInt(timestamp, 10))
 	signature, err := api.SignParameters(params, c.apiSecret)
@@ -52,11 +60,12 @@ func (c *Client) SignUpload(folder string, timestamp int64) (UploadSignature, er
 		return UploadSignature{}, fmt.Errorf("cloudinary: sign upload: %w", err)
 	}
 	return UploadSignature{
-		CloudName: c.cloudName,
-		APIKey:    c.apiKey,
-		Folder:    folder,
-		Timestamp: timestamp,
-		Signature: signature,
+		CloudName:      c.cloudName,
+		APIKey:         c.apiKey,
+		AllowedFormats: ProductFormats,
+		Folder:         folder,
+		Timestamp:      timestamp,
+		Signature:      signature,
 	}, nil
 }
 

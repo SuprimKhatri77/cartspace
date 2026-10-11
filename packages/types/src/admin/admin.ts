@@ -67,6 +67,9 @@ export const UploadSignatureSchema = z
   .object({
     cloud_name: z.string(),
     api_key: z.string(),
+    allowed_formats: z
+      .string()
+      .describe("Comma-separated; Cloudinary rejects any other format"),
     folder: z.string(),
     timestamp: z
       .int()
@@ -76,7 +79,7 @@ export const UploadSignatureSchema = z
   .meta({
     id: "UploadSignature",
     description:
-      "POST the file with these fields to https://api.cloudinary.com/v1_1/{cloud_name}/image/upload.",
+      "POST the file with these fields (all of them, unchanged) to https://api.cloudinary.com/v1_1/{cloud_name}/image/upload.",
   });
 export type UploadSignature = z.infer<typeof UploadSignatureSchema>;
 

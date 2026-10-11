@@ -16,11 +16,11 @@ func TestSignUpload(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Cloudinary: sha1 of the sorted "key=value&..." params, then the secret.
-	sum := sha1.Sum([]byte("folder=cartspace/products&timestamp=1760000000secret-xyz")) //nolint:gosec
+	sum := sha1.Sum([]byte("allowed_formats=jpg,png,webp,avif&folder=cartspace/products&timestamp=1760000000secret-xyz")) //nolint:gosec
 	if got.Signature != hex.EncodeToString(sum[:]) {
 		t.Errorf("signature = %s, want %s", got.Signature, hex.EncodeToString(sum[:]))
 	}
-	if got.CloudName != "cartspace" || got.APIKey != "key-123" || got.Folder != "cartspace/products" || got.Timestamp != 1760000000 {
+	if got.CloudName != "cartspace" || got.APIKey != "key-123" || got.AllowedFormats != "jpg,png,webp,avif" || got.Folder != "cartspace/products" || got.Timestamp != 1760000000 {
 		t.Errorf("unexpected signature: %+v", got)
 	}
 }

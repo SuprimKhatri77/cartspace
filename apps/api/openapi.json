@@ -3142,6 +3142,10 @@
           "api_key": {
             "type": "string"
           },
+          "allowed_formats": {
+            "type": "string",
+            "description": "Comma-separated; Cloudinary rejects any other format"
+          },
           "folder": {
             "type": "string"
           },
@@ -3156,11 +3160,12 @@
         "required": [
           "cloud_name",
           "api_key",
+          "allowed_formats",
           "folder",
           "timestamp",
           "signature"
         ],
-        "description": "POST the file with these fields to https://api.cloudinary.com/v1_1/{cloud_name}/image/upload."
+        "description": "POST the file with these fields (all of them, unchanged) to https://api.cloudinary.com/v1_1/{cloud_name}/image/upload."
       },
       "AdminOrderListResponse": {
         "type": "object",
