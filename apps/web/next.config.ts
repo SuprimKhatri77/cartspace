@@ -14,9 +14,16 @@ const nextConfig: NextConfig = {
     loader: "custom",
     loaderFile: "./lib/image-loader.ts",
   },
-  ...(turbopackMemoryMb > 0 && {
-    experimental: { turbopackMemoryLimit: turbopackMemoryMb * 1024 * 1024 },
-  }),
+  experimental: {
+    // The default scroll handler looks for the new page's first DOM node,
+    // which can be a tag React hoisted into <head>; it then gives up, so a
+    // product opened from far down /shop kept the old scroll position. This
+    // one measures the segment's own nodes (Next 16's suggested fix).
+    appNewScrollHandler: true,
+    ...(turbopackMemoryMb > 0 && {
+      turbopackMemoryLimit: turbopackMemoryMb * 1024 * 1024,
+    }),
+  },
 };
 
 export default nextConfig;
