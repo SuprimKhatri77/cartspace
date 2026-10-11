@@ -294,12 +294,14 @@
     background-size: 100% 1px;
   }
 
-  /* Skeleton shimmer, layered on bg-muted. */
-  .shimmer {
+  /* Skeleton shimmer, layered on bg-muted. Not `.shimmer`: shadcn/tailwind.css
+     has a text-shimmer utility by that name whose background-clip: text
+     erased the block's background. */
+  .skeleton-shimmer {
     position: relative;
     overflow: hidden;
   }
-  .shimmer::after {
+  .skeleton-shimmer::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -310,18 +312,11 @@
       color-mix(in oklch, var(--background) 55%, transparent),
       transparent
     );
-    animation: shimmer 1.6s infinite;
-  }
-
-  .no-scrollbar {
-    scrollbar-width: none;
-  }
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
+    animation: skeleton-shimmer 1.6s infinite;
   }
 }
 
-@keyframes shimmer {
+@keyframes skeleton-shimmer {
   100% {
     transform: translateX(100%);
   }
@@ -356,7 +351,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shimmer::after,
+  .skeleton-shimmer::after,
   .animate-marquee,
   .animate-rise,
   [class*="animate-[hero-settle"] {
