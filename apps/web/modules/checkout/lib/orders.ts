@@ -5,6 +5,17 @@ export function orderLabel(number: number): string {
   return `CS-${number}`;
 }
 
+/**
+ * The order number in a URL segment: "1042", or the label "CS-1042" (any
+ * case) someone pasted. Null for anything else, including 0.
+ */
+export function parseOrderNumber(raw: string): number | null {
+  const match = /^(?:cs-)?(\d{1,15})$/i.exec(raw.trim());
+  if (!match) return null;
+  const number = Number(match[1]);
+  return number > 0 ? number : null;
+}
+
 export const STATUS_LABELS: Record<OrderStatus, string> = {
   pending: "Awaiting payment",
   paid: "Confirmed",

@@ -5,6 +5,7 @@ import {
   formatOrderDate,
   formatShortDate,
   orderLabel,
+  parseOrderNumber,
   stepDate,
   timelineStep,
 } from "@/modules/checkout/lib/orders";
@@ -14,6 +15,27 @@ describe("orders", () => {
     expect(orderLabel(1042)).toBe("CS-1042");
     // UTC, so a late-evening order doesn't move a day between server and browser
     expect(formatOrderDate("2026-10-10T23:30:00Z")).toBe("10 October 2026");
+  });
+
+  test("order numbers in urls", () => {
+    expect(parseOrderNumber("1042")).toBe(1042);
+    expect(parseOrderNumber("CS-1042")).toBe(1042);
+    expect(parseOrderNumber("cs-1042")).toBe(1042);
+    expect(parseOrderNumber("01042")).toBe(1042);
+    for (const raw of [
+      "",
+      "0",
+      "CS-",
+      "CS-CS-1042",
+      "1e3",
+      "0x10",
+      "-5",
+      "10.5",
+      "1042a",
+      "9".repeat(16),
+    ]) {
+      expect(parseOrderNumber(raw)).toBeNull();
+    }
   });
 
   test("timeline steps", () => {

@@ -1,21 +1,20 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { OrderView } from "@/modules/checkout/components/orders-view";
-import { orderLabel } from "@/modules/checkout/lib/orders";
+import { orderLabel, parseOrderNumber } from "@/modules/checkout/lib/orders";
 
 type Params = { params: Promise<{ number: string }> };
 
-function parseNumber(raw: string): number | null {
-  return /^\d{1,15}$/.test(raw) ? Number(raw) : null;
-}
-
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const number = parseNumber((await params).number);
+  const number = parseOrderNumber((await params).number);
   return { title: number ? `Order ${orderLabel(number)}` : "Order" };
 }
 
 export default async function OrderPage({ params }: Params) {
-  const number = parseNumber((await params).number);
+  const raw = (await params).number;
+  const number = parseOrderNumber(raw);
   if (!number) notFound();
+  // "CS-1042" or "01042" lands on the one URL the app links to
+  if (raw !== String(number)) redirect(`/account/orders/${number}`);
   return <OrderView number={number} />;
 }
