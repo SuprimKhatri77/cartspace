@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AnimatePresence, m } from "motion/react";
 import { HandbagIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -13,8 +12,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CountBadge } from "@/components/layout/count-badge";
 import { loginPath } from "@/lib/auth/redirect";
-import { EASE_OUT } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { useCart } from "../queries";
@@ -39,31 +38,7 @@ export function BagButton() {
       aria-label={count > 0 ? `Bag, ${count} items` : "Bag"}
     >
       <HandbagIcon weight="light" className="size-5" />
-      <AnimatePresence initial={false}>
-        {count > 0 && (
-          <m.span
-            key="badge"
-            initial={{ scale: 0.4, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.4, opacity: 0 }}
-            transition={{ duration: 0.3, ease: EASE_OUT }}
-            className="absolute top-1 right-0.5 flex h-4 min-w-4 items-center justify-center overflow-hidden rounded-full bg-primary px-1 font-mono text-[0.625rem] leading-none text-primary-foreground tabular-nums"
-            aria-hidden
-          >
-            <AnimatePresence mode="popLayout" initial={false}>
-              <m.span
-                key={count}
-                initial={{ y: 8, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -8, opacity: 0 }}
-                transition={{ duration: 0.3, ease: EASE_OUT }}
-              >
-                {count > 99 ? "99+" : count}
-              </m.span>
-            </AnimatePresence>
-          </m.span>
-        )}
-      </AnimatePresence>
+      <CountBadge count={count} />
     </Button>
   );
 }

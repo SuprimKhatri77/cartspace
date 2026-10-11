@@ -2584,6 +2584,15 @@
           "saved_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "variant_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Active variants; with more than one, a size or colour must be chosen"
+          },
+          "in_stock": {
+            "type": "boolean",
+            "description": "Whether any active variant has stock"
           }
         },
         "required": [
@@ -2605,7 +2614,9 @@
           "selling_price",
           "offer_price",
           "price",
-          "saved_at"
+          "saved_at",
+          "variant_count",
+          "in_stock"
         ],
         "description": "A saved product, still on sale."
       },

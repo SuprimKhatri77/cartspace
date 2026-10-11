@@ -39,11 +39,13 @@ export function ThemePicker({ initial }: { initial: ThemeId }) {
 
   return (
     <Popover.Root>
+      {/* z-40: under the sheets' backdrop (z-50), so an open drawer covers
+          it instead of the picker sitting on the drawer's buttons. */}
       <Popover.Trigger
         aria-label="Choose a theme"
         className={cn(
           LIFT,
-          "fixed right-4 z-50 flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_12px_30px_-10px_oklch(0.2_0.01_60/0.5)] transition-transform duration-200 ease-out-expo outline-none hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95 sm:right-6",
+          "fixed right-4 z-40 flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_12px_30px_-10px_oklch(0.2_0.01_60/0.5)] transition-transform duration-200 ease-out-expo outline-none hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95 sm:right-6",
         )}
       >
         <PaletteIcon weight="light" className="size-5" />

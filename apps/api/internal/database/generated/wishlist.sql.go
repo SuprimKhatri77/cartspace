@@ -80,7 +80,11 @@ func (q *Queries) ListWishlistIDs(ctx context.Context, userID pgtype.UUID) ([]pg
 }
 
 const listWishlistProducts = `-- name: ListWishlistProducts :many
-SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.rating_count, sp.rating_avg, sp.variant_id, sp.selling_price, sp.offer_price, sp.price, w.created_at AS saved_at
+SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.rating_count, sp.rating_avg, sp.variant_id, sp.selling_price, sp.offer_price, sp.price, w.created_at AS saved_at,
+    (SELECT COUNT(*) FROM product_variants v
+     WHERE v.product_id = sp.id AND v.is_active)::int AS variant_count,
+    EXISTS (SELECT 1 FROM product_variants v
+            WHERE v.product_id = sp.id AND v.is_active AND v.stock > 0) AS in_stock
 FROM wishlist_items w
 JOIN storefront_products sp ON sp.id = w.product_id
 WHERE w.user_id = $1
@@ -114,8 +118,12 @@ type ListWishlistProductsRow struct {
 	OfferPrice     pgtype.Int4        `json:"offer_price"`
 	Price          int32              `json:"price"`
 	SavedAt        pgtype.Timestamptz `json:"saved_at"`
+	VariantCount   int32              `json:"variant_count"`
+	InStock        bool               `json:"in_stock"`
 }
 
+// variant_count and in_stock tell the shopper whether one tap can add it to
+// the bag (a single variant in stock) or a size/colour must be chosen first.
 func (q *Queries) ListWishlistProducts(ctx context.Context, arg ListWishlistProductsParams) ([]ListWishlistProductsRow, error) {
 	rows, err := q.db.Query(ctx, listWishlistProducts, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
@@ -145,6 +153,8 @@ func (q *Queries) ListWishlistProducts(ctx context.Context, arg ListWishlistProd
 			&i.OfferPrice,
 			&i.Price,
 			&i.SavedAt,
+			&i.VariantCount,
+			&i.InStock,
 		); err != nil {
 			return nil, err
 		}

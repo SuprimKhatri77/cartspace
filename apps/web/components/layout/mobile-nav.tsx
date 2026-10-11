@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ListIcon } from "@phosphor-icons/react";
+import {
+  HeartIcon,
+  ListIcon,
+  PackageIcon,
+  UserCircleIcon,
+} from "@phosphor-icons/react";
 import {
   Accordion,
   AccordionContent,
@@ -19,11 +24,18 @@ import {
 import { site } from "@/lib/site";
 import { useAuth } from "@/providers/auth-provider";
 import type { Collection as NavCategory } from "@/modules/catalog/api";
+import { useSavedCount } from "@/modules/wishlist/hooks";
+import { useWishlistDrawer } from "@/modules/wishlist/store";
+
+const accountLink =
+  "-mx-2 flex h-11 w-[calc(100%+1rem)] items-center gap-3 rounded-control px-2 text-left transition-colors hover:bg-muted";
 
 /** Full-height navigation sheet for small screens. */
 export function MobileNav({ categories }: { categories: NavCategory[] }) {
   const [open, setOpen] = useState(false);
   const user = useAuth((s) => s.user);
+  const savedCount = useSavedCount();
+  const openWishlist = useWishlistDrawer((s) => s.setOpen);
   const close = () => setOpen(false);
 
   return (
@@ -99,9 +111,42 @@ export function MobileNav({ categories }: { categories: NavCategory[] }) {
 
         <div className="space-y-2 border-t border-border px-5 py-5 text-sm">
           {user ? (
-            <Link href="/account" onClick={close} className="block">
-              Account
-            </Link>
+            <ul className="space-y-1">
+              <li>
+                <Link
+                  href="/account/orders"
+                  onClick={close}
+                  className={accountLink}
+                >
+                  <PackageIcon weight="light" className="size-5" />
+                  Orders
+                </Link>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    close();
+                    openWishlist(true);
+                  }}
+                  className={accountLink}
+                >
+                  <HeartIcon weight="light" className="size-5" />
+                  Wishlist
+                  {savedCount > 0 && (
+                    <span className="ml-auto font-mono text-xs text-muted-foreground tabular-nums">
+                      {savedCount}
+                    </span>
+                  )}
+                </button>
+              </li>
+              <li>
+                <Link href="/account" onClick={close} className={accountLink}>
+                  <UserCircleIcon weight="light" className="size-5" />
+                  Account
+                </Link>
+              </li>
+            </ul>
           ) : (
             <div className="grid grid-cols-2 gap-2">
               <Link
