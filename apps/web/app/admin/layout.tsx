@@ -4,6 +4,7 @@ import { ArrowUpRightIcon } from "@phosphor-icons/react/ssr";
 import { site } from "@/lib/site";
 import { AdminMobileNav } from "@/modules/admin/components/admin-mobile-nav";
 import { AdminAccount, AdminNav } from "@/modules/admin/components/admin-nav";
+import { LogoMark } from "@/components/brand/logo-mark";
 
 export const metadata: Metadata = {
   title: { template: `%s · Admin · ${site.name}`, default: "Admin" },
@@ -24,6 +25,7 @@ export default function AdminLayout({
           className="flex h-16 items-baseline gap-3 border-b border-sidebar-border px-5 pt-5"
         >
           <span className="font-serif text-[1.65rem] leading-none">
+            <LogoMark className="mr-[0.28em] inline-block size-[0.66em] align-baseline" />
             {site.name}
           </span>
           <span className="eyebrow">Admin</span>

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { site } from "@/lib/site";
 import { AdminAccount, AdminNav } from "./admin-nav";
+import { LogoMark } from "@/components/brand/logo-mark";
 
 /** The sidebar as a sheet, below the lg breakpoint. */
 export function AdminMobileNav() {
@@ -31,6 +32,7 @@ export function AdminMobileNav() {
       >
         <div className="flex h-16 items-baseline gap-3 border-b border-sidebar-border px-5 pt-5">
           <SheetTitle className="font-serif text-2xl font-normal">
+            <LogoMark className="mr-[0.28em] inline-block size-[0.66em] align-baseline" />
             {site.name}
           </SheetTitle>
           <span className="eyebrow">Admin</span>

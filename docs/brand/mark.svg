@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 8 46 46" fill="none">
+  <!-- cartspace: an open frame (a space) with its corner object stepping out -->
+  <path d="M39 13H13V51H51V25" stroke="#24201c" stroke-width="6"/>
+  <rect x="44" y="8" width="12" height="12" rx="1" fill="#24201c"/>
+</svg>

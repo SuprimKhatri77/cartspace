@@ -61,6 +61,9 @@ func TestRender(t *testing.T) {
 	if !strings.Contains(r.HTML, "/image/upload/c_fill,g_auto,w_128,h_160,f_jpg,q_auto/c_fill,ar_4:5/scarf.jpg") {
 		t.Error("product image should be a jpeg thumbnail")
 	}
+	if !strings.Contains(r.HTML, `src="http://localhost:3000/email/mark.png"`) {
+		t.Error("the header should show the logo mark from the storefront")
+	}
 	if !strings.Contains(r.HTML, "11 October 2026") {
 		t.Error("placed date missing")
 	}

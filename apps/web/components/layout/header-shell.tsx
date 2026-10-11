@@ -16,6 +16,7 @@ import {
   WishlistHeaderButton,
 } from "@/modules/wishlist/components/wishlist-drawer";
 import { UserMenu } from "./user-menu";
+import { LogoMark } from "@/components/brand/logo-mark";
 
 /**
  * The sticky header. It sits flush on the page at the top and gains a
@@ -55,6 +56,7 @@ export function HeaderShell({ categories }: { categories: NavCategory[] }) {
           href="/"
           className="font-serif text-[1.65rem] leading-none tracking-[-0.02em] outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
         >
+          <LogoMark className="mr-[0.28em] inline-block size-[0.66em] align-baseline" />
           {site.name}
         </Link>
 
