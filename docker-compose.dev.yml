@@ -72,6 +72,16 @@ services:
     networks:
       - app-network
 
+  # Catches every email the api sends (SMTP mailpit:1025); read them at
+  # http://localhost:8025. Nothing leaves the machine.
+  mailpit:
+    image: axllent/mailpit:v1.31.3
+    container_name: cartspace-mailpit
+    ports:
+      - "127.0.0.1:8025:8025"
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge

@@ -49,6 +49,18 @@ type Category struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type EmailOutbox struct {
+	ID            pgtype.UUID        `json:"id"`
+	Kind          string             `json:"kind"`
+	OrderID       pgtype.UUID        `json:"order_id"`
+	Status        string             `json:"status"`
+	Attempts      int32              `json:"attempts"`
+	NextAttemptAt pgtype.Timestamptz `json:"next_attempt_at"`
+	LastError     pgtype.Text        `json:"last_error"`
+	SentAt        pgtype.Timestamptz `json:"sent_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
 type Order struct {
 	ID              pgtype.UUID        `json:"id"`
 	Number          int64              `json:"number"`

@@ -39,3 +39,33 @@ func TestSplitList(t *testing.T) {
 		t.Fatal("empty value must give no proxies")
 	}
 }
+
+func TestValidateMail(t *testing.T) {
+	ok := Config{SMTPHost: "mailpit", SMTPPort: 1025, SMTPTLS: SMTPNoTLS, MailFrom: "Cartspace <orders@example.com>"}
+
+	tests := []struct {
+		name    string
+		edit    func(c *Config)
+		wantErr bool
+	}{
+		{"valid", func(c *Config) {}, false},
+		{"mail off checks nothing", func(c *Config) { *c = Config{} }, false},
+		{"bare address", func(c *Config) { c.MailFrom = "orders@example.com" }, false},
+		{"no sender", func(c *Config) { c.MailFrom = "" }, true},
+		{"bad sender", func(c *Config) { c.MailFrom = "Cartspace" }, true},
+		{"unknown tls mode", func(c *Config) { c.SMTPTLS = "ssl" }, true},
+		{"port out of range", func(c *Config) { c.SMTPPort = 70000 }, true},
+		{"username without password", func(c *Config) { c.SMTPUsername = "u" }, true},
+		{"username and password", func(c *Config) { c.SMTPUsername, c.SMTPPassword = "u", "p" }, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := ok
+			tt.edit(&c)
+			err := c.ValidateMail()
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
