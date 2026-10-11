@@ -44,6 +44,9 @@ export const AddressInputSchema = z
   .meta({ id: "AddressInput" });
 export type AddressInput = z.infer<typeof AddressInputSchema>;
 
+/** The most addresses a customer can save (apps/api checkout.MaxAddresses). */
+export const MAX_ADDRESSES = 10;
+
 export const AddressSchema = z
   .object({
     id: Uuid,

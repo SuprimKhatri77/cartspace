@@ -134,4 +134,46 @@ export function registerAuthPaths() {
     },
     errors: { 404: "The user no longer exists (USER_NOT_FOUND)" },
   });
+
+  operation({
+    method: "patch",
+    path: "/api/v1/auth/me",
+    operationId: "updateProfile",
+    tag,
+    summary: "Change your name",
+    description:
+      "Saves the name and sets a fresh `access_token` cookie carrying it (pages read the name from the token).",
+    auth: "user",
+    request: body(schemas.UpdateProfileBodySchema),
+    success: {
+      status: 200,
+      description: "Your details are saved",
+      schema: schemas.UserResponseSchema,
+    },
+    errors: {
+      400: "Invalid body (VALIDATION_FAILED)",
+      404: "The user no longer exists (USER_NOT_FOUND)",
+    },
+  });
+
+  operation({
+    method: "post",
+    path: "/api/v1/auth/me/password",
+    operationId: "changePassword",
+    tag,
+    summary: "Change your password",
+    description:
+      "Checks the current password, sets the new one and signs out every other session (the one asking stays signed in). A wrong current password is a VALIDATION_FAILED field error on `current_password`, not a 401.",
+    auth: "user",
+    request: body(schemas.ChangePasswordBodySchema),
+    success: {
+      status: 200,
+      description: "Password changed",
+      schema: schemas.MessageResponseSchema,
+    },
+    errors: {
+      400: "Invalid body, or a wrong current password (VALIDATION_FAILED)",
+      404: "The user no longer exists (USER_NOT_FOUND)",
+    },
+  });
 }

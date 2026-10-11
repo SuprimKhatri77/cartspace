@@ -38,7 +38,15 @@ export default async function AccountPage() {
         className="animate-rise max-w-2xl"
         style={{ "--i": 2 } as React.CSSProperties}
       >
-        <h2 className="eyebrow mb-4">Profile</h2>
+        <div className="mb-4 flex items-baseline justify-between gap-4">
+          <h2 className="eyebrow">Profile</h2>
+          <Link
+            href="/account/settings"
+            className="link-underline text-xs text-muted-foreground hover:text-foreground"
+          >
+            Edit
+          </Link>
+        </div>
         <dl className="divide-y divide-border border-y border-border">
           {rows.map((row) => (
             <div

@@ -113,6 +113,32 @@ func (q *Queries) UpdateUserImage(ctx context.Context, arg UpdateUserImageParams
 	return i, err
 }
 
+const updateUserName = `-- name: UpdateUserName :one
+UPDATE users SET name = $2 WHERE id = $1
+RETURNING id, name, email, password_hash, role, image_url, created_at, updated_at
+`
+
+type UpdateUserNameParams struct {
+	ID   pgtype.UUID `json:"id"`
+	Name string      `json:"name"`
+}
+
+func (q *Queries) UpdateUserName(ctx context.Context, arg UpdateUserNameParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserName, arg.ID, arg.Name)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Role,
+		&i.ImageUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateUserPassword = `-- name: UpdateUserPassword :exec
 UPDATE users SET password_hash = $2 WHERE id = $1
 `

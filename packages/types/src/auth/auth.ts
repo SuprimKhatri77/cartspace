@@ -47,6 +47,25 @@ export const ResetPasswordBodySchema = z
   .meta({ id: "ResetPasswordBody" });
 export type ResetPasswordBody = z.infer<typeof ResetPasswordBodySchema>;
 
+export const UpdateProfileBodySchema = z
+  .object({ name: RegisterBodySchema.shape.name })
+  .meta({ id: "UpdateProfileBody" });
+export type UpdateProfileBody = z.infer<typeof UpdateProfileBodySchema>;
+
+export const ChangePasswordBodySchema = z
+  .object({
+    current_password: z
+      .string()
+      .min(1, "Enter your current password")
+      .max(72, "Password cannot exceed 72 characters"),
+    new_password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .max(72, "Password cannot exceed 72 characters"),
+  })
+  .meta({ id: "ChangePasswordBody" });
+export type ChangePasswordBody = z.infer<typeof ChangePasswordBodySchema>;
+
 export const LoginBodySchema = z
   .object({
     email,

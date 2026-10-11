@@ -83,6 +83,15 @@ export type ResetPasswordBody = {
     password: string;
 };
 
+export type UpdateProfileBody = {
+    name: string;
+};
+
+export type ChangePasswordBody = {
+    current_password: string;
+    new_password: string;
+};
+
 export type CategoryListResponse = {
     success: true;
     message: string;
@@ -1405,6 +1414,80 @@ export type GetMeResponses = {
 };
 
 export type GetMeResponse = GetMeResponses[keyof GetMeResponses];
+
+export type UpdateProfileData = {
+    body: UpdateProfileBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/me';
+};
+
+export type UpdateProfileErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * The user no longer exists (USER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type UpdateProfileError = UpdateProfileErrors[keyof UpdateProfileErrors];
+
+export type UpdateProfileResponses = {
+    /**
+     * Your details are saved
+     */
+    200: UserResponse;
+};
+
+export type UpdateProfileResponse = UpdateProfileResponses[keyof UpdateProfileResponses];
+
+export type ChangePasswordData = {
+    body: ChangePasswordBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/me/password';
+};
+
+export type ChangePasswordErrors = {
+    /**
+     * Invalid body, or a wrong current password (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * The user no longer exists (USER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type ChangePasswordError = ChangePasswordErrors[keyof ChangePasswordErrors];
+
+export type ChangePasswordResponses = {
+    /**
+     * Password changed
+     */
+    200: MessageResponse;
+};
+
+export type ChangePasswordResponse = ChangePasswordResponses[keyof ChangePasswordResponses];
 
 export type AdminListCategoriesData = {
     body?: never;

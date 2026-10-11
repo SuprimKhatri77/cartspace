@@ -103,6 +103,22 @@ func (q *Queries) RevokeAllUserSessions(ctx context.Context, userID pgtype.UUID)
 	return err
 }
 
+const revokeOtherUserSessions = `-- name: RevokeOtherUserSessions :exec
+UPDATE sessions SET revoked_at = now()
+WHERE user_id = $1 AND id IS DISTINCT FROM $2 AND revoked_at IS NULL
+`
+
+type RevokeOtherUserSessionsParams struct {
+	UserID pgtype.UUID `json:"user_id"`
+	KeepID pgtype.UUID `json:"keep_id"`
+}
+
+// Every session of the user but keep_id (the one asking; NULL keeps none).
+func (q *Queries) RevokeOtherUserSessions(ctx context.Context, arg RevokeOtherUserSessionsParams) error {
+	_, err := q.db.Exec(ctx, revokeOtherUserSessions, arg.UserID, arg.KeepID)
+	return err
+}
+
 const revokeSession = `-- name: RevokeSession :exec
 UPDATE sessions SET revoked_at = now()
 WHERE id = $1 AND revoked_at IS NULL
