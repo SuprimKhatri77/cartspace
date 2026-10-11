@@ -17,7 +17,16 @@ export function Providers({
     <ReactQueryProvider>
       <AuthProvider user={user}>
         <MotionProvider>{children}</MotionProvider>
-        <Toaster position="bottom-center" />
+        {/* Bottom right on larger screens; on phones sonner spans the
+            width at the bottom, kept clear of the iPhone home bar. */}
+        <Toaster
+          position="bottom-right"
+          mobileOffset={{
+            bottom: "calc(env(safe-area-inset-bottom) + 16px)",
+            left: 16,
+            right: 16,
+          }}
+        />
       </AuthProvider>
     </ReactQueryProvider>
   );

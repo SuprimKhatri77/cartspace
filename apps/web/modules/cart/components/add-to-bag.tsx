@@ -4,52 +4,47 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, m } from "motion/react";
 import { CheckIcon } from "@phosphor-icons/react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { loginPath } from "@/lib/auth/redirect";
 import { EASE_OUT } from "@/lib/motion";
 import { useAuth } from "@/providers/auth-provider";
-import {
-  cartErrorMessage,
-  useCartMutations,
-} from "../hooks/use-cart-mutations";
-import { useBagDrawer } from "../store";
+import { useCartMutations } from "../hooks/use-cart-mutations";
+import type { LinePreview } from "../lib/cart-math";
 
 /** How long the button says "Added" before it resets. */
 const ADDED_FOR = 1800;
 
 /**
- * Adds one of the selected variant. The label rolls to "Added" and the bag
- * opens; signed-out shoppers go to sign in and come back to this variant.
+ * Adds one of the selected variant. The bag count and the label change at
+ * once; a toast confirms with "View bag" once the API agrees, or the add
+ * rolls back with its reason. Signed-out shoppers go to sign in and come
+ * back to this variant.
  */
 export function AddToBag({
-  variantId,
+  preview,
   stock,
 }: {
-  variantId: string;
+  /** The selected variant, shown in the bag before the API answers. */
+  preview: LinePreview;
   stock: number;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const user = useAuth((s) => s.user);
-  const openBag = useBagDrawer((s) => s.setOpen);
   const { add } = useCartMutations();
-  const [added, setAdded] = useState(false);
+  // When the last add was clicked (0: none showing), so another click
+  // restarts the "Added" label's timer.
+  const [addedAt, setAddedAt] = useState(0);
+  const added = addedAt > 0;
 
   useEffect(() => {
-    if (!added) return;
-    const timer = setTimeout(() => setAdded(false), ADDED_FOR);
+    if (!addedAt) return;
+    const timer = setTimeout(() => setAddedAt(0), ADDED_FOR);
     return () => clearTimeout(timer);
-  }, [added]);
+  }, [addedAt]);
 
   const soldOut = stock === 0;
-  const label = soldOut
-    ? "Sold out"
-    : added
-      ? "Added"
-      : add.isPending
-        ? "Adding…"
-        : "Add to bag";
+  const label = soldOut ? "Sold out" : added ? "Added" : "Add to bag";
 
   function onClick() {
     if (!user) {
@@ -57,15 +52,11 @@ export function AddToBag({
       router.push(loginPath(pathname + window.location.search));
       return;
     }
+    setAddedAt(Date.now());
     add.mutate(
-      { variant_id: variantId, quantity: 1 },
-      {
-        onSuccess: () => {
-          setAdded(true);
-          openBag(true);
-        },
-        onError: (error) => toast.error(cartErrorMessage(error)),
-      },
+      { variant_id: preview.variant_id, quantity: 1, preview, announce: true },
+      // The hook rolls back and says why; the label stops claiming success.
+      { onError: () => setAddedAt(0) },
     );
   }
 
@@ -73,7 +64,8 @@ export function AddToBag({
     <Button
       size="lg"
       className="relative w-full min-w-0 shrink overflow-hidden"
-      disabled={soldOut || add.isPending}
+      // Never blocked while saving: each click adds one more.
+      disabled={soldOut}
       onClick={onClick}
       aria-live="polite"
     >
