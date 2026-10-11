@@ -1,9 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import type { CartLine } from "@repo/types";
+import type {
+  ProductDetail,
+  StorefrontVariant,
+  WishlistProduct,
+} from "@repo/types";
 import {
+  addLine,
   EMPTY_CART,
+  type LinePreview,
   optionSummary,
+  productPreview,
   removeLine,
+  savedPreview,
   setLineQuantity,
   unitCount,
   withTotals,
@@ -90,5 +99,114 @@ describe("cart math", () => {
     expect(shippingFor(0)).toBe(0);
     expect(shippingFor(14_999)).toBe(800);
     expect(shippingFor(15_000)).toBe(0);
+  });
+});
+
+describe("optimistic add", () => {
+  const preview: LinePreview = {
+    variant_id: "new",
+    product_id: "p2",
+    product_name: "Mug",
+    product_slug: "mug",
+    sku: null,
+    stock: 4,
+    image: "",
+    selling_price: 1500,
+    offer_price: null,
+    price: 1500,
+    options: [],
+  };
+
+  test("grows an existing line, up to what it can hold", () => {
+    const cart = withTotals([line({ quantity: 9, line_total: 18000 })]);
+    const once = addLine(cart, "v1", 1);
+    expect(once.items[0]).toMatchObject({ quantity: 10, line_total: 20000 });
+    expect(once.item_count).toBe(10);
+    // at the cap: unchanged, the API says why
+    expect(addLine(once, "v1", 1).items[0]?.quantity).toBe(10);
+    // a line already above its stock never shrinks
+    const over = withTotals([line({ quantity: 5, stock: 2, max_quantity: 2 })]);
+    expect(addLine(over, "v1", 1).items[0]?.quantity).toBe(5);
+  });
+
+  test("appends a new line from its preview", () => {
+    const cart = withTotals([line({})]);
+    const next = addLine(cart, "new", 2, preview);
+    expect(next.items).toHaveLength(2);
+    expect(next.items[1]).toMatchObject({
+      variant_id: "new",
+      quantity: 2,
+      line_total: 3000,
+      available: true,
+      max_quantity: 4,
+    });
+    expect(next).toMatchObject({ item_count: 3, subtotal: 5000 });
+  });
+
+  test("waits for the API without a preview", () => {
+    const cart = withTotals([line({})]);
+    expect(addLine(cart, "new", 1)).toBe(cart);
+  });
+
+  test("previews the chosen variant, else the default", () => {
+    const product = {
+      id: "p1",
+      name: "Tee",
+      slug: "tee",
+      variant_id: "default",
+      stock: 3,
+      images: ["https://x/p.jpg"],
+      variant_images: ["https://x/default.jpg"],
+      selling_price: 2000,
+      offer_price: 1500,
+      price: 1500,
+    } as ProductDetail;
+    const variant = {
+      id: "v2",
+      sku: "TEE-M",
+      stock: 7,
+      images: [],
+      selling_price: 2200,
+      offer_price: null,
+      price: 2200,
+      options: [{ name: "Size", value: "M", type: "text" }],
+    } as unknown as StorefrontVariant;
+
+    expect(productPreview(product, undefined)).toMatchObject({
+      variant_id: "default",
+      stock: 3,
+      image: "https://x/default.jpg",
+      offer_price: 1500,
+      price: 1500,
+      options: [],
+    });
+    // no photos of its own: the product's
+    expect(productPreview(product, variant)).toMatchObject({
+      variant_id: "v2",
+      sku: "TEE-M",
+      stock: 7,
+      image: "https://x/p.jpg",
+      offer_price: null,
+      price: 2200,
+    });
+  });
+
+  test("previews a saved product's only variant", () => {
+    const saved = {
+      id: "p1",
+      name: "Tee",
+      slug: "tee",
+      variant_id: "v1",
+      images: [],
+      selling_price: 2000,
+      offer_price: null,
+      price: 2000,
+    } as unknown as WishlistProduct;
+    expect(savedPreview(saved)).toMatchObject({
+      variant_id: "v1",
+      image: "",
+      price: 2000,
+      options: [],
+    });
   });
 });

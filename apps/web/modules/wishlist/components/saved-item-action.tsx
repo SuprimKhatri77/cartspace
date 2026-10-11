@@ -2,15 +2,11 @@
 
 import Link from "next/link";
 import { HandbagIcon } from "@phosphor-icons/react";
-import { toast } from "sonner";
 import type { WishlistProduct } from "@repo/types";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  cartErrorMessage,
-  useCartMutations,
-} from "@/modules/cart/hooks/use-cart-mutations";
-import { useBagDrawer } from "@/modules/cart/store";
+import { useCartMutations } from "@/modules/cart/hooks/use-cart-mutations";
+import { savedPreview } from "@/modules/cart/lib/cart-math";
 
 /**
  * What a saved product offers: one tap into the bag when there is only
@@ -23,12 +19,11 @@ export function SavedItemAction({
   className,
 }: {
   product: WishlistProduct;
-  /** Called before leaving for the product page or the bag (a drawer closes). */
+  /** Called before leaving for the product page (a drawer closes). */
   onNavigate?: () => void;
   className?: string;
 }) {
   const { add } = useCartMutations();
-  const openBag = useBagDrawer((s) => s.setOpen);
 
   if (!product.in_stock) {
     return (
@@ -57,23 +52,20 @@ export function SavedItemAction({
     <Button
       variant="outline"
       size="sm"
-      disabled={add.isPending}
       className={className}
+      // In the bag at once; the toast's "View bag" opens it (and closes
+      // the wishlist drawer), a refusal rolls back with its reason.
       onClick={() =>
-        add.mutate(
-          { variant_id: product.variant_id, quantity: 1 },
-          {
-            onSuccess: () => {
-              onNavigate?.();
-              openBag(true);
-            },
-            onError: (error) => toast.error(cartErrorMessage(error)),
-          },
-        )
+        add.mutate({
+          variant_id: product.variant_id,
+          quantity: 1,
+          preview: savedPreview(product),
+          announce: true,
+        })
       }
     >
       <HandbagIcon />
-      {add.isPending ? "Adding…" : "Add to bag"}
+      Add to bag
     </Button>
   );
 }

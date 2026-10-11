@@ -43,7 +43,7 @@ export function BagButton() {
   );
 }
 
-/** The bag as a side sheet; add-to-bag and the header button open it. */
+/** The bag as a side sheet; the header button and the "Added" toast open it. */
 export function BagDrawer() {
   const open = useBagDrawer((s) => s.open);
   const setOpen = useBagDrawer((s) => s.setOpen);
