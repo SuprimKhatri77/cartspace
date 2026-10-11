@@ -49,7 +49,10 @@ export default async function RootLayout({
         instrumentSerif.variable,
       )}
     >
-      <body className="flex min-h-full flex-col">
+      {/* Children never shrink: a scroll lock (dialogs, menus) can pin the
+          body to the viewport height, and shrinking would collapse the
+          overflow-hidden announcement bar. */}
+      <body className="flex min-h-full flex-col *:shrink-0">
         <Providers user={user}>{children}</Providers>
       </body>
     </html>
