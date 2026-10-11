@@ -11,6 +11,10 @@ import { MobileNav } from "./mobile-nav";
 import type { Collection as NavCategory } from "@/modules/catalog/api";
 import { SearchDialog } from "@/modules/search/components/search-dialog";
 import { BagButton, BagDrawer } from "@/modules/cart/components/bag";
+import {
+  WishlistDrawer,
+  WishlistHeaderButton,
+} from "@/modules/wishlist/components/wishlist-drawer";
 import { UserMenu } from "./user-menu";
 
 /**
@@ -59,10 +63,13 @@ export function HeaderShell({ categories }: { categories: NavCategory[] }) {
         <div className="flex items-center justify-end gap-0.5">
           <SearchDialog collections={categories} />
           <UserMenu />
+          {/* Phones keep the wishlist in the menus: the header is full. */}
+          <WishlistHeaderButton className="hidden sm:inline-flex" />
           <BagButton />
         </div>
       </div>
       <BagDrawer />
+      <WishlistDrawer />
     </header>
   );
 }

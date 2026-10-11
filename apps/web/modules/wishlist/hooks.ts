@@ -17,8 +17,10 @@ import {
 } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
 import { loginPath } from "@/lib/auth/redirect";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { useAuth } from "@/providers/auth-provider";
 import { wishlistKeys } from "./keys";
+import { useWishlistDrawer } from "./store";
 
 const mutationKey = [...wishlistKeys.all, "write"] as const;
 
@@ -84,7 +86,7 @@ export function useToggleWishlist() {
         toast(`Saved ${name}`, {
           action: {
             label: "View wishlist",
-            onClick: () => router.push("/account/wishlist"),
+            onClick: () => useWishlistDrawer.getState().setOpen(true),
           },
         });
       }
@@ -125,4 +127,25 @@ export function useWishlistProducts() {
       meta.page < meta.total_pages ? meta.page + 1 : undefined,
     enabled: Boolean(userId),
   });
+}
+
+/**
+ * The saved products to show: the loaded pages, minus any the shopper has
+ * just unsaved (the ids update at once, the list on its next fetch).
+ */
+export function useSavedProducts() {
+  const hydrated = useHydrated();
+  const query = useWishlistProducts();
+  const { ids, ready } = useWishlistIds();
+  const products = (query.data?.pages.flatMap((p) => p.data) ?? []).filter(
+    (p) => !hydrated || !ready || ids.has(p.id),
+  );
+  return { query, products };
+}
+
+/** How many products the shopper has saved (0 until hydrated, as on the server). */
+export function useSavedCount() {
+  const hydrated = useHydrated();
+  const { ids } = useWishlistIds();
+  return hydrated ? ids.size : 0;
 }

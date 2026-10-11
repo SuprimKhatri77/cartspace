@@ -12,6 +12,13 @@ export const MAX_WISHLIST = 200;
 
 export const WishlistProductSchema = ProductWithPriceSchema.extend({
   saved_at: Timestamp,
+  variant_count: z
+    .int()
+    .nonnegative()
+    .describe(
+      "Active variants; with more than one, a size or colour must be chosen",
+    ),
+  in_stock: z.boolean().describe("Whether any active variant has stock"),
 }).meta({
   id: "WishlistProduct",
   description: "A saved product, still on sale.",

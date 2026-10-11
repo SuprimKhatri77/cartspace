@@ -839,6 +839,14 @@ export type WishlistProduct = {
      */
     price: number;
     saved_at: string;
+    /**
+     * Active variants; with more than one, a size or colour must be chosen
+     */
+    variant_count: number;
+    /**
+     * Whether any active variant has stock
+     */
+    in_stock: boolean;
 };
 
 export type WishlistIdsResponse = {
