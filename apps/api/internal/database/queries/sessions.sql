@@ -32,6 +32,11 @@ WHERE id = $1 AND revoked_at IS NULL;
 UPDATE sessions SET revoked_at = now()
 WHERE user_id = $1 AND revoked_at IS NULL;
 
+-- name: RevokeOtherUserSessions :exec
+-- Every session of the user but keep_id (the one asking; NULL keeps none).
+UPDATE sessions SET revoked_at = now()
+WHERE user_id = sqlc.arg(user_id) AND id IS DISTINCT FROM sqlc.narg(keep_id) AND revoked_at IS NULL;
+
 -- name: DeleteStaleSessions :execrows
 -- expired sessions, and revoked ones kept for a week for auditing
 DELETE FROM sessions

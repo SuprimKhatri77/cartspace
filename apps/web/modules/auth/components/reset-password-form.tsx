@@ -4,9 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { ResetPasswordBodySchema } from "@repo/types";
+import { PasswordInput } from "@/components/forms/password-input";
 import { buttonVariants, Button } from "@/components/ui/button";
 import {
   Field,
@@ -15,7 +15,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { useFocusFirstError } from "@/hooks/use-focus-first-error";
 import { logout, resetPassword } from "@/lib/api/client";
 import { getApiError, mapFieldErrors } from "@/lib/api/errors";
@@ -36,7 +35,6 @@ export function ResetPasswordForm() {
   const signedIn = useAuth((s) => Boolean(s.user));
   const setUser = useAuth((s) => s.setUser);
   const [password, setPassword] = useState("");
-  const [shown, setShown] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [linkDead, setLinkDead] = useState(false);
   const { ref: formRef, focusFirstError } = useFocusFirstError();
@@ -133,35 +131,18 @@ export function ResetPasswordForm() {
           <FieldLabel htmlFor="password" className="eyebrow !text-foreground">
             New password
           </FieldLabel>
-          <div className="relative">
-            <Input
-              id="password"
-              name="password"
-              type={shown ? "text" : "password"}
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setError(undefined);
-              }}
-              aria-invalid={Boolean(error)}
-              aria-describedby={error ? "password-error" : "password-hint"}
-              className="pr-11"
-            />
-            <button
-              type="button"
-              onClick={() => setShown((s) => !s)}
-              aria-label={shown ? "Hide password" : "Show password"}
-              aria-pressed={shown}
-              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {shown ? (
-                <EyeSlashIcon className="size-4" />
-              ) : (
-                <EyeIcon className="size-4" />
-              )}
-            </button>
-          </div>
+          <PasswordInput
+            id="password"
+            name="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setError(undefined);
+            }}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? "password-error" : "password-hint"}
+          />
           {!error && (
             <FieldDescription id="password-hint" className="text-xs">
               8 to 72 characters.

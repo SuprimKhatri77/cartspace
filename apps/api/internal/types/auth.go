@@ -21,3 +21,12 @@ type ResetPasswordRequest struct {
 	Token    string `json:"token" label:"Reset link" trim:"-" binding:"required,max=100"`
 	Password string `json:"password" label:"Password" trim:"-" binding:"required,min=8,max=72"`
 }
+
+type UpdateProfileRequest struct {
+	Name string `json:"name" label:"Name" binding:"required,not_blank,min=2,max=50,personname"`
+}
+
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" label:"Current password" trim:"-" binding:"required,max=72"`
+	NewPassword     string `json:"new_password" label:"New password" trim:"-" binding:"required,min=8,max=72"`
+}

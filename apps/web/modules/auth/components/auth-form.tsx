@@ -10,7 +10,7 @@ import {
   type LoginBody,
   type RegisterBody,
 } from "@repo/types";
-import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
+import { PasswordInput } from "@/components/forms/password-input";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -59,7 +59,6 @@ export function AuthForm(props: AuthFormProps) {
     password: "",
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [showPassword, setShowPassword] = useState(false);
   const { ref: formRef, focusFirstError } = useFocusFirstError();
 
   function fail(errors: Record<string, string>) {
@@ -212,32 +211,15 @@ export function AuthForm(props: AuthFormProps) {
         {field(
           "password",
           "Password",
-          <div className="relative">
-            <Input
-              id="password"
-              name="password"
-              type={showPassword ? "text" : "password"}
-              autoComplete={isRegister ? "new-password" : "current-password"}
-              value={values.password}
-              onChange={(e) => updateField("password", e.target.value)}
-              aria-invalid={Boolean(fieldErrors.password)}
-              aria-describedby={describedBy("password", isRegister)}
-              className="pr-11"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((shown) => !shown)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              aria-pressed={showPassword}
-              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {showPassword ? (
-                <EyeSlashIcon className="size-4" />
-              ) : (
-                <EyeIcon className="size-4" />
-              )}
-            </button>
-          </div>,
+          <PasswordInput
+            id="password"
+            name="password"
+            autoComplete={isRegister ? "new-password" : "current-password"}
+            value={values.password}
+            onChange={(e) => updateField("password", e.target.value)}
+            aria-invalid={Boolean(fieldErrors.password)}
+            aria-describedby={describedBy("password", isRegister)}
+          />,
           isRegister ? "8 to 72 characters." : undefined,
         )}
         {!isRegister && (

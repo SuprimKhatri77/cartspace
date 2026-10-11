@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import {
   AddressInputSchema,
+  MAX_ADDRESSES,
   type Address,
   type Cart,
   type CheckoutBody,
@@ -177,6 +178,8 @@ function CheckoutForm({
   const choice = picked ?? saved?.[0]?.id ?? NEW;
   const [address, setAddress] = useState<AddressValues>(EMPTY_ADDRESS);
   const [save, setSave] = useState(true);
+  // The API saves no more than this many; past it, it ignores the box.
+  const bookFull = (saved?.length ?? 0) >= MAX_ADDRESSES;
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [redirecting, setRedirecting] = useState(false);
   const { ref: formRef, focusFirstError } = useFocusFirstError();
@@ -250,7 +253,7 @@ function CheckoutForm({
       return;
     }
     setErrors({});
-    checkout.mutate({ address: parsed.data, save_address: save });
+    checkout.mutate({ address: parsed.data, save_address: save && !bookFull });
   }
 
   const shipping = shippingFor(cart.subtotal);
@@ -318,15 +321,30 @@ function CheckoutForm({
                     errors={errors}
                     onChange={change}
                   />
-                  <label className="flex items-center gap-3 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={save}
-                      onChange={(e) => setSave(e.target.checked)}
-                      className="size-4 accent-[var(--primary)]"
-                    />
-                    Save this address for next time
-                  </label>
+                  {bookFull ? (
+                    // The API wouldn't save it, so don't offer to.
+                    <p className="text-[0.8125rem] text-muted-foreground">
+                      You have {MAX_ADDRESSES} saved addresses, the most we
+                      keep. To save this one, remove one in{" "}
+                      <Link
+                        href="/account/addresses"
+                        className="underline underline-offset-4 hover:text-foreground"
+                      >
+                        your addresses
+                      </Link>
+                      .
+                    </p>
+                  ) : (
+                    <label className="flex items-center gap-3 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={save}
+                        onChange={(e) => setSave(e.target.checked)}
+                        className="size-4 accent-[var(--primary)]"
+                      />
+                      Save this address for next time
+                    </label>
+                  )}
                 </div>
               )}
             </div>

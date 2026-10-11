@@ -27,6 +27,8 @@ func TestSetupRegistersAllRoutes(t *testing.T) {
 		"POST /api/v1/auth/logout",
 		"POST /api/v1/auth/refresh",
 		"GET /api/v1/auth/me",
+		"PATCH /api/v1/auth/me",
+		"POST /api/v1/auth/me/password",
 		"POST /api/v1/auth/password/forgot",
 		"POST /api/v1/auth/password/reset",
 

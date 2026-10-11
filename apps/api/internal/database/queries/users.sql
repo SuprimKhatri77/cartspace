@@ -15,3 +15,7 @@ RETURNING *;
 
 -- name: UpdateUserPassword :exec
 UPDATE users SET password_hash = $2 WHERE id = $1;
+
+-- name: UpdateUserName :one
+UPDATE users SET name = $2 WHERE id = $1
+RETURNING *;
