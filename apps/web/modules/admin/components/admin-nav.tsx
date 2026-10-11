@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ChatCircleTextIcon,
+  GearSixIcon,
   PackageIcon,
   ReceiptIcon,
   SignOutIcon,
@@ -21,6 +22,7 @@ const links: { label: string; href: string; icon: Icon }[] = [
   { label: "Products", href: "/admin/products", icon: PackageIcon },
   { label: "Categories", href: "/admin/categories", icon: TreeStructureIcon },
   { label: "Reviews", href: "/admin/reviews", icon: ChatCircleTextIcon },
+  { label: "Settings", href: "/admin/settings", icon: GearSixIcon },
 ];
 
 function isCurrent(pathname: string, href: string): boolean {

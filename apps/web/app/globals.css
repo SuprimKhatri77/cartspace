@@ -66,7 +66,8 @@
  * badges and focus; a light serif and square corners. --clay is each
  * theme's accent and --surface the well behind product photography.
  */
-:root {
+:root,
+[data-theme="editorial"] {
   color-scheme: light;
   --heading-font: var(--font-instrument-serif);
   --heading-weight: 400;
@@ -77,7 +78,7 @@
      set font-size-adjust so the same sizes fit. */
   --heading-size-adjust: none;
   --em-style: italic;
-  --em-color: inherit;
+  --em-color: currentColor;
   --theme-radius-control: 0px;
   --theme-radius-field: 0px;
   --theme-radius-panel: 0px;
@@ -264,7 +265,9 @@
   /* Display type in the theme's headline face; sizes come from the text-*
      utility next to it. <em> inside is the theme's emphasis. */
   .display {
-    font-family: var(--font-serif);
+    /* --heading-font, not --font-serif: that one is declared on :root, so
+       it would carry the page's theme into a nested [data-theme] preview. */
+    font-family: var(--heading-font);
     font-weight: var(--heading-weight);
     font-variation-settings: var(--heading-variation);
     line-height: var(--heading-leading);

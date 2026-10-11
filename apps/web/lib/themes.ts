@@ -1,6 +1,9 @@
+import type { StoreTheme } from "@repo/types";
+
 /**
  * Store themes. Each id matches a [data-theme] block in app/globals.css
- * (Editorial is the :root default). The store's look comes from STORE_THEME;
+ * (Editorial is also the :root default) and the API's StoreTheme enum. The
+ * store's look is the theme an admin saved (falling back to STORE_THEME);
  * with DEMO_THEME_PICKER on, a visitor's pick (the cookie) overrides it.
  */
 export const THEMES = [
@@ -26,7 +29,13 @@ export const THEMES = [
     preview: ["#f8f5ea", "#2a4636", "#b65c3b"],
     themeColor: "#f8f5ea",
   },
-] as const;
+] as const satisfies readonly {
+  id: StoreTheme;
+  name: string;
+  description: string;
+  preview: readonly string[];
+  themeColor: string;
+}[];
 
 export type ThemeId = (typeof THEMES)[number]["id"];
 export type Theme = (typeof THEMES)[number];

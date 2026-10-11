@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { StoreThemeSchema } from "@repo/types";
 import {
   DEFAULT_THEME,
   isThemeId,
@@ -19,6 +20,8 @@ describe("themes", () => {
     expect(isThemeId("dark")).toBe(false);
     expect(isThemeId(undefined)).toBe(false);
     expect(themeById("botanical").name).toBe("Botanical");
+    // the web's themes are exactly the ones the API accepts
+    expect(THEMES.map((t) => t.id)).toEqual([...StoreThemeSchema.options]);
   });
 
   test("the store theme, unless the picker is on and a pick was made", () => {
