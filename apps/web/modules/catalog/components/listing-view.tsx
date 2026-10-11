@@ -370,7 +370,7 @@ function ActivePills({
           key={pill.label}
           type="button"
           onClick={pill.remove}
-          className="animate-rise group inline-flex h-8 items-center gap-1.5 border border-border bg-secondary/60 pr-2 pl-3 text-xs transition-colors hover:border-foreground"
+          className="animate-rise group inline-flex h-8 items-center gap-1.5 rounded-control border border-border bg-secondary/60 pr-2 pl-3 text-xs transition-colors hover:border-foreground"
           aria-label={`Remove ${pill.label}`}
         >
           {pill.label}

@@ -90,7 +90,7 @@ export function ReviewsSection({
               </button>
             </p>
           ) : list.length === 0 ? (
-            <p className="border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            <p className="rounded-panel border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
               No reviews yet. Buyers can be the first to share how it wears.
             </p>
           ) : (

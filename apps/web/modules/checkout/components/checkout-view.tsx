@@ -294,7 +294,7 @@ function CheckoutForm({
         </Section>
 
         <Section number={3} title="Delivery">
-          <div className="flex items-center gap-4 border border-border p-4 text-sm">
+          <div className="flex items-center gap-4 rounded-panel border border-border p-4 text-sm">
             <TruckIcon
               weight="light"
               className="size-6 text-muted-foreground"
@@ -312,13 +312,13 @@ function CheckoutForm({
 
       <aside
         aria-label="Order summary"
-        className="space-y-6 border border-border bg-surface/60 p-6 lg:sticky lg:top-24"
+        className="space-y-6 rounded-panel border border-border bg-surface/60 p-6 lg:sticky lg:top-24"
       >
         <p className="eyebrow">Order summary</p>
         <ul className="max-h-80 space-y-4 overflow-y-auto pr-1">
           {cart.items.map((line) => (
             <li key={line.variant_id} className="flex gap-4">
-              <div className="relative aspect-[4/5] w-14 shrink-0 overflow-hidden bg-background">
+              <div className="relative aspect-[4/5] w-14 shrink-0 overflow-hidden rounded-media bg-background">
                 {line.image && (
                   <Image
                     src={line.image}

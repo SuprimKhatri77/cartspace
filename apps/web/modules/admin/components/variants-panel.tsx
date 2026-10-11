@@ -159,7 +159,7 @@ export function VariantsPanel({
               <TableRow key={variant.id}>
                 <TableCell className="pl-5">
                   <div className="flex items-center gap-3">
-                    <span className="relative h-12 w-10 shrink-0 overflow-hidden bg-surface">
+                    <span className="relative h-12 w-10 shrink-0 overflow-hidden rounded-media bg-surface">
                       {variant.images[0] && (
                         <Image
                           src={variant.images[0]}
@@ -291,7 +291,7 @@ function OptionChip({
 }) {
   const color = type === "color" ? swatchColor(value) : null;
   return (
-    <span className="inline-flex h-6 items-center gap-1.5 border border-border px-2 text-[0.6875rem]">
+    <span className="inline-flex h-6 items-center gap-1.5 rounded-control border border-border px-2 text-[0.6875rem]">
       {color && (
         <span
           aria-hidden

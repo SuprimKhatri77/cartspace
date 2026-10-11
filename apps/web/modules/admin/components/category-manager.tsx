@@ -89,7 +89,7 @@ export function CategoryManager() {
         </Button>
       </div>
 
-      <div className="border border-border bg-card">
+      <div className="overflow-hidden rounded-panel border border-border bg-card">
         {tree.isPending ? (
           <div className="space-y-2 p-5">
             {Array.from({ length: 5 }, (_, i) => (

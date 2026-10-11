@@ -23,6 +23,7 @@ a full-stack e-commerce store: a go/gin api and a next.js storefront with an adm
 - stripe hosted checkout with saved addresses, stock reserved while you pay, flat-rate shipping that's free over a threshold
 - order history with a status timeline, tracking number and refund date
 - wishlist, and reviews from verified buyers (a rating summary with a distribution, one review per product)
+- three light themes (editorial, studio, botanical), plus a demo-only theme picker for showing the store to clients
 
 **admin** (`/admin`, admin role only)
 
@@ -190,6 +191,19 @@ the success and cancel pages are built from `FRONTEND_URL`. in production, creat
 ### cloudinary
 
 the admin uploads images straight from the browser with a signature from `POST /admin/uploads/signature`, into the `cartspace/products` folder on your cloud. the api only accepts image urls from that folder, and deleting a product deletes its images unless a past order still shows them. the demo catalog uses cloudinary's public `demo` cloud, so it works without uploading anything.
+
+### themes
+
+the store ships three light themes: **editorial** (warm paper, a light serif, square corners; the default), **studio** (crisp white, bold sans-serif, soft corners) and **botanical** (cream and forest green, a soft serif, rounded shapes).
+
+- `STORE_THEME` picks the store's look.
+- `DEMO_THEME_PICKER=true` adds a floating picker in the bottom-right corner for demos. A visitor's pick is kept in a cookie and applied on the server, so pages never flash the wrong theme. Leave it off for a real store.
+
+a theme is a `[data-theme="…"]` block of tokens in `apps/web/app/globals.css`: colours, the headline font and its style, and four corner radii (`rounded-control`, `rounded-field`, `rounded-panel`, `rounded-media`). to add a theme:
+
+1. add that block to `globals.css`
+2. add an entry to `THEMES` in `apps/web/lib/themes.ts`
+3. load a new font in `app/layout.tsx` with `preload: false`, if the theme needs one
 
 ## scripts
 

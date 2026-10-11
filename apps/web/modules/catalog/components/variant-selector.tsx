@@ -111,7 +111,7 @@ function Swatch({
         aria-label={label}
         onClick={onClick}
         className={cn(
-          "h-11 border px-4 text-[0.8125rem] transition-colors",
+          "h-11 rounded-control border px-4 text-[0.8125rem] transition-colors",
           selected
             ? "border-primary bg-primary text-primary-foreground"
             : "border-border hover:border-foreground",

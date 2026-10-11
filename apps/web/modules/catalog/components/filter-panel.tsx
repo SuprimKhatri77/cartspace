@@ -117,7 +117,7 @@ export function FilterPanel({
                     type="button"
                     aria-pressed={pressed}
                     onClick={toggle}
-                    className="h-9 min-w-11 border border-border px-3 text-xs tabular-nums transition-colors duration-200 hover:border-foreground aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+                    className="h-9 min-w-11 rounded-control border border-border px-3 text-xs tabular-nums transition-colors duration-200 hover:border-foreground aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
                   >
                     {value}
                   </button>
@@ -142,7 +142,7 @@ export function FilterPanel({
                 onChange({ ...filters, featured: e.target.checked })
               }
             />
-            <span className="flex size-4 items-center justify-center border border-input transition-colors peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-ring/40">
+            <span className="flex size-4 items-center justify-center rounded-[calc(var(--radius-field)*0.4)] border border-input transition-colors peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-ring/40">
               {filters.featured && (
                 <CheckIcon weight="bold" className="size-3" />
               )}

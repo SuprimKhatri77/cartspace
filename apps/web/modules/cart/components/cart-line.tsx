@@ -70,7 +70,7 @@ export function CartLine({
         href={href}
         onClick={onNavigate}
         className={cn(
-          "relative block aspect-[4/5] overflow-hidden bg-surface",
+          "relative block aspect-[4/5] overflow-hidden rounded-media bg-surface",
           size === "large" ? "w-24 sm:w-28" : "w-20",
         )}
         tabIndex={-1}

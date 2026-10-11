@@ -9,7 +9,7 @@ export function NotFoundView() {
         className="display animate-rise mt-4 text-[clamp(4rem,14vw,11rem)] text-foreground/90"
         style={{ "--i": 1 } as React.CSSProperties}
       >
-        Lost, <em className="italic">beautifully.</em>
+        Lost, <em>beautifully.</em>
       </h1>
       <p
         className="animate-rise mt-6 max-w-md text-sm text-muted-foreground"

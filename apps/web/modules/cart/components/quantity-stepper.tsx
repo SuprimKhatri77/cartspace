@@ -28,7 +28,7 @@ export function QuantityStepper({
   return (
     <div
       className={cn(
-        "inline-flex h-8 items-center border border-border",
+        "inline-flex h-8 items-center overflow-hidden rounded-control border border-border",
         className,
       )}
       role="group"

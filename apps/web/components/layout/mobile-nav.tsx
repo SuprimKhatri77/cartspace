@@ -107,7 +107,7 @@ export function MobileNav({ categories }: { categories: NavCategory[] }) {
               <Link
                 href="/auth/login"
                 onClick={close}
-                className="flex h-11 items-center justify-center border border-border"
+                className="flex h-11 items-center justify-center rounded-control border border-border"
               >
                 Sign in
               </Link>

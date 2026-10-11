@@ -23,11 +23,7 @@ export function Hero() {
                 className="animate-rise block"
                 style={{ "--i": i + 1 } as React.CSSProperties}
               >
-                {i === hero.title.length - 1 ? (
-                  <em className="italic">{line}</em>
-                ) : (
-                  line
-                )}
+                {i === hero.title.length - 1 ? <em>{line}</em> : line}
               </span>
             </span>
           ))}
@@ -59,7 +55,7 @@ export function Hero() {
       </div>
 
       <div className="relative order-1 lg:order-2 lg:col-span-7 lg:pl-10">
-        <div className="relative aspect-[4/5] overflow-hidden bg-surface sm:aspect-[5/4] lg:aspect-auto lg:h-[calc(100svh-10rem)] lg:min-h-[32rem]">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-media bg-surface sm:aspect-[5/4] lg:aspect-auto lg:h-[calc(100svh-10rem)] lg:min-h-[32rem]">
           <Image
             src={hero.image}
             alt={hero.imageAlt}
@@ -70,7 +66,7 @@ export function Hero() {
           />
         </div>
         <div
-          className="animate-rise absolute -bottom-8 left-0 hidden w-[34%] border-[6px] border-background bg-surface shadow-xl md:block lg:-left-6"
+          className="animate-rise absolute -bottom-8 left-0 hidden w-[34%] overflow-hidden rounded-media border-[6px] border-background bg-surface shadow-xl md:block lg:-left-6"
           style={{ "--i": 6 } as React.CSSProperties}
         >
           <div className="relative aspect-square">

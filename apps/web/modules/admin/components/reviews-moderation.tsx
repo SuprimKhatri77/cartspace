@@ -124,7 +124,7 @@ export function ReviewsModeration({
           ))}
         </div>
       ) : reviews.isError && !outOfRange ? (
-        <div className="border border-border p-8 text-sm text-muted-foreground">
+        <div className="rounded-panel border border-border p-8 text-sm text-muted-foreground">
           The reviews couldn&apos;t load.{" "}
           <button
             type="button"
@@ -135,7 +135,7 @@ export function ReviewsModeration({
           </button>
         </div>
       ) : rows.length === 0 ? (
-        <div className="border border-border px-5 py-16 text-center">
+        <div className="rounded-panel border border-border px-5 py-16 text-center">
           <p className="font-serif text-2xl">No reviews here.</p>
           <p className="mt-2 text-sm text-muted-foreground">
             Reviews from customers who bought a product appear here as they are
@@ -205,7 +205,7 @@ function ReviewCard({ review }: { review: AdminReview }) {
   return (
     <li
       className={cn(
-        "border border-border bg-card p-5 transition-colors",
+        "rounded-panel border border-border bg-card p-5 transition-colors",
         hidden && "bg-muted/40",
       )}
     >
