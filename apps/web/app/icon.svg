@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Drawn on a 4-unit grid so every edge lands on a whole pixel at 16 and 32px. -->
+  <rect width="64" height="64" rx="14" fill="#24201c"/>
+  <path d="M36 24H20V48H44V36" fill="none" stroke="#faf8f4" stroke-width="8"/>
+  <rect x="44" y="12" width="8" height="8" rx="1" fill="#faf8f4"/>
+</svg>

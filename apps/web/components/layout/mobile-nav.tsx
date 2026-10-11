@@ -26,6 +26,7 @@ import { useAuth } from "@/providers/auth-provider";
 import type { Collection as NavCategory } from "@/modules/catalog/api";
 import { useSavedCount } from "@/modules/wishlist/hooks";
 import { useWishlistDrawer } from "@/modules/wishlist/store";
+import { LogoMark } from "@/components/brand/logo-mark";
 
 const accountLink =
   "-mx-2 flex h-11 w-[calc(100%+1rem)] items-center gap-3 rounded-control px-2 text-left transition-colors hover:bg-muted";
@@ -49,6 +50,7 @@ export function MobileNav({ categories }: { categories: NavCategory[] }) {
       <SheetContent side="left" className="w-full gap-0 p-0 sm:max-w-sm">
         <div className="flex h-16 items-center border-b border-border px-5">
           <SheetTitle className="font-serif text-2xl font-normal">
+            <LogoMark className="mr-[0.28em] inline-block size-[0.66em] align-baseline" />
             {site.name}
           </SheetTitle>
         </div>

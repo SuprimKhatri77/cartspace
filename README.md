@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/mark-light.svg">
+  <img src="docs/brand/mark.svg" alt="cartspace logo" width="44">
+</picture>
+
 # cartspace
 
 a full-stack e-commerce store: a go/gin api and a next.js storefront with an admin panel, stripe checkout, reviews, wishlists and search, held together by one typed api contract.
