@@ -36,10 +36,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "cn-toast !gap-3 !rounded-none !px-4 !py-3.5 !font-sans !text-[0.8125rem] !shadow-[0_18px_40px_-18px_oklch(0.2_0.012_60/0.35)]",
+            "cn-toast !gap-3 !rounded-panel !px-4 !py-3.5 !font-sans !text-[0.8125rem] !shadow-[0_18px_40px_-18px_oklch(0.2_0.012_60/0.35)]",
           description: "!text-muted-foreground",
           actionButton:
-            "!rounded-none !bg-primary !px-3 !text-xs !font-medium !text-primary-foreground",
+            "!rounded-control !bg-primary !px-3 !text-xs !font-medium !text-primary-foreground",
         },
       }}
       {...props}

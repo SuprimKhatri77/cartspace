@@ -11,7 +11,7 @@ export function ClosingCta() {
           The cartspace way
         </p>
         <h2 className="display mx-auto mt-5 max-w-3xl text-5xl sm:text-7xl">
-          Fewer, <em className="italic">better</em> things.
+          Fewer, <em>better</em> things.
         </h2>
         <Link
           href="/shop"

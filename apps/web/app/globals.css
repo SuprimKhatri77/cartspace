@@ -7,8 +7,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-serif: var(--font-instrument-serif);
-  --font-heading: var(--font-instrument-serif);
+  --font-serif: var(--heading-font);
+  --font-heading: var(--heading-font);
   --color-clay: var(--clay);
   --color-clay-foreground: var(--clay-foreground);
   --color-success: var(--success);
@@ -50,15 +50,38 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Theme-driven corners (see the theme blocks below). */
+  --radius-control: var(--theme-radius-control);
+  --radius-field: var(--theme-radius-field);
+  --radius-panel: var(--theme-radius-panel);
+  --radius-media: var(--theme-radius-media);
 }
 
 /*
- * Editorial palette: warm paper and ink, stone greys and one clay accent for
- * offers, badges and focus. Light only: product colours read true against
- * paper. --surface is the well behind product photography.
+ * Themes. Editorial is the default (:root); the others override tokens on
+ * <html data-theme="…">, set on the server from lib/themes.ts. All are
+ * light: product colours read true against a light page.
+ *
+ * Editorial: warm paper and ink, stone greys and one clay accent for offers,
+ * badges and focus; a light serif and square corners. --clay is each
+ * theme's accent and --surface the well behind product photography.
  */
 :root {
   color-scheme: light;
+  --heading-font: var(--font-instrument-serif);
+  --heading-weight: 400;
+  --heading-tracking: -0.02em;
+  --heading-leading: 0.95;
+  --heading-variation: normal;
+  /* Headline sizes are tuned for the serif's small x-height; other faces
+     set font-size-adjust so the same sizes fit. */
+  --heading-size-adjust: none;
+  --em-style: italic;
+  --em-color: inherit;
+  --theme-radius-control: 0px;
+  --theme-radius-field: 0px;
+  --theme-radius-panel: 0px;
+  --theme-radius-media: 0px;
   --background: oklch(0.985 0.006 85);
   --foreground: oklch(0.2 0.012 60);
   --card: oklch(0.995 0.003 85);
@@ -97,6 +120,110 @@
   --sidebar-ring: oklch(0.52 0.12 40);
 }
 
+/* Studio: crisp white and near-black with a cobalt accent; tight sans-serif
+   headlines, emphasis in colour instead of italics, soft rounded corners. */
+[data-theme="studio"] {
+  --heading-font: var(--font-geist-sans);
+  --heading-weight: 600;
+  --heading-tracking: -0.035em;
+  --heading-leading: 0.8;
+  --heading-size-adjust: 0.4;
+  --em-style: normal;
+  --em-color: var(--clay);
+  --theme-radius-control: 0.5rem;
+  --theme-radius-field: 0.5rem;
+  --theme-radius-panel: 0.75rem;
+  --theme-radius-media: 0.75rem;
+  --radius: 0.5rem;
+  --background: oklch(0.995 0 0);
+  --foreground: oklch(0.18 0.006 265);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.006 265);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.006 265);
+  --primary: oklch(0.18 0.006 265);
+  --primary-foreground: oklch(0.995 0 0);
+  --secondary: oklch(0.965 0.003 265);
+  --secondary-foreground: oklch(0.18 0.006 265);
+  --muted: oklch(0.965 0.003 265);
+  --muted-foreground: oklch(0.48 0.012 265);
+  --accent: oklch(0.955 0.006 265);
+  --accent-foreground: oklch(0.18 0.006 265);
+  --destructive: oklch(0.55 0.21 27);
+  --clay: oklch(0.5 0.19 262);
+  --clay-foreground: oklch(0.995 0 0);
+  --success: oklch(0.52 0.12 155);
+  --surface: oklch(0.96 0.004 265);
+  --border: oklch(0.91 0.004 265);
+  --input: oklch(0.87 0.006 265);
+  --ring: oklch(0.5 0.19 262);
+  --chart-1: oklch(0.5 0.19 262);
+  --chart-2: oklch(0.18 0.006 265);
+  --chart-3: oklch(0.72 0.09 262);
+  --chart-4: oklch(0.52 0.12 155);
+  --chart-5: oklch(0.86 0.01 265);
+  --sidebar: oklch(0.98 0.002 265);
+  --sidebar-foreground: oklch(0.18 0.006 265);
+  --sidebar-primary: oklch(0.18 0.006 265);
+  --sidebar-primary-foreground: oklch(0.995 0 0);
+  --sidebar-accent: oklch(0.945 0.008 265);
+  --sidebar-accent-foreground: oklch(0.18 0.006 265);
+  --sidebar-border: oklch(0.91 0.004 265);
+  --sidebar-ring: oklch(0.5 0.19 262);
+}
+
+/* Botanical: cream and deep forest green with a terracotta accent; a soft
+   serif (Fraunces) and organic shapes: pill controls, generous rounding. */
+[data-theme="botanical"] {
+  --heading-font: var(--font-fraunces);
+  --heading-weight: 400;
+  --heading-tracking: -0.015em;
+  --heading-leading: 1;
+  --heading-variation: "SOFT" 100;
+  --em-style: italic;
+  --em-color: var(--clay);
+  --theme-radius-control: 9999px;
+  --theme-radius-field: 0.75rem;
+  --theme-radius-panel: 1rem;
+  --theme-radius-media: 1.25rem;
+  --radius: 0.75rem;
+  --background: oklch(0.975 0.014 95);
+  --foreground: oklch(0.27 0.04 155);
+  --card: oklch(0.985 0.01 95);
+  --card-foreground: oklch(0.27 0.04 155);
+  --popover: oklch(0.985 0.01 95);
+  --popover-foreground: oklch(0.27 0.04 155);
+  --primary: oklch(0.33 0.06 155);
+  --primary-foreground: oklch(0.975 0.014 95);
+  --secondary: oklch(0.945 0.02 115);
+  --secondary-foreground: oklch(0.27 0.04 155);
+  --muted: oklch(0.945 0.018 110);
+  --muted-foreground: oklch(0.47 0.03 150);
+  --accent: oklch(0.93 0.025 130);
+  --accent-foreground: oklch(0.27 0.04 155);
+  --destructive: oklch(0.53 0.18 27);
+  --clay: oklch(0.56 0.13 42);
+  --clay-foreground: oklch(0.975 0.014 95);
+  --success: oklch(0.5 0.1 150);
+  --surface: oklch(0.94 0.02 110);
+  --border: oklch(0.88 0.02 120);
+  --input: oklch(0.84 0.024 120);
+  --ring: oklch(0.56 0.13 42);
+  --chart-1: oklch(0.56 0.13 42);
+  --chart-2: oklch(0.33 0.06 155);
+  --chart-3: oklch(0.72 0.06 140);
+  --chart-4: oklch(0.5 0.1 150);
+  --chart-5: oklch(0.86 0.03 110);
+  --sidebar: oklch(0.96 0.016 105);
+  --sidebar-foreground: oklch(0.27 0.04 155);
+  --sidebar-primary: oklch(0.33 0.06 155);
+  --sidebar-primary-foreground: oklch(0.975 0.014 95);
+  --sidebar-accent: oklch(0.92 0.025 125);
+  --sidebar-accent-foreground: oklch(0.27 0.04 155);
+  --sidebar-border: oklch(0.88 0.02 120);
+  --sidebar-ring: oklch(0.56 0.13 42);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -116,6 +243,11 @@
   :focus-visible {
     outline-offset: 2px;
   }
+  /* Headline type follows the theme wherever the serif face is used. */
+  .font-serif {
+    font-weight: var(--heading-weight);
+    font-variation-settings: var(--heading-variation);
+  }
 }
 
 @layer components {
@@ -129,9 +261,20 @@
     @apply font-mono text-[0.6875rem] font-medium tracking-[0.16em] text-muted-foreground uppercase;
   }
 
-  /* Serif display type; sizes come from the text-* utility next to it. */
+  /* Display type in the theme's headline face; sizes come from the text-*
+     utility next to it. <em> inside is the theme's emphasis. */
   .display {
-    @apply font-serif leading-[0.95] font-normal tracking-[-0.02em] text-balance;
+    font-family: var(--font-serif);
+    font-weight: var(--heading-weight);
+    font-variation-settings: var(--heading-variation);
+    line-height: var(--heading-leading);
+    letter-spacing: var(--heading-tracking);
+    font-size-adjust: var(--heading-size-adjust);
+    text-wrap: balance;
+  }
+  :is(.display, .font-serif) em {
+    font-style: var(--em-style);
+    color: var(--em-color);
   }
 
   /* An underline that grows from the left on hover. */

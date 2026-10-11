@@ -212,7 +212,7 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
 
       <div
         className={cn(
-          "border border-border transition-opacity",
+          "overflow-hidden rounded-panel border border-border transition-opacity",
           products.isPlaceholderData && "opacity-60",
         )}
       >
@@ -324,7 +324,7 @@ function ProductRow({
     <TableRow className="group">
       <TableCell>
         <Link href={href} className="flex items-center gap-3">
-          <span className="relative h-14 w-11 shrink-0 overflow-hidden bg-surface">
+          <span className="relative h-14 w-11 shrink-0 overflow-hidden rounded-media bg-surface">
             {image && (
               <Image
                 src={image}

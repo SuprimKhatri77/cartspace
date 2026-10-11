@@ -24,7 +24,9 @@ function Panel({
   className?: string;
 }) {
   return (
-    <section className={`border border-border bg-card ${className ?? ""}`}>
+    <section
+      className={`overflow-hidden rounded-panel border border-border bg-card ${className ?? ""}`}
+    >
       <header className="flex h-12 items-center justify-between border-b border-border px-5">
         <h2 className="eyebrow !text-foreground">{title}</h2>
         {action}
@@ -40,7 +42,7 @@ export function Dashboard() {
   if (isPending) return <DashboardSkeleton />;
   if (isError) {
     return (
-      <div className="flex flex-col items-start gap-4 border border-border p-8">
+      <div className="flex flex-col items-start gap-4 rounded-panel border border-border p-8">
         <p className="text-sm text-muted-foreground">
           The dashboard couldn&apos;t load.
         </p>
@@ -76,11 +78,11 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 border-t border-l border-border xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-panel border border-border bg-border xl:grid-cols-4">
         {kpis.map((kpi, i) => (
           <div
             key={kpi.label}
-            className="animate-rise border-r border-b border-border bg-card p-5 sm:p-6"
+            className="animate-rise bg-card p-5 sm:p-6"
             style={{ "--i": i } as React.CSSProperties}
           >
             <p className="eyebrow">{kpi.label}</p>
@@ -205,14 +207,14 @@ export function Dashboard() {
       <div className="flex flex-wrap gap-3">
         <Link
           href="/admin/products/new"
-          className="group inline-flex h-10 items-center gap-2 border border-border px-4 text-[0.8125rem] transition-colors hover:bg-muted"
+          className="group inline-flex h-10 items-center gap-2 rounded-control border border-border px-4 text-[0.8125rem] transition-colors hover:bg-muted"
         >
           Add a product
           <ArrowRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
         </Link>
         <Link
           href="/admin/categories"
-          className="group inline-flex h-10 items-center gap-2 border border-border px-4 text-[0.8125rem] transition-colors hover:bg-muted"
+          className="group inline-flex h-10 items-center gap-2 rounded-control border border-border px-4 text-[0.8125rem] transition-colors hover:bg-muted"
         >
           Manage categories
           <ArrowRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -231,14 +233,14 @@ function DashboardSkeleton() {
     >
       <div className="grid grid-cols-2 gap-px xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-32 rounded-none" />
+          <Skeleton key={i} className="h-32 rounded-panel" />
         ))}
       </div>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <Skeleton className="h-80 rounded-none" />
-        <Skeleton className="h-80 rounded-none" />
+        <Skeleton className="h-80 rounded-panel" />
+        <Skeleton className="h-80 rounded-panel" />
       </div>
-      <Skeleton className="h-64 rounded-none" />
+      <Skeleton className="h-64 rounded-panel" />
     </div>
   );
 }

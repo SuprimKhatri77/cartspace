@@ -44,7 +44,7 @@ export function WishlistButton({
         "flex items-center justify-center transition-colors",
         variant === "overlay"
           ? "size-9 rounded-full bg-background/85 text-foreground backdrop-blur hover:bg-background"
-          : "size-12 shrink-0 border border-border hover:border-foreground",
+          : "size-12 shrink-0 rounded-control border border-border hover:border-foreground",
         className,
       )}
     >

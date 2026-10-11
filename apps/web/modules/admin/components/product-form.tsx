@@ -400,7 +400,10 @@ export function Section({
   return (
     <section
       id={id}
-      className={cn("scroll-mt-24 border border-border bg-card", className)}
+      className={cn(
+        "scroll-mt-24 rounded-panel border border-border bg-card",
+        className,
+      )}
     >
       <header className="flex min-h-12 items-center justify-between gap-3 border-b border-border px-5 py-2">
         <h2 className="eyebrow !text-foreground">{title}</h2>

@@ -198,7 +198,7 @@ function MegaPanel({ category }: { category: NavCategory }) {
           render={<Link href={base} />}
           className="group block outline-none"
         >
-          <div className="relative aspect-[4/3] overflow-hidden bg-surface">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-media bg-surface">
             <Image
               src={category.image}
               alt=""

@@ -22,7 +22,7 @@ export function StoryBand() {
     <section className="container-page grid items-center gap-10 lg:grid-cols-12 lg:gap-16">
       <div
         ref={ref}
-        className="relative aspect-[3/2] overflow-hidden bg-surface lg:col-span-7"
+        className="relative aspect-[3/2] overflow-hidden rounded-media bg-surface lg:col-span-7"
       >
         <m.div className="absolute -inset-y-[10%] inset-x-0" style={{ y }}>
           <Image

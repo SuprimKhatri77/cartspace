@@ -2,7 +2,12 @@ import { cn } from "@/lib/utils";
 import { GRID_CLASSES } from "./product-grid";
 
 function Block({ className }: { className?: string }) {
-  return <div className={cn("shimmer bg-muted", className)} aria-hidden />;
+  return (
+    <div
+      className={cn("shimmer rounded-media bg-muted", className)}
+      aria-hidden
+    />
+  );
 }
 
 export function ProductGridSkeleton({ count = 8 }: { count?: number }) {

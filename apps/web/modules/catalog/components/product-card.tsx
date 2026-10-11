@@ -42,7 +42,7 @@ export function ProductCard({
         href={`/products/${product.slug}`}
         className="group/link flex flex-col gap-3.5 outline-none"
       >
-        <div className="relative aspect-[4/5] overflow-hidden bg-surface ring-ring/40 ring-offset-2 ring-offset-background group-focus-visible/link:ring-2">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-media bg-surface ring-ring/40 ring-offset-2 ring-offset-background group-focus-visible/link:ring-2">
           {image && (
             <Image
               src={image}
@@ -70,12 +70,12 @@ export function ProductCard({
             />
           )}
           {onOffer && product.offer_price !== null && (
-            <span className="absolute top-3 left-3 bg-clay px-2 py-1 font-mono text-[0.625rem] tracking-[0.14em] text-clay-foreground uppercase">
+            <span className="absolute top-3 left-3 rounded-control bg-clay px-2 py-1 font-mono text-[0.625rem] tracking-[0.14em] text-clay-foreground uppercase">
               −{percentOff(product.selling_price, product.offer_price)}%
             </span>
           )}
           {product.is_featured && !onOffer && (
-            <span className="absolute top-3 left-3 bg-background/85 px-2 py-1 font-mono text-[0.625rem] tracking-[0.14em] uppercase backdrop-blur">
+            <span className="absolute top-3 left-3 rounded-control bg-background/85 px-2 py-1 font-mono text-[0.625rem] tracking-[0.14em] uppercase backdrop-blur">
               Editor&apos;s pick
             </span>
           )}

@@ -48,7 +48,7 @@ export function ProductGallery({
                 onMouseEnter={() => setIndex(i)}
                 aria-label={`Show photo ${i + 1} of ${images.length}`}
                 aria-current={i === index}
-                className="relative block aspect-[4/5] w-full overflow-hidden bg-surface opacity-55 transition-opacity duration-300 hover:opacity-100 aria-[current=true]:opacity-100"
+                className="relative block aspect-[4/5] w-full overflow-hidden rounded-media bg-surface opacity-55 transition-opacity duration-300 hover:opacity-100 aria-[current=true]:opacity-100"
               >
                 <Image
                   src={src}
@@ -86,7 +86,7 @@ function ZoomImage({ src, alt }: { src: string; alt: string }) {
 
   return (
     <div
-      className="relative hidden aspect-[4/5] cursor-zoom-in overflow-hidden bg-surface lg:block"
+      className="relative hidden aspect-[4/5] cursor-zoom-in overflow-hidden rounded-media bg-surface lg:block"
       onMouseEnter={() => setZoom(true)}
       onMouseLeave={() => setZoom(false)}
       onMouseMove={(e) => {
@@ -155,7 +155,7 @@ function MobileStrip({ images, alt }: { images: string[]; alt: string }) {
         {images.map((src, i) => (
           <div
             key={src}
-            className="relative aspect-[4/5] w-full shrink-0 snap-center bg-surface"
+            className="relative aspect-[4/5] w-full shrink-0 snap-center overflow-hidden rounded-media bg-surface"
           >
             <Image
               src={src}

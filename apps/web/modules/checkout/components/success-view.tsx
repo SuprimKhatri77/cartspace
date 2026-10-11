@@ -123,7 +123,7 @@ function Confirmation({ order }: { order: OrderDetail }) {
             className="display animate-rise text-[clamp(3rem,6vw,5rem)]"
             style={{ "--i": 1 } as React.CSSProperties}
           >
-            Thank you, <em className="italic">{a.full_name.split(" ")[0]}.</em>
+            Thank you, <em>{a.full_name.split(" ")[0]}.</em>
           </h1>
           <p
             className="animate-rise max-w-md text-sm leading-relaxed text-muted-foreground"
@@ -168,12 +168,12 @@ function Confirmation({ order }: { order: OrderDetail }) {
         </div>
       </div>
 
-      <aside className="h-fit space-y-5 border border-border bg-surface/60 p-6">
+      <aside className="h-fit space-y-5 rounded-panel border border-border bg-surface/60 p-6">
         <p className="eyebrow">Summary</p>
         <ul className="space-y-4">
           {order.items.map((item) => (
             <li key={item.id} className="flex gap-3 text-sm">
-              <div className="relative aspect-[4/5] w-12 shrink-0 overflow-hidden bg-background">
+              <div className="relative aspect-[4/5] w-12 shrink-0 overflow-hidden rounded-media bg-background">
                 {item.image && (
                   <Image
                     src={item.image}

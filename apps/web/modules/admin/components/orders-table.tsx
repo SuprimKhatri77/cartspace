@@ -126,7 +126,7 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
 
       <div
         className={cn(
-          "border border-border transition-opacity",
+          "overflow-hidden rounded-panel border border-border transition-opacity",
           orders.isPlaceholderData && "opacity-60",
         )}
       >

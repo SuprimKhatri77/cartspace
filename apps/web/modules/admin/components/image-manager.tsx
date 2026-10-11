@@ -135,13 +135,13 @@ export function ImageManager({
         className={cn(
           "grid grid-cols-3 gap-3 sm:grid-cols-5",
           invalid &&
-            "rounded-none ring-1 ring-destructive/40 ring-offset-4 ring-offset-background",
+            "rounded-media ring-1 ring-destructive/40 ring-offset-4 ring-offset-background",
         )}
       >
         {images.map((image, i) => (
           <figure
             key={image.url}
-            className="group relative aspect-[4/5] overflow-hidden bg-surface"
+            className="group relative aspect-[4/5] overflow-hidden rounded-media bg-surface"
           >
             <Image
               src={image.url}
@@ -193,7 +193,7 @@ export function ImageManager({
         {uploads.map((upload) => (
           <figure
             key={upload.id}
-            className="relative aspect-[4/5] overflow-hidden bg-surface"
+            className="relative aspect-[4/5] overflow-hidden rounded-media bg-surface"
             aria-label={`Uploading ${upload.name}`}
           >
             {/* A local blob preview: next/image can't load object URLs. */}
@@ -230,7 +230,7 @@ export function ImageManager({
               void addFiles([...e.dataTransfer.files]);
             }}
             className={cn(
-              "flex aspect-[4/5] flex-col items-center justify-center gap-2 border border-dashed border-input p-2 text-center text-xs text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground",
+              "flex aspect-[4/5] flex-col rounded-media items-center justify-center gap-2 border border-dashed border-input p-2 text-center text-xs text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground",
               dragging && "border-foreground bg-muted text-foreground",
             )}
           >

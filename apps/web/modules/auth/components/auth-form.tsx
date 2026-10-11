@@ -129,11 +129,11 @@ export function AuthForm(props: AuthFormProps) {
         >
           {isRegister ? (
             <>
-              Create your <em className="italic">account.</em>
+              Create your <em>account.</em>
             </>
           ) : (
             <>
-              Sign <em className="italic">in.</em>
+              Sign <em>in.</em>
             </>
           )}
         </h1>

@@ -228,7 +228,7 @@ export function OrderDetailView({ number }: { number: number }) {
           <ul className="divide-y divide-border">
             {o.items.map((item) => (
               <li key={item.id} className="flex gap-4 px-5 py-4">
-                <div className="relative aspect-[4/5] w-14 shrink-0 overflow-hidden bg-surface">
+                <div className="relative aspect-[4/5] w-14 shrink-0 overflow-hidden rounded-media bg-surface">
                   {item.image && (
                     <Image
                       src={item.image}
@@ -420,7 +420,7 @@ export function OrderDetailView({ number }: { number: number }) {
       >
         <Field
           orientation="horizontal"
-          className="items-start justify-between gap-4 border border-border p-4"
+          className="items-start justify-between gap-4 rounded-panel border border-border p-4"
         >
           <div className="space-y-1">
             <FieldLabel htmlFor="restock" className="text-[0.8125rem]">

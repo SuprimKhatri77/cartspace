@@ -134,7 +134,7 @@ export function OrdersView() {
                     {order.preview_images.map((src) => (
                       <div
                         key={src}
-                        className="relative aspect-[4/5] w-12 overflow-hidden border-2 border-background bg-surface"
+                        className="relative aspect-[4/5] w-12 overflow-hidden rounded-media border-2 border-background bg-surface"
                       >
                         <Image
                           src={src}
@@ -255,7 +255,7 @@ export function OrderView({ number }: { number: number }) {
           ))}
         </ol>
       ) : (
-        <p className="border border-border p-4 text-sm text-muted-foreground">
+        <p className="rounded-panel border border-border p-4 text-sm text-muted-foreground">
           {order.status === "cancelled"
             ? "This order was cancelled before payment. Nothing was charged."
             : order.status === "refunded"
@@ -268,7 +268,7 @@ export function OrderView({ number }: { number: number }) {
         <ul className="divide-y divide-border border-y border-border">
           {order.items.map((item) => (
             <li key={item.id} className="flex gap-4 py-4">
-              <div className="relative aspect-[4/5] w-16 shrink-0 overflow-hidden bg-surface">
+              <div className="relative aspect-[4/5] w-16 shrink-0 overflow-hidden rounded-media bg-surface">
                 {item.image && (
                   <Image
                     src={item.image}

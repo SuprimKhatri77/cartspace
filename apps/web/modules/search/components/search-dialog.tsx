@@ -91,14 +91,14 @@ export function SearchDialog({ collections }: { collections: Collection[] }) {
           Search
         </span>
         {shortcut && (
-          <kbd className="hidden h-5 items-center border border-border px-1.5 font-mono text-[0.625rem] tracking-wider text-muted-foreground lg:inline-flex">
+          <kbd className="hidden h-5 items-center rounded-[calc(var(--radius-field)*0.4)] border border-border px-1.5 font-mono text-[0.625rem] tracking-wider text-muted-foreground lg:inline-flex">
             {shortcut}
           </kbd>
         )}
       </DialogPrimitive.Trigger>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-[oklch(0.2_0.012_60/0.32)] transition-opacity duration-300 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-sm" />
-        <DialogPrimitive.Popup className="fixed inset-0 z-50 flex flex-col bg-popover text-popover-foreground shadow-2xl transition-[opacity,translate,scale] duration-300 ease-out-expo outline-none data-ending-style:opacity-0 data-starting-style:-translate-y-3 data-starting-style:opacity-0 sm:inset-auto sm:top-[10vh] sm:left-1/2 sm:max-h-[min(40rem,80vh)] sm:w-[min(42rem,calc(100%-2rem))] sm:-translate-x-1/2 sm:border sm:border-border">
+        <DialogPrimitive.Popup className="fixed inset-0 z-50 flex flex-col bg-popover text-popover-foreground shadow-2xl transition-[opacity,translate,scale] duration-300 ease-out-expo outline-none data-ending-style:opacity-0 data-starting-style:-translate-y-3 data-starting-style:opacity-0 sm:inset-auto sm:top-[10vh] sm:rounded-panel sm:left-1/2 sm:max-h-[min(40rem,80vh)] sm:w-[min(42rem,calc(100%-2rem))] sm:-translate-x-1/2 sm:border sm:border-border">
           <DialogPrimitive.Title className="sr-only">
             Search the shop
           </DialogPrimitive.Title>
@@ -327,7 +327,7 @@ function ProductResult({
       className="animate-rise gap-4 py-2"
       style={{ "--i": index } as React.CSSProperties}
     >
-      <div className="relative aspect-[4/5] w-11 shrink-0 overflow-hidden bg-surface">
+      <div className="relative aspect-[4/5] w-11 shrink-0 overflow-hidden rounded-media bg-surface">
         {image && (
           <Image
             src={image}

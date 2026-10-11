@@ -30,7 +30,7 @@ export default async function AccountPage() {
           className="display animate-rise text-5xl sm:text-6xl"
           style={{ "--i": 1 } as React.CSSProperties}
         >
-          Hello, <em className="italic">{firstName}.</em>
+          Hello, <em>{firstName}.</em>
         </h1>
       </header>
 

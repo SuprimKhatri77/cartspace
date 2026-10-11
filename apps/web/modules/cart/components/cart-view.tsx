@@ -98,7 +98,7 @@ export function CartView({ seeded }: { seeded: boolean }) {
 
           <aside
             aria-label="Order summary"
-            className="space-y-6 border border-border bg-surface/60 p-6 lg:sticky lg:top-24"
+            className="space-y-6 rounded-panel border border-border bg-surface/60 p-6 lg:sticky lg:top-24"
           >
             <p className="eyebrow">Summary</p>
             <FreeShippingProgress subtotal={cart.subtotal} />

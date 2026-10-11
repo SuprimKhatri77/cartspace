@@ -39,7 +39,7 @@ export function CollectionTiles({
           >
             <Link
               href={`/categories/${collection.slug}`}
-              className="group relative block h-full overflow-hidden bg-surface"
+              className="group relative block h-full overflow-hidden rounded-media bg-surface"
             >
               <div
                 className={cn(
