@@ -39,6 +39,18 @@ services:
       - .env.local
     environment:
       NEXT_DIST_DIR: .next-docker
+      # Turbopack keeps every compiled route in memory and grows past 4GB
+      # over a long session. This is a soft target: past it, Turbopack drops
+      # cached work instead of growing.
+      TURBOPACK_MEMORY_LIMIT_MB: "2048"
+    # The hard cap, for when the soft one isn't enough. Without it, a dev
+    # server that keeps growing pushes an 8GB machine into swap until
+    # systemd-oomd kills the whole desktop session. With it, only this
+    # container is killed and comes back by itself. memswap_limit equal to
+    # mem_limit means it gets no swap.
+    mem_limit: 3500m
+    memswap_limit: 3500m
+    restart: unless-stopped
     depends_on:
       api:
         condition: service_healthy
