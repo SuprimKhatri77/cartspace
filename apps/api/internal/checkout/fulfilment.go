@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/emails"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/payments"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 )
@@ -95,10 +96,14 @@ func (s *Service) change(ctx context.Context, number int64, a Action,
 // Ship marks a paid order shipped, with its tracking number if there is one.
 func (s *Service) Ship(ctx context.Context, number int64, tracking string) (db.Order, error) {
 	return s.change(ctx, number, Ship, func(qtx *db.Queries, order db.Order) (db.Order, error) {
-		return qtx.ShipOrder(ctx, db.ShipOrderParams{
+		shipped, err := qtx.ShipOrder(ctx, db.ShipOrderParams{
 			ID:             order.ID,
 			TrackingNumber: pgtype.Text{String: tracking, Valid: tracking != ""},
 		})
+		if err != nil {
+			return db.Order{}, err
+		}
+		return shipped, emails.Enqueue(ctx, qtx, emails.OrderShipped, order.ID)
 	})
 }
 
@@ -200,6 +205,10 @@ func (s *Service) RefundPaid(ctx context.Context, number int64, restock bool) (d
 			}
 		}
 		slog.Info("checkout: order refunded", "order", number, "restock", restock)
-		return qtx.RefundOrder(ctx, order.ID)
+		refunded, err := qtx.RefundOrder(ctx, order.ID)
+		if err != nil {
+			return db.Order{}, err
+		}
+		return refunded, emails.Enqueue(ctx, qtx, emails.OrderRefunded, order.ID)
 	})
 }

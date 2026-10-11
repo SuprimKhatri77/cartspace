@@ -22,6 +22,7 @@ a full-stack e-commerce store: a go/gin api and a next.js storefront with an adm
 - a bag drawer and `/cart` with live prices and quantities capped to stock
 - stripe hosted checkout with saved addresses, stock reserved while you pay, flat-rate shipping that's free over a threshold
 - order history with a status timeline, tracking number and refund date
+- order emails: confirmed, shipped (with tracking) and refunded, html with a plain-text part
 - wishlist, and reviews from verified buyers (a rating summary with a distribution, one review per product)
 - three light themes (editorial, studio, botanical), chosen in the admin with live previews, plus a demo-only theme picker for showing the store to clients
 
@@ -38,7 +39,7 @@ a full-stack e-commerce store: a go/gin api and a next.js storefront with an adm
 
 | layer        | what                                                                                                       |
 | ------------ | ---------------------------------------------------------------------------------------------------------- |
-| api          | go 1.24, gin, postgres 17 with pgx, sqlc, golang-migrate, stripe-go, cloudinary, scalar api docs          |
+| api          | go 1.24, gin, postgres 17 with pgx, sqlc, golang-migrate, stripe-go, cloudinary, go-mail, scalar api docs |
 | web          | next.js 16 (app router, `proxy.ts`), react 19, tanstack query 5, tailwind v4, shadcn (base ui), motion    |
 | contract     | zod schemas → openapi 3.1 (zod-to-openapi) → typed clients (hey-api), checked both ways in ci              |
 | tooling      | turborepo + bun workspaces, docker compose, husky + commitlint + lint-staged, golangci-lint, github actions |
@@ -55,6 +56,7 @@ apps/
       routes/              one file per area + the contract test
       handlers/            http handlers per area
       checkout/            checkout, webhooks, fulfilment (the order state machine)
+      emails/              order emails: the outbox sender, smtp, templates
       auth/                sessions, refresh rotation, jwt
       database/            sqlc queries (queries/*.sql) and the generated go
       repository/          repositories over the generated queries (cart, variants…)
@@ -128,6 +130,7 @@ sequenceDiagram
 - stock is reserved when checkout starts, so a paid order can never oversell. an unpaid page expires after about 30 minutes; stripe's `checkout.session.expired` cancels the order and returns the stock, and a sweep in the api (every 5 minutes and before each checkout) catches any expiry whose webhook never arrived.
 - webhooks are signature-checked, recorded in `stripe_events` so a retry is a no-op, and applied in a transaction. an order paid after its reservation was released takes back what stock it can and records the shortfall.
 - orders move through one tested transition table (`internal/checkout/fulfilment.go`): `pending → paid → shipped → delivered`, `pending → cancelled`, and `paid | shipped | delivered → refunded`. every transition locks the order row. a refund is a full stripe refund with an idempotency key per order, so retrying can't refund twice. restocks return only what the order actually took.
+- each paid, shipped or refunded order queues its email in the same transaction (see [emails](#emails)).
 - prices are in cents everywhere. an offer applies while `offer_price` is set and `offer_expires_at` is empty or in the future, and one sql expression decides it for listings, sorting, the cart and checkout. shipping is a flat rate, free from a threshold (`internal/constants/shipping.go`).
 
 ### caching
@@ -157,7 +160,7 @@ wrap any value containing `$` in single quotes, or docker compose will try to ex
 ### run with docker (recommended)
 
 ```sh
-bun run docker:dev:up                         # api :5000 (hot reload), web :3000, postgres :5432
+bun run docker:dev:up                         # api :5000 (hot reload), web :3000, postgres :5432, mailpit :8025
 docker exec cartspace-api go run ./cmd/seed   # the seed admin + customer
 bun run db:seed:catalog                       # ~30 demo products through the api
 ```
@@ -192,6 +195,18 @@ the success and cancel pages are built from `FRONTEND_URL`. in production, creat
 ### cloudinary
 
 the admin uploads images straight from the browser with a signature from `POST /admin/uploads/signature`, into the `cartspace/products` folder on your cloud. the api only accepts image urls from that folder, and deleting a product deletes its images unless a past order still shows them. the demo catalog uses cloudinary's public `demo` cloud, so it works without uploading anything.
+
+### emails
+
+the api emails the shopper when an order is **confirmed** (paid), **shipped** (with the tracking number) and **refunded**. there's no email for delivered, or for cancelling an unpaid checkout.
+
+- each status change writes its email to an `email_outbox` table in the same transaction, so a change that commits always gets its email and one that rolls back never does. there's one email of each kind per order, so a replayed stripe webhook doesn't send twice.
+- a sender inside the api delivers the outbox every 10 seconds, rendering each email from the order as it is then. a failed send is retried after 1, 2, 4… minutes (at most an hour apart, 8 tries); a server that refuses the address for good fails it at once. an email still unsent after 48 hours is dropped rather than sent late. outcomes are in the table (`status`, `attempts`, `last_error`) and the logs.
+- emails go out over plain smtp ([go-mail](https://github.com/wneessen/go-mail)), so any provider works: set `SMTP_HOST`, `SMTP_PORT`, `SMTP_TLS` (`starttls`, `tls` or `none`), `SMTP_USERNAME`, `SMTP_PASSWORD` and `MAIL_FROM` (an address on a domain the provider has verified). resend, postmark and amazon ses all offer smtp.
+- in development the compose stack runs [mailpit](https://mailpit.axllent.org), which catches every email: read them at http://localhost:8025. `.env.example` is already set up for it.
+- without `SMTP_HOST`, emails stay queued and the api logs a warning at startup. a bad mail setting (for example no `MAIL_FROM`) stops the api from starting.
+
+the templates are in `apps/api/internal/emails/templates` (one layout for all three, html and plain text).
 
 ### themes
 
@@ -243,5 +258,5 @@ a theme is a `[data-theme="…"]` block of tokens in `apps/web/app/globals.css`:
 
 - guest carts (the bag needs an account)
 - partial refunds and returns
-- order emails
-- redis or a job queue (expired checkouts and sessions are cleaned up by loops inside the api process)
+- emails beyond orders (password reset, verifying the address)
+- redis or a job queue (expired checkouts, old sessions and the email outbox are handled by loops inside the api process)

@@ -8,6 +8,8 @@ import (
 
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	"github.com/suprimkhatri77/cartspace/backend/internal/database"
+	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/emails"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/cloudinary"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/payments"
 )
@@ -48,6 +50,20 @@ func initPayments(cfg *config.Config) payments.Provider {
 		return nil
 	}
 	return provider
+}
+
+// initEmails returns the order email sender, or nil without SMTP_HOST:
+// emails then stay queued, and those under two days old go out once mail
+// is set up.
+func initEmails(cfg *config.Config, queries *dbgen.Queries) *emails.Worker {
+	if !cfg.MailEnabled() {
+		slog.Warn("order emails disabled: SMTP_HOST is not set (they stay queued)")
+		return nil
+	}
+	if cfg.FrontendURL == "" {
+		slog.Warn("order emails: FRONTEND_URL is not set, so their order links won't work")
+	}
+	return emails.NewWorker(queries, emails.NewSMTP(cfg), cfg.FrontendURL)
 }
 
 func initLogger() {

@@ -12,6 +12,9 @@ import (
 	"time"
 )
 
+// emailInterval is how often queued order emails are sent.
+const emailInterval = 10 * time.Second
+
 // Run serves until SIGINT/SIGTERM, then shuts down gracefully.
 // It returns early with an error if the server fails to listen.
 func (a *App) Run() error {
@@ -25,6 +28,10 @@ func (a *App) Run() error {
 	defer stopBackground()
 	a.startSessionCleanup(bgCtx, sessionCleanupInterval)
 	a.startOrderExpiry(bgCtx, orderExpiryInterval)
+	emailsDone := closedChan()
+	if a.Emails != nil {
+		emailsDone = a.Emails.Start(bgCtx, emailInterval)
+	}
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -50,6 +57,20 @@ func (a *App) Run() error {
 	if err := srv.Shutdown(ctx); err != nil {
 		return fmt.Errorf("server shutdown: %w", err)
 	}
+	// Stop the email sender and let it record the send in flight (which the
+	// cancel cuts short), so the caller closes the database after it.
+	stopBackground()
+	select {
+	case <-emailsDone:
+	case <-ctx.Done():
+		slog.Warn("email sender did not stop in time")
+	}
 	slog.Info("server stopped")
 	return nil
+}
+
+func closedChan() <-chan struct{} {
+	c := make(chan struct{})
+	close(c)
+	return c
 }

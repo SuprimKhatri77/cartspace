@@ -2,6 +2,8 @@ package config
 
 import (
 	"errors"
+	"fmt"
+	"net/mail"
 	"os"
 	"strconv"
 	"strings"
@@ -28,6 +30,14 @@ type Config struct {
 	CookieDomain         string
 	OpenAPIPath          string
 	TrustedProxies       []string // proxies allowed to set X-Forwarded-For; none by default
+
+	// Order emails go out over SMTP; without SMTP_HOST they stay queued.
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUsername string
+	SMTPPassword string
+	SMTPTLS      string // starttls (default), tls or none
+	MailFrom     string // e.g. "Cartspace <orders@example.com>"
 
 	AccessTokenTTL     time.Duration
 	RefreshTokenTTL    time.Duration
@@ -73,6 +83,19 @@ func Load() (*Config, error) {
 		openapiPath = "openapi.json"
 	}
 
+	smtpPort := 587
+	if p := strings.TrimSpace(os.Getenv("SMTP_PORT")); p != "" {
+		v, err := strconv.Atoi(p)
+		if err != nil {
+			return nil, fmt.Errorf("SMTP_PORT: %q is not a number", p)
+		}
+		smtpPort = v
+	}
+	smtpTLS := strings.ToLower(strings.TrimSpace(os.Getenv("SMTP_TLS")))
+	if smtpTLS == "" {
+		smtpTLS = SMTPStartTLS
+	}
+
 	return &Config{
 		Port:                 port,
 		GinMode:              ginMode,
@@ -88,6 +111,13 @@ func Load() (*Config, error) {
 		CookieDomain:         cookieDomain,
 		OpenAPIPath:          openapiPath,
 		TrustedProxies:       splitList(os.Getenv("TRUSTED_PROXIES")),
+
+		SMTPHost:     strings.TrimSpace(os.Getenv("SMTP_HOST")),
+		SMTPPort:     smtpPort,
+		SMTPUsername: os.Getenv("SMTP_USERNAME"),
+		SMTPPassword: os.Getenv("SMTP_PASSWORD"),
+		SMTPTLS:      smtpTLS,
+		MailFrom:     strings.TrimSpace(os.Getenv("MAIL_FROM")),
 
 		AccessTokenTTL:     15 * time.Minute,
 		RefreshTokenTTL:    30 * 24 * time.Hour,
@@ -107,6 +137,43 @@ func (c *Config) ValidateAuth() error {
 	}
 	if c.JWTAccessSecret == c.JWTRefreshSecret {
 		return errors.New("JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different")
+	}
+	return nil
+}
+
+// SMTP_TLS modes.
+const (
+	SMTPStartTLS = "starttls" // upgrade a plain connection (port 587); required
+	SMTPTLS      = "tls"      // implicit TLS from the start (port 465)
+	SMTPNoTLS    = "none"     // plain text, for a local catcher such as Mailpit
+)
+
+// MailEnabled reports whether order emails are sent.
+func (c *Config) MailEnabled() bool { return c.SMTPHost != "" }
+
+// ValidateMail fails fast on an SMTP setup that could never send: no or a
+// malformed sender, an unknown TLS mode or a bad port. Without SMTP_HOST
+// mail is off and nothing is checked.
+func (c *Config) ValidateMail() error {
+	if !c.MailEnabled() {
+		return nil
+	}
+	if c.MailFrom == "" {
+		return errors.New("MAIL_FROM is required when SMTP_HOST is set (e.g. Cartspace <orders@example.com>)")
+	}
+	if _, err := mail.ParseAddress(c.MailFrom); err != nil {
+		return fmt.Errorf("MAIL_FROM %q is not an email address: %w", c.MailFrom, err)
+	}
+	switch c.SMTPTLS {
+	case SMTPStartTLS, SMTPTLS, SMTPNoTLS:
+	default:
+		return fmt.Errorf("SMTP_TLS must be starttls, tls or none, not %q", c.SMTPTLS)
+	}
+	if c.SMTPPort < 1 || c.SMTPPort > 65535 {
+		return fmt.Errorf("SMTP_PORT %d is out of range", c.SMTPPort)
+	}
+	if c.SMTPUsername != "" && c.SMTPPassword == "" {
+		return errors.New("SMTP_PASSWORD is required with SMTP_USERNAME")
 	}
 	return nil
 }

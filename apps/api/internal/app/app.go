@@ -10,6 +10,7 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/config"
 	"github.com/suprimkhatri77/cartspace/backend/internal/database"
 	dbgen "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/emails"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/cloudinary"
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 )
@@ -20,6 +21,7 @@ type App struct {
 	DB        *database.DB
 	CldClient *cloudinary.Client
 	Checkout  *checkout.Service
+	Emails    *emails.Worker // nil when mail is off
 	Router    *gin.Engine
 }
 
@@ -29,6 +31,9 @@ func New(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("config: %w", err)
 	}
 	if err := cfg.ValidateAuth(); err != nil {
+		return nil, fmt.Errorf("config: %w", err)
+	}
+	if err := cfg.ValidateMail(); err != nil {
 		return nil, fmt.Errorf("config: %w", err)
 	}
 
@@ -64,6 +69,7 @@ func New(ctx context.Context) (*App, error) {
 		DB:        db,
 		CldClient: cldClient,
 		Checkout:  checkoutSvc,
+		Emails:    initEmails(cfg, queries),
 		Router:    r,
 	}, nil
 }

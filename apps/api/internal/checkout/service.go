@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+	"github.com/suprimkhatri77/cartspace/backend/internal/emails"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/payments"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
@@ -469,6 +470,9 @@ func fulfil(ctx context.Context, qtx *db.Queries, session payments.Session) erro
 	}
 	if err := qtx.RemoveOrderedCartLines(ctx, db.RemoveOrderedCartLinesParams{UserID: order.UserID, OrderID: order.ID}); err != nil {
 		return fmt.Errorf("clear bought lines: %w", err)
+	}
+	if err := emails.Enqueue(ctx, qtx, emails.OrderConfirmed, order.ID); err != nil {
+		return err
 	}
 	slog.Info("checkout: order paid", "order", order.Number)
 	return nil
