@@ -19,12 +19,23 @@ export function safeNextPath(next: string | null | undefined): string | null {
   }
 }
 
-/** The login page, returning to path after signing in. */
-export function loginPath(path?: string): string {
+export const REGISTER_PATH = "/auth/register";
+
+function withNext(page: string, path?: string): string {
   const next = safeNextPath(path);
   return next && next !== "/"
-    ? `${LOGIN_PATH}?next=${encodeURIComponent(next)}`
-    : LOGIN_PATH;
+    ? `${page}?next=${encodeURIComponent(next)}`
+    : page;
+}
+
+/** The login page, returning to path after signing in. */
+export function loginPath(path?: string): string {
+  return withNext(LOGIN_PATH, path);
+}
+
+/** The sign-up page, returning to path after creating the account. */
+export function registerPath(path?: string): string {
+  return withNext(REGISTER_PATH, path);
 }
 
 /** Where a user lands when there is no ?next=. */

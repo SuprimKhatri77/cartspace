@@ -14,8 +14,10 @@ import (
 var (
 	once sync.Once
 
-	// only letters (upper+lower) and spaces allowed
-	alphaSpaceRe = regexp.MustCompile(`^[a-zA-Z\s]+$`)
+	// A person's name in any script: a letter first, then letters, combining
+	// marks, spaces, apostrophes, periods and hyphens (José, O'Brien,
+	// Mary-Jane, J. R.). Not tabs or newlines.
+	personNameRe = regexp.MustCompile(`^\p{L}[\p{L}\p{M} '’.-]*$`)
 
 	// A UUID in its canonical 8-4-4-4-12 form, in either case (RFC 9562:
 	// the hex digits are case-insensitive on input).
@@ -29,8 +31,8 @@ func Init() {
 			return
 		}
 
-		_ = v.RegisterValidation("alphaspace", func(fl validator.FieldLevel) bool {
-			return alphaSpaceRe.MatchString(fl.Field().String())
+		_ = v.RegisterValidation("personname", func(fl validator.FieldLevel) bool {
+			return personNameRe.MatchString(fl.Field().String())
 		})
 
 		// Replaces the built-in "uuid", whose pattern is lowercase only: an

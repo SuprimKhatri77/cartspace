@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { StarIcon } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { ReviewBodySchema, type ReviewSummary } from "@repo/types";
+import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useFocusFirstError } from "@/hooks/use-focus-first-error";
 import { getApiError, mapFieldErrors } from "@/lib/api/errors";
 import { loginPath } from "@/lib/auth/redirect";
 import { friendlyFieldErrors } from "@/lib/forms";
@@ -190,6 +192,14 @@ function WriteReview({
   const pathname = usePathname();
   const mine = useMyReview(slug);
   const [open, setOpen] = useState(false);
+  // Whether the open form differs from what's saved (set by the form).
+  const dirty = useRef(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  function close() {
+    dirty.current = false;
+    setOpen(false);
+  }
 
   // From an order page: /products/x?review=1#reviews opens the form.
   const canReview = mine.data?.can_review ?? false;
@@ -236,7 +246,14 @@ function WriteReview({
           Your review is hidden from the shop.
         </p>
       )}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          // Esc or a click outside shouldn't throw away a half-written review.
+          if (!next && dirty.current) setConfirmDiscard(true);
+          else setOpen(next);
+        }}
+      >
         <DialogContent className="max-w-[calc(100%-2rem)] gap-6 p-6 sm:max-w-lg">
           {/* Keyed so reopening starts from the saved review. */}
           {open && (
@@ -245,11 +262,26 @@ function WriteReview({
               slug={slug}
               productName={productName}
               initial={review ?? undefined}
-              close={() => setOpen(false)}
+              onDirtyChange={(isDirty) => {
+                dirty.current = isDirty;
+              }}
+              close={close}
             />
           )}
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={confirmDiscard}
+        onOpenChange={setConfirmDiscard}
+        title={review ? "Discard your changes?" : "Discard your review?"}
+        description="What you've written hasn't been saved."
+        confirmLabel="Discard"
+        pending={false}
+        onConfirm={() => {
+          setConfirmDiscard(false);
+          close();
+        }}
+      />
     </>
   );
 }
@@ -258,11 +290,13 @@ function ReviewForm({
   slug,
   productName,
   initial,
+  onDirtyChange,
   close,
 }: {
   slug: string;
   productName: string;
   initial?: { rating: number; title: string; body: string };
+  onDirtyChange: (dirty: boolean) => void;
   close: () => void;
 }) {
   const { write, remove } = useReviewMutations(slug);
@@ -270,12 +304,27 @@ function ReviewForm({
   const [title, setTitle] = useState(initial?.title ?? "");
   const [body, setBody] = useState(initial?.body ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const { ref: formRef, focusFirstError } = useFocusFirstError();
+
+  const dirty =
+    rating !== (initial?.rating ?? 0) ||
+    title !== (initial?.title ?? "") ||
+    body !== (initial?.body ?? "");
+  useEffect(() => {
+    onDirtyChange(dirty);
+  }, [dirty, onDirtyChange]);
+
+  function fail(next: Record<string, string>) {
+    setErrors(next);
+    focusFirstError();
+  }
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const parsed = ReviewBodySchema.safeParse({ rating, title, body });
     if (!parsed.success) {
-      setErrors(
+      fail(
         friendlyFieldErrors(parsed.error, {
           rating: "a rating",
           title: "a title",
@@ -291,14 +340,14 @@ function ReviewForm({
         close();
       },
       onError: (error) => {
-        setErrors(mapFieldErrors(getApiError(error)?.errors));
+        fail(mapFieldErrors(getApiError(error)?.errors));
         toast.error(getApiError(error)?.message ?? "Couldn't save your review");
       },
     });
   }
 
   return (
-    <form onSubmit={submit} noValidate className="space-y-6">
+    <form ref={formRef} onSubmit={submit} noValidate className="space-y-6">
       <DialogHeader className="gap-1">
         <DialogTitle className="font-serif text-3xl font-normal">
           {initial ? "Edit your review" : "Write a review"}
@@ -309,7 +358,11 @@ function ReviewForm({
       <FieldGroup className="gap-5">
         <Field data-invalid={Boolean(errors.rating)}>
           <FieldLabel className="eyebrow !text-foreground">Rating</FieldLabel>
-          <StarInput value={rating} onChange={setRating} />
+          <StarInput
+            value={rating}
+            onChange={setRating}
+            invalid={Boolean(errors.rating)}
+          />
           <FieldError key={errors.rating} className="animate-rise">
             {errors.rating}
           </FieldError>
@@ -327,9 +380,14 @@ function ReviewForm({
             maxLength={100}
             onChange={(e) => setTitle(e.target.value)}
             aria-invalid={Boolean(errors.title)}
+            aria-describedby={errors.title ? "review-title-error" : undefined}
             placeholder="In a few words"
           />
-          <FieldError key={errors.title} className="animate-rise">
+          <FieldError
+            key={errors.title}
+            id="review-title-error"
+            className="animate-rise"
+          >
             {errors.title}
           </FieldError>
         </Field>
@@ -346,9 +404,14 @@ function ReviewForm({
             maxLength={2000}
             onChange={(e) => setBody(e.target.value)}
             aria-invalid={Boolean(errors.body)}
+            aria-describedby={errors.body ? "review-body-error" : undefined}
             placeholder="How does it fit, feel and wear?"
           />
-          <FieldError key={errors.body} className="animate-rise">
+          <FieldError
+            key={errors.body}
+            id="review-body-error"
+            className="animate-rise"
+          >
             {errors.body}
           </FieldError>
         </Field>
@@ -358,20 +421,7 @@ function ReviewForm({
         {initial ? (
           <button
             type="button"
-            disabled={remove.isPending}
-            onClick={() =>
-              remove.mutate(undefined, {
-                onSuccess: () => {
-                  toast("Review deleted");
-                  close();
-                },
-                onError: (error) =>
-                  toast.error(
-                    getApiError(error)?.message ??
-                      "Couldn't delete your review",
-                  ),
-              })
-            }
+            onClick={() => setConfirmDelete(true)}
             className="link-underline text-xs text-muted-foreground hover:text-destructive"
           >
             Delete review
@@ -387,6 +437,30 @@ function ReviewForm({
               : "Post review"}
         </Button>
       </DialogFooter>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Delete your review?"
+        description="It comes off the product page for good. You can write a new one later."
+        confirmLabel="Delete review"
+        pending={remove.isPending}
+        onConfirm={() =>
+          remove.mutate(undefined, {
+            onSuccess: () => {
+              setConfirmDelete(false);
+              toast("Review deleted");
+              close();
+            },
+            onError: (error) => {
+              setConfirmDelete(false);
+              toast.error(
+                getApiError(error)?.message ?? "Couldn't delete your review",
+              );
+            },
+          })
+        }
+      />
     </form>
   );
 }
@@ -400,9 +474,11 @@ const LABELS = ["Poor", "Fair", "Good", "Very good", "Excellent"];
 function StarInput({
   value,
   onChange,
+  invalid,
 }: {
   value: number;
   onChange: (value: number) => void;
+  invalid?: boolean;
 }) {
   const [hover, setHover] = useState(0);
   const shown = hover || value;
@@ -411,6 +487,7 @@ function StarInput({
       <div
         role="radiogroup"
         aria-label="Rating"
+        aria-invalid={invalid}
         className="flex"
         onMouseLeave={() => setHover(0)}
       >

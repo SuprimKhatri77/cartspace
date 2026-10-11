@@ -40,6 +40,10 @@ export function useWishlistIds() {
   return { ids, ready: query.isSuccess };
 }
 
+// Set when a toggle fails while another is still in flight: its snapshot
+// would undo the other's change, so the last one to settle refetches.
+let resync = false;
+
 /**
  * Saves or unsaves a product at once (the heart fills before the API
  * answers) and rolls back with a toast if it refuses. Signed-out shoppers
@@ -76,7 +80,12 @@ export function useToggleWishlist() {
       return { previous };
     },
     onError: (error, _vars, context) => {
-      queryClient.setQueryData(key, context?.previous);
+      // This mutation still counts as in flight while its callbacks run.
+      if (queryClient.isMutating({ mutationKey }) <= 1) {
+        queryClient.setQueryData(key, context?.previous);
+      } else {
+        resync = true;
+      }
       toast.error(
         getApiError(error)?.message ?? "Couldn't update your wishlist.",
       );
@@ -92,6 +101,10 @@ export function useToggleWishlist() {
       }
     },
     onSettled: () => {
+      if (resync && queryClient.isMutating({ mutationKey }) <= 1) {
+        resync = false;
+        void queryClient.invalidateQueries({ queryKey: key });
+      }
       // The saved-products page refetches when next shown.
       void queryClient.invalidateQueries({
         queryKey: wishlistKeys.list(userId),

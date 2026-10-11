@@ -125,7 +125,9 @@ export function CartLine({
                 {" · "}
                 <button
                   type="button"
-                  className="underline underline-offset-2 hover:text-foreground"
+                  // A taller hit area than the text, without moving it.
+                  className="-my-2 py-2 underline underline-offset-2 hover:text-foreground disabled:opacity-50"
+                  disabled={update.isPending}
                   onClick={() =>
                     update.mutate({
                       variantId: line.variant_id,
@@ -154,7 +156,7 @@ export function CartLine({
           <button
             type="button"
             onClick={() => remove.mutate(line)}
-            className="link-underline text-xs text-muted-foreground hover:text-foreground"
+            className="link-underline -my-3 py-3 text-xs text-muted-foreground hover:text-foreground"
           >
             Remove
             <span className="sr-only"> {line.product_name}</span>

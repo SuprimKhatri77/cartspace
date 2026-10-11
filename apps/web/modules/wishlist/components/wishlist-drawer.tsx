@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { HeartIcon, XIcon } from "@phosphor-icons/react";
 import type { WishlistProduct } from "@repo/types";
 import { CountBadge } from "@/components/layout/count-badge";
@@ -15,10 +14,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { loginPath } from "@/lib/auth/redirect";
 import { cn } from "@/lib/utils";
 import { Price } from "@/modules/catalog/components/price";
 import { useAuth } from "@/providers/auth-provider";
+import { SignInLink } from "@/modules/auth/components/sign-in-link";
 import { useSavedCount, useSavedProducts, useToggleWishlist } from "../hooks";
 import { useWishlistDrawer } from "../store";
 import { SavedItemAction } from "./saved-item-action";
@@ -58,7 +57,6 @@ export function WishlistDrawer() {
 
 function WishlistContents({ close }: { close: () => void }) {
   const user = useAuth((s) => s.user);
-  const pathname = usePathname();
   const count = useSavedCount();
   const { query, products } = useSavedProducts();
 
@@ -83,13 +81,9 @@ function WishlistContents({ close }: { close: () => void }) {
           title="Sign in to save pieces."
           body="Your wishlist is kept on your account, so it follows you between devices."
           action={
-            <Link
-              href={loginPath(pathname)}
-              onClick={close}
-              className={buttonVariants()}
-            >
+            <SignInLink onClick={close} className={buttonVariants()}>
               Sign in
-            </Link>
+            </SignInLink>
           }
         />
       </>

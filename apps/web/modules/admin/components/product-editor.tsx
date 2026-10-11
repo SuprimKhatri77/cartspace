@@ -15,7 +15,7 @@ import { getApiError } from "@/lib/api/errors";
 import { useAdminMutation } from "../hooks/use-admin-mutation";
 import { adminKeys } from "../keys";
 import { useAdminProduct } from "../queries";
-import { ConfirmDialog } from "./confirm-dialog";
+import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { AdminPageHeader } from "./page-header";
 import { ProductForm } from "./product-form";
 import { ActiveBadge } from "./status-badge";

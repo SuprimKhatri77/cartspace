@@ -110,6 +110,7 @@ export function ListingView({ category }: { category: string | null }) {
               total={total}
               active={active}
               updating={updating}
+              onClear={() => change(clearFilters(filters))}
             />
             <p
               className="text-[0.8125rem] text-muted-foreground tabular-nums"
@@ -221,11 +222,13 @@ function MobileFilters({
   total,
   active,
   updating,
+  onClear,
 }: {
   panel: React.ReactNode;
   total: number;
   active: number;
   updating: boolean;
+  onClear: () => void;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -248,8 +251,18 @@ function MobileFilters({
           <SheetTitle className="eyebrow !text-foreground">Filter</SheetTitle>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto px-5">{panel}</div>
-        <SheetFooter className="border-t border-border p-4">
-          <SheetClose render={<Button size="lg" className="w-full" />}>
+        <SheetFooter className="flex-row gap-2 border-t border-border p-4">
+          {active > 0 && (
+            <Button
+              variant="outline"
+              size="lg"
+              className="shrink-0"
+              onClick={onClear}
+            >
+              Clear all
+            </Button>
+          )}
+          <SheetClose render={<Button size="lg" className="flex-1" />}>
             {updating
               ? "Updating…"
               : `Show ${total} ${total === 1 ? "product" : "products"}`}

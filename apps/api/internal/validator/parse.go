@@ -96,7 +96,7 @@ func mapTagToCode(fe validator.FieldError) string {
 		return constants.FieldInvalidUUID
 	case "url":
 		return constants.FieldInvalidURL
-	case "alphaspace", "alphanum":
+	case "personname", "alphanum":
 		return constants.FieldInvalidFormat
 	case "oneof":
 		return constants.FieldInvalidValue
@@ -137,8 +137,8 @@ func buildMessage(fe validator.FieldError, label string) string {
 		return fmt.Sprintf("%s must be a valid ID", label)
 	case "url":
 		return fmt.Sprintf("%s must be a valid URL", label)
-	case "alphaspace":
-		return fmt.Sprintf("%s can only contain letters and spaces", label)
+	case "personname":
+		return fmt.Sprintf("%s can only contain letters, spaces, apostrophes and hyphens", label)
 	case "gt":
 		return fmt.Sprintf("%s must be greater than %s", label, fe.Param())
 	case "gte":

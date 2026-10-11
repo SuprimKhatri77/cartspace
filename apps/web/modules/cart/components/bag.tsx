@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { HandbagIcon } from "@phosphor-icons/react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -13,9 +12,9 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CountBadge } from "@/components/layout/count-badge";
-import { loginPath } from "@/lib/auth/redirect";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
+import { SignInLink } from "@/modules/auth/components/sign-in-link";
 import { useCart } from "../queries";
 import { unitCount } from "../lib/cart-math";
 import { useBagDrawer } from "../store";
@@ -60,7 +59,6 @@ export function BagDrawer() {
 
 function BagContents({ close }: { close: () => void }) {
   const user = useAuth((s) => s.user);
-  const pathname = usePathname();
   const { data: cart, isPending, isError, refetch } = useCart();
   const lines = cart?.items ?? [];
 
@@ -85,13 +83,9 @@ function BagContents({ close }: { close: () => void }) {
           title="Sign in to start a bag."
           body="Your bag is saved to your account, so it follows you between devices."
           action={
-            <Link
-              href={loginPath(pathname)}
-              onClick={close}
-              className={buttonVariants()}
-            >
+            <SignInLink onClick={close} className={buttonVariants()}>
               Sign in
-            </Link>
+            </SignInLink>
           }
         />
       </>

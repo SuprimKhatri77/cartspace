@@ -8,6 +8,7 @@ import { ArrowRightIcon } from "@phosphor-icons/react";
 import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { MobileNav } from "./mobile-nav";
+import { useActiveNav } from "./use-active-nav";
 import type { Collection as NavCategory } from "@/modules/catalog/api";
 import { SearchDialog } from "@/modules/search/components/search-dialog";
 import { BagButton, BagDrawer } from "@/modules/cart/components/bag";
@@ -77,7 +78,7 @@ export function HeaderShell({ categories }: { categories: NavCategory[] }) {
 }
 
 const navLink =
-  "relative flex h-16 items-center px-3 text-[0.8125rem] outline-none transition-colors hover:text-foreground focus-visible:text-foreground after:absolute after:inset-x-3 after:bottom-[18px] after:h-px after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-500 after:ease-out-expo hover:after:scale-x-100 data-popup-open:after:scale-x-100";
+  "relative flex h-16 items-center px-3 text-[0.8125rem] outline-none transition-colors hover:text-foreground focus-visible:text-foreground after:absolute after:inset-x-3 after:bottom-[18px] after:h-px after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-500 after:ease-out-expo hover:after:scale-x-100 data-popup-open:after:scale-x-100 aria-[current=page]:text-foreground aria-[current=page]:after:scale-x-100";
 
 function DesktopNav({
   categories,
@@ -86,6 +87,8 @@ function DesktopNav({
   categories: NavCategory[];
   anchor: React.RefObject<HTMLDivElement | null>;
 }) {
+  const active = useActiveNav(categories);
+
   return (
     <NavigationMenu.Root
       className="hidden justify-center lg:flex"
@@ -96,6 +99,7 @@ function DesktopNav({
         <NavigationMenu.Item>
           <NavigationMenu.Link
             render={<Link href="/shop" />}
+            active={active === "shop"}
             className={navLink}
           >
             Shop all
@@ -107,7 +111,12 @@ function DesktopNav({
             <NavigationMenu.Trigger
               className={cn(navLink, "data-popup-open:text-foreground")}
               // Clicking the trigger goes to the category; hover opens the panel.
-              render={<Link href={`/categories/${category.slug}`} />}
+              render={
+                <Link
+                  href={`/categories/${category.slug}`}
+                  aria-current={active === category.slug ? "page" : undefined}
+                />
+              }
               nativeButton={false}
             >
               {category.name}
@@ -121,6 +130,7 @@ function DesktopNav({
         <NavigationMenu.Item>
           <NavigationMenu.Link
             render={<Link href="/shop?featured=true" />}
+            active={active === "featured"}
             className={navLink}
           >
             Editor&apos;s picks

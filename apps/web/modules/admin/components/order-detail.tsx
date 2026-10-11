@@ -40,7 +40,7 @@ import { formatOrderDate, orderLabel } from "@/modules/checkout/lib/orders";
 import { useAdminMutation } from "../hooks/use-admin-mutation";
 import { adminKeys } from "../keys";
 import { useAdminOrder } from "../queries";
-import { ConfirmDialog } from "./confirm-dialog";
+import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { AdminPageHeader } from "./page-header";
 import { Section } from "./product-form";
 import { OrderStatusBadge } from "./status-badge";

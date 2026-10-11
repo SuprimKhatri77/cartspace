@@ -27,6 +27,9 @@ import type { Collection as NavCategory } from "@/modules/catalog/api";
 import { useSavedCount } from "@/modules/wishlist/hooks";
 import { useWishlistDrawer } from "@/modules/wishlist/store";
 import { LogoMark } from "@/components/brand/logo-mark";
+import { cn } from "@/lib/utils";
+import { SignInLink } from "@/modules/auth/components/sign-in-link";
+import { useActiveNav } from "./use-active-nav";
 
 const accountLink =
   "-mx-2 flex h-11 w-[calc(100%+1rem)] items-center gap-3 rounded-control px-2 text-left transition-colors hover:bg-muted";
@@ -38,6 +41,10 @@ export function MobileNav({ categories }: { categories: NavCategory[] }) {
   const savedCount = useSavedCount();
   const openWishlist = useWishlistDrawer((s) => s.setOpen);
   const close = () => setOpen(false);
+  const active = useActiveNav(categories);
+  // The current section, underlined like the desktop header's.
+  const mark = (section: string) =>
+    active === section && "underline decoration-1 underline-offset-[0.2em]";
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -59,7 +66,11 @@ export function MobileNav({ categories }: { categories: NavCategory[] }) {
           <Link
             href="/shop"
             onClick={close}
-            className="animate-rise block py-3 font-serif text-4xl"
+            aria-current={active === "shop" ? "page" : undefined}
+            className={cn(
+              "animate-rise block py-3 font-serif text-4xl",
+              mark("shop"),
+            )}
           >
             Shop all
           </Link>
@@ -71,7 +82,12 @@ export function MobileNav({ categories }: { categories: NavCategory[] }) {
                 className="animate-rise border-none"
                 style={{ "--i": i + 1 } as React.CSSProperties}
               >
-                <AccordionTrigger className="py-3 font-serif text-4xl font-normal hover:no-underline">
+                <AccordionTrigger
+                  className={cn(
+                    "py-3 font-serif text-4xl font-normal hover:no-underline",
+                    mark(category.slug),
+                  )}
+                >
                   {category.name}
                 </AccordionTrigger>
                 <AccordionContent>
@@ -104,7 +120,11 @@ export function MobileNav({ categories }: { categories: NavCategory[] }) {
           <Link
             href="/shop?featured=true"
             onClick={close}
-            className="animate-rise block py-3 font-serif text-4xl"
+            aria-current={active === "featured" ? "page" : undefined}
+            className={cn(
+              "animate-rise block py-3 font-serif text-4xl",
+              mark("featured"),
+            )}
             style={{ "--i": categories.length + 1 } as React.CSSProperties}
           >
             Editor&apos;s picks
@@ -151,20 +171,19 @@ export function MobileNav({ categories }: { categories: NavCategory[] }) {
             </ul>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              <Link
-                href="/auth/login"
+              <SignInLink
                 onClick={close}
                 className="flex h-11 items-center justify-center rounded-control border border-border"
               >
                 Sign in
-              </Link>
-              <Link
-                href="/auth/register"
+              </SignInLink>
+              <SignInLink
+                register
                 onClick={close}
                 className="flex h-11 items-center justify-center bg-primary text-primary-foreground"
               >
                 Create account
-              </Link>
+              </SignInLink>
             </div>
           )}
         </div>

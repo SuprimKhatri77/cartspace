@@ -34,7 +34,7 @@ import { useAdminMutation } from "../hooks/use-admin-mutation";
 import { adminKeys } from "../keys";
 import type { StoredImage } from "../lib/upload";
 import { useAdminVariants } from "../queries";
-import { ConfirmDialog } from "./confirm-dialog";
+import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { Section } from "./product-form";
 import { ActiveBadge } from "./status-badge";
 import { StockInput } from "./stock-input";

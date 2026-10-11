@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   HeartIcon,
   PackageIcon,
@@ -19,12 +18,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { loginPath } from "@/lib/auth/redirect";
 import { cn } from "@/lib/utils";
 import { useLogout } from "@/modules/auth/hooks/mutations/use-logout";
 import { useSavedCount } from "@/modules/wishlist/hooks";
 import { useWishlistDrawer } from "@/modules/wishlist/store";
 import { useAuth } from "@/providers/auth-provider";
+import { SignInLink } from "@/modules/auth/components/sign-in-link";
 
 /** Up to two initials for the avatar: "Ada Lovelace" → "AL". */
 export function initialsOf(name: string): string {
@@ -56,23 +55,21 @@ const icon = "size-4 text-muted-foreground";
 
 export function UserMenu() {
   const user = useAuth((s) => s.user);
-  const pathname = usePathname();
   const logout = useLogout();
   const savedCount = useSavedCount();
   const openWishlist = useWishlistDrawer((s) => s.setOpen);
 
   if (!user) {
     return (
-      <Link
+      <SignInLink
         className={buttonVariants({
           variant: "ghost",
           className: "gap-2 px-2.5",
         })}
-        href={loginPath(pathname)}
       >
         <UserIcon className="size-5" weight="light" />
         <span className="hidden sm:inline">Sign in</span>
-      </Link>
+      </SignInLink>
     );
   }
 

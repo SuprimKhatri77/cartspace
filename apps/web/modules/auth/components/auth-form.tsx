@@ -14,11 +14,13 @@ import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   Field,
+  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useFocusFirstError } from "@/hooks/use-focus-first-error";
 import { getApiError, mapFieldErrors } from "@/lib/api/errors";
 import { safeNextPath } from "@/lib/auth/redirect";
 
@@ -58,6 +60,12 @@ export function AuthForm(props: AuthFormProps) {
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
+  const { ref: formRef, focusFirstError } = useFocusFirstError();
+
+  function fail(errors: Record<string, string>) {
+    setFieldErrors(errors);
+    focusFirstError();
+  }
 
   function updateField(field: FieldName, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -77,7 +85,7 @@ export function AuthForm(props: AuthFormProps) {
       if (props.mode === "register") {
         const parsed = RegisterBodySchema.safeParse(values);
         if (!parsed.success) {
-          setFieldErrors(issuesToFieldErrors(parsed.error));
+          fail(issuesToFieldErrors(parsed.error));
           return;
         }
         await props.onSubmit(parsed.data);
@@ -87,30 +95,50 @@ export function AuthForm(props: AuthFormProps) {
           password: values.password,
         });
         if (!parsed.success) {
-          setFieldErrors(issuesToFieldErrors(parsed.error));
+          fail(issuesToFieldErrors(parsed.error));
           return;
         }
         await props.onSubmit(parsed.data);
       }
     } catch (error) {
       // The mutation already showed a toast; add per-field messages.
-      setFieldErrors(mapFieldErrors(getApiError(error)?.errors));
+      fail(mapFieldErrors(getApiError(error)?.errors));
     }
   }
 
-  function field(name: FieldName, label: string, input: React.ReactNode) {
+  function field(
+    name: FieldName,
+    label: string,
+    input: React.ReactNode,
+    hint?: string,
+  ) {
     return (
       <Field data-invalid={Boolean(fieldErrors[name])}>
         <FieldLabel htmlFor={name} className="eyebrow !text-foreground">
           {label}
         </FieldLabel>
         {input}
+        {hint && !fieldErrors[name] && (
+          <FieldDescription id={`${name}-hint`} className="text-xs">
+            {hint}
+          </FieldDescription>
+        )}
         {/* key: a new message replays the entrance. */}
-        <FieldError key={fieldErrors[name]} className="animate-rise">
+        <FieldError
+          key={fieldErrors[name]}
+          id={`${name}-error`}
+          className="animate-rise"
+        >
           {fieldErrors[name]}
         </FieldError>
       </Field>
     );
+  }
+
+  /** Points an input at its error, else its hint, for screen readers. */
+  function describedBy(name: FieldName, hasHint = false) {
+    if (fieldErrors[name]) return `${name}-error`;
+    return hasHint ? `${name}-hint` : undefined;
   }
 
   const otherHref = `${isRegister ? "/auth/login" : "/auth/register"}${
@@ -118,7 +146,12 @@ export function AuthForm(props: AuthFormProps) {
   }`;
 
   return (
-    <form className="w-full max-w-sm" onSubmit={handleSubmit} noValidate>
+    <form
+      ref={formRef}
+      className="w-full max-w-sm"
+      onSubmit={handleSubmit}
+      noValidate
+    >
       <div className="mb-10 space-y-3">
         <p className="eyebrow animate-rise">
           {isRegister ? "Join cartspace" : "Welcome back"}
@@ -159,6 +192,7 @@ export function AuthForm(props: AuthFormProps) {
               value={values.name}
               onChange={(e) => updateField("name", e.target.value)}
               aria-invalid={Boolean(fieldErrors.name)}
+              aria-describedby={describedBy("name")}
             />,
           )}
         {field(
@@ -172,6 +206,7 @@ export function AuthForm(props: AuthFormProps) {
             value={values.email}
             onChange={(e) => updateField("email", e.target.value)}
             aria-invalid={Boolean(fieldErrors.email)}
+            aria-describedby={describedBy("email")}
           />,
         )}
         {field(
@@ -186,6 +221,7 @@ export function AuthForm(props: AuthFormProps) {
               value={values.password}
               onChange={(e) => updateField("password", e.target.value)}
               aria-invalid={Boolean(fieldErrors.password)}
+              aria-describedby={describedBy("password", isRegister)}
               className="pr-11"
             />
             <button
@@ -202,6 +238,7 @@ export function AuthForm(props: AuthFormProps) {
               )}
             </button>
           </div>,
+          isRegister ? "8 to 72 characters." : undefined,
         )}
 
         <Button
