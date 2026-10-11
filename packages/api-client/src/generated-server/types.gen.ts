@@ -1002,11 +1002,15 @@ export type UploadSignatureResponse = {
 };
 
 /**
- * POST the file with these fields to https://api.cloudinary.com/v1_1/{cloud_name}/image/upload.
+ * POST the file with these fields (all of them, unchanged) to https://api.cloudinary.com/v1_1/{cloud_name}/image/upload.
  */
 export type UploadSignature = {
     cloud_name: string;
     api_key: string;
+    /**
+     * Comma-separated; Cloudinary rejects any other format
+     */
+    allowed_formats: string;
     folder: string;
     /**
      * Unix seconds; Cloudinary accepts it for an hour
