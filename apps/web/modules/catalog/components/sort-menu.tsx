@@ -29,7 +29,7 @@ export function SortMenu({
     >
       <SelectTrigger
         aria-label="Sort products"
-        className="h-9 border-none px-0 text-[0.8125rem] hover:bg-transparent dark:bg-transparent"
+        className="h-9 border-none px-0 text-[0.8125rem] hover:bg-transparent"
       >
         <span className="text-muted-foreground">Sort:</span>
         <SelectValue />
