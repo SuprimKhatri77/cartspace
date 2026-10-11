@@ -1,13 +1,9 @@
 #!/bin/sh
 set -e
 
-if [ -d "./migrations" ] && [ "$(ls -A ./migrations 2>/dev/null)" ]; then
-    echo "Running migrations..."
-    migrate -path ./migrations -database "$DATABASE_URL" up
-    echo "Migrations completed"
-else
-    echo "No migrations found, skipping..."
-fi
+# The migrator deploys run too (cmd/migrate, with the SQL compiled in).
+echo "Running migrations..."
+go run ./cmd/migrate up
 
 echo "Starting air..."
 exec air
