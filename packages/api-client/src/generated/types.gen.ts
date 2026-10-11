@@ -927,6 +927,22 @@ export type ReviewBody = {
     body: string;
 };
 
+export type StoreSettingsResponse = {
+    success: true;
+    message: string;
+    data: StoreSettings;
+};
+
+/**
+ * Store-wide settings.
+ */
+export type StoreSettings = {
+    theme: StoreTheme;
+    updated_at: string;
+};
+
+export type StoreTheme = 'editorial' | 'studio' | 'botanical';
+
 export type AdminStatsResponse = {
     success: true;
     message: string;
@@ -1115,6 +1131,10 @@ export type AdminReviewResponse = {
 
 export type ReviewStatusBody = {
     status: ReviewStatus;
+};
+
+export type StoreThemeBody = {
+    theme: StoreTheme;
 };
 
 export type GetHealthData = {
@@ -2887,6 +2907,31 @@ export type GetMyReviewResponses = {
 
 export type GetMyReviewResponse = GetMyReviewResponses[keyof GetMyReviewResponses];
 
+export type GetStoreSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/settings';
+};
+
+export type GetStoreSettingsErrors = {
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type GetStoreSettingsError = GetStoreSettingsErrors[keyof GetStoreSettingsErrors];
+
+export type GetStoreSettingsResponses = {
+    /**
+     * Settings fetched
+     */
+    200: StoreSettingsResponse;
+};
+
+export type GetStoreSettingsResponse = GetStoreSettingsResponses[keyof GetStoreSettingsResponses];
+
 export type AdminGetStatsData = {
     body?: never;
     path?: never;
@@ -3320,3 +3365,40 @@ export type AdminSetReviewStatusResponses = {
 };
 
 export type AdminSetReviewStatusResponse = AdminSetReviewStatusResponses[keyof AdminSetReviewStatusResponses];
+
+export type AdminSetStoreThemeData = {
+    body: StoreThemeBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/settings';
+};
+
+export type AdminSetStoreThemeErrors = {
+    /**
+     * Unknown theme (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSetStoreThemeError = AdminSetStoreThemeErrors[keyof AdminSetStoreThemeErrors];
+
+export type AdminSetStoreThemeResponses = {
+    /**
+     * Store theme updated
+     */
+    200: StoreSettingsResponse;
+};
+
+export type AdminSetStoreThemeResponse = AdminSetStoreThemeResponses[keyof AdminSetStoreThemeResponses];

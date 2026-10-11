@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddCartItemData, AddCartItemErrors, AddCartItemResponses, AddToWishlistData, AddToWishlistErrors, AddToWishlistResponses, AdminCancelOrderData, AdminCancelOrderErrors, AdminCancelOrderResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminDeliverOrderData, AdminDeliverOrderErrors, AdminDeliverOrderResponses, AdminGetOrderData, AdminGetOrderErrors, AdminGetOrderResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetStatsData, AdminGetStatsErrors, AdminGetStatsResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListOrdersData, AdminListOrdersErrors, AdminListOrdersResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminListReviewsData, AdminListReviewsErrors, AdminListReviewsResponses, AdminListVariantsData, AdminListVariantsErrors, AdminListVariantsResponses, AdminRefundOrderData, AdminRefundOrderErrors, AdminRefundOrderResponses, AdminSetReviewStatusData, AdminSetReviewStatusErrors, AdminSetReviewStatusResponses, AdminSetVariantStockData, AdminSetVariantStockErrors, AdminSetVariantStockResponses, AdminShipOrderData, AdminShipOrderErrors, AdminShipOrderResponses, AdminSignUploadData, AdminSignUploadErrors, AdminSignUploadResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ClearCartData, ClearCartErrors, ClearCartResponses, DeleteAddressData, DeleteAddressErrors, DeleteAddressResponses, DeleteReviewData, DeleteReviewErrors, DeleteReviewResponses, GetCartData, GetCartErrors, GetCartResponses, GetCheckoutSessionData, GetCheckoutSessionErrors, GetCheckoutSessionResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetMyReviewData, GetMyReviewErrors, GetMyReviewResponses, GetOrderData, GetOrderErrors, GetOrderResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, ListAddressesData, ListAddressesErrors, ListAddressesResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListOrdersData, ListOrdersErrors, ListOrdersResponses, ListProductsData, ListProductsErrors, ListProductsResponses, ListReviewsData, ListReviewsErrors, ListReviewsResponses, ListWishlistData, ListWishlistErrors, ListWishlistIdsData, ListWishlistIdsErrors, ListWishlistIdsResponses, ListWishlistResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveCartItemData, RemoveCartItemErrors, RemoveCartItemResponses, RemoveFromWishlistData, RemoveFromWishlistErrors, RemoveFromWishlistResponses, StartCheckoutData, StartCheckoutErrors, StartCheckoutResponses, StripeWebhookData, StripeWebhookErrors, StripeWebhookResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses, WriteReviewData, WriteReviewErrors, WriteReviewResponses } from './types.gen';
+import type { AddCartItemData, AddCartItemErrors, AddCartItemResponses, AddToWishlistData, AddToWishlistErrors, AddToWishlistResponses, AdminCancelOrderData, AdminCancelOrderErrors, AdminCancelOrderResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminDeliverOrderData, AdminDeliverOrderErrors, AdminDeliverOrderResponses, AdminGetOrderData, AdminGetOrderErrors, AdminGetOrderResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetStatsData, AdminGetStatsErrors, AdminGetStatsResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListOrdersData, AdminListOrdersErrors, AdminListOrdersResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminListReviewsData, AdminListReviewsErrors, AdminListReviewsResponses, AdminListVariantsData, AdminListVariantsErrors, AdminListVariantsResponses, AdminRefundOrderData, AdminRefundOrderErrors, AdminRefundOrderResponses, AdminSetReviewStatusData, AdminSetReviewStatusErrors, AdminSetReviewStatusResponses, AdminSetStoreThemeData, AdminSetStoreThemeErrors, AdminSetStoreThemeResponses, AdminSetVariantStockData, AdminSetVariantStockErrors, AdminSetVariantStockResponses, AdminShipOrderData, AdminShipOrderErrors, AdminShipOrderResponses, AdminSignUploadData, AdminSignUploadErrors, AdminSignUploadResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ClearCartData, ClearCartErrors, ClearCartResponses, DeleteAddressData, DeleteAddressErrors, DeleteAddressResponses, DeleteReviewData, DeleteReviewErrors, DeleteReviewResponses, GetCartData, GetCartErrors, GetCartResponses, GetCheckoutSessionData, GetCheckoutSessionErrors, GetCheckoutSessionResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetMyReviewData, GetMyReviewErrors, GetMyReviewResponses, GetOrderData, GetOrderErrors, GetOrderResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, GetStoreSettingsData, GetStoreSettingsErrors, GetStoreSettingsResponses, ListAddressesData, ListAddressesErrors, ListAddressesResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListOrdersData, ListOrdersErrors, ListOrdersResponses, ListProductsData, ListProductsErrors, ListProductsResponses, ListReviewsData, ListReviewsErrors, ListReviewsResponses, ListWishlistData, ListWishlistErrors, ListWishlistIdsData, ListWishlistIdsErrors, ListWishlistIdsResponses, ListWishlistResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveCartItemData, RemoveCartItemErrors, RemoveCartItemResponses, RemoveFromWishlistData, RemoveFromWishlistErrors, RemoveFromWishlistResponses, StartCheckoutData, StartCheckoutErrors, StartCheckoutResponses, StripeWebhookData, StripeWebhookErrors, StripeWebhookResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses, WriteReviewData, WriteReviewErrors, WriteReviewResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -732,6 +732,17 @@ export const getMyReview = <ThrowOnError extends boolean = false>(options: Optio
 });
 
 /**
+ * Store settings
+ *
+ * Store-wide settings the storefront needs, such as its theme.
+ */
+export const getStoreSettings = <ThrowOnError extends boolean = false>(options?: Options<GetStoreSettingsData, ThrowOnError>): RequestResult<GetStoreSettingsResponses, GetStoreSettingsErrors, ThrowOnError> => (options?.client ?? client).get<GetStoreSettingsResponses, GetStoreSettingsErrors, ThrowOnError>({
+    responseType: 'json',
+    url: '/api/v1/settings',
+    ...options
+});
+
+/**
  * Dashboard figures
  *
  * Sales (paid, shipped and delivered orders), the last 30 days by day, low stock and recent orders.
@@ -896,6 +907,26 @@ export const adminSetReviewStatus = <ThrowOnError extends boolean = false>(optio
             type: 'apiKey'
         }],
     url: '/api/v1/admin/reviews/{id}/status',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Change the store's theme
+ *
+ * The storefront switches to the theme on its next render.
+ */
+export const adminSetStoreTheme = <ThrowOnError extends boolean = false>(options: Options<AdminSetStoreThemeData, ThrowOnError>): RequestResult<AdminSetStoreThemeResponses, AdminSetStoreThemeErrors, ThrowOnError> => (options.client ?? client).put<AdminSetStoreThemeResponses, AdminSetStoreThemeErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/settings',
     ...options,
     headers: {
         'Content-Type': 'application/json',

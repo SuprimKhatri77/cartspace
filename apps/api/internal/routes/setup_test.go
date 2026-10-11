@@ -51,6 +51,8 @@ func TestSetupRegistersAllRoutes(t *testing.T) {
 		"POST /api/v1/admin/orders/:number/refund",
 		"GET /api/v1/admin/reviews",
 		"PUT /api/v1/admin/reviews/:id/status",
+		"PUT /api/v1/admin/settings",
+		"GET /api/v1/settings",
 		"GET /api/v1/products",
 		"GET /api/v1/products/:productSlug",
 		"GET /api/v1/products/:productSlug/reviews",
