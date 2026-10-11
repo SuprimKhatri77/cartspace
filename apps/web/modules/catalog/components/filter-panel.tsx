@@ -170,25 +170,32 @@ function SwatchToggle({
       type="button"
       aria-pressed={pressed}
       onClick={onToggle}
-      className="group flex items-center gap-2 text-xs"
+      className="group flex items-center gap-2 text-xs outline-none"
     >
-      <span
-        className={cn(
-          "relative flex size-7 items-center justify-center rounded-full shadow-[inset_0_0_0_1px_var(--border)] ring-1 ring-border ring-offset-2 ring-offset-background transition-[box-shadow] duration-200 group-hover:ring-foreground/50 group-aria-pressed:ring-2 group-aria-pressed:ring-foreground",
-          !color && "bg-muted",
-        )}
-        style={color ? { background: color } : undefined}
-      >
-        {pressed && (
-          <CheckIcon
-            weight="bold"
-            className={cn(
-              "size-3.5",
-              color && isLightSwatch(value) ? "text-foreground" : "text-white",
-              !color && "text-foreground",
-            )}
-          />
-        )}
+      {/* The ring is drawn inside this box, not as an outer ring/offset:
+          the panel scrolls and the accordion clips, so anything outside
+          the button would be cut off. */}
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full shadow-[inset_0_0_0_1px_var(--border)] transition-[box-shadow] duration-200 group-hover:shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--foreground)_50%,transparent)] group-aria-pressed:shadow-[inset_0_0_0_2px_var(--foreground)] group-focus-visible:shadow-[inset_0_0_0_2px_var(--ring)]!">
+        <span
+          className={cn(
+            "flex size-7 items-center justify-center rounded-full shadow-[inset_0_0_0_1px_var(--border)]",
+            !color && "bg-muted",
+          )}
+          style={color ? { background: color } : undefined}
+        >
+          {pressed && (
+            <CheckIcon
+              weight="bold"
+              className={cn(
+                "size-3.5",
+                color && isLightSwatch(value)
+                  ? "text-foreground"
+                  : "text-white",
+                !color && "text-foreground",
+              )}
+            />
+          )}
+        </span>
       </span>
       <span className="text-muted-foreground group-aria-pressed:text-foreground">
         {value}
