@@ -43,3 +43,36 @@ RETURNING *;
 
 -- name: DeleteReview :execrows
 DELETE FROM reviews WHERE product_id = $1 AND user_id = $2;
+
+-- Admin moderation: every review, filtered by status and rating.
+
+-- name: CountAdminReviews :one
+SELECT COUNT(*) FROM reviews r
+WHERE (sqlc.narg(status)::text IS NULL OR r.status = sqlc.narg(status)::text)
+  AND (sqlc.narg(rating)::int IS NULL OR r.rating = sqlc.narg(rating)::int);
+
+-- name: AdminListReviews :many
+SELECT
+    r.id, r.rating, r.title, r.body, r.status, r.created_at, r.updated_at,
+    p.id AS product_id, p.name AS product_name, p.slug AS product_slug,
+    u.name AS author_name, u.email AS author_email
+FROM reviews r
+JOIN products p ON p.id = r.product_id
+JOIN users u ON u.id = r.user_id
+WHERE (sqlc.narg(status)::text IS NULL OR r.status = sqlc.narg(status)::text)
+  AND (sqlc.narg(rating)::int IS NULL OR r.rating = sqlc.narg(rating)::int)
+ORDER BY r.created_at DESC, r.id DESC
+LIMIT @page_limit OFFSET @page_offset;
+
+-- name: SetReviewStatus :one
+-- The rating trigger refreshes the product's average and count.
+WITH updated AS (
+    UPDATE reviews SET status = @status WHERE reviews.id = @id RETURNING *
+)
+SELECT
+    r.id, r.rating, r.title, r.body, r.status, r.created_at, r.updated_at,
+    p.id AS product_id, p.name AS product_name, p.slug AS product_slug,
+    u.name AS author_name, u.email AS author_email
+FROM updated r
+JOIN products p ON p.id = r.product_id
+JOIN users u ON u.id = r.user_id;

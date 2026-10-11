@@ -436,6 +436,14 @@ func fulfil(ctx context.Context, qtx *db.Queries, session payments.Session) erro
 		if err != nil {
 			return fmt.Errorf("retake stock: %w", err)
 		}
+		for _, row := range short {
+			// A refund with restock then returns only what was taken.
+			if err := qtx.SetItemShortfall(ctx, db.SetItemShortfallParams{
+				OrderID: order.ID, VariantID: row.ID, Shortfall: row.Shortfall,
+			}); err != nil {
+				return fmt.Errorf("record shortfall: %w", err)
+			}
+		}
 		if len(short) > 0 {
 			slog.Error("checkout: paid after release, oversold", "order", order.Number, "variants", len(short))
 		}

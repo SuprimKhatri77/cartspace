@@ -106,6 +106,41 @@ func (s *Stripe) ExpireSession(ctx context.Context, id string) error {
 	return nil
 }
 
+func (s *Stripe) Refund(ctx context.Context, paymentIntentID, idempotencyKey string) (string, error) {
+	params := &stripe.RefundCreateParams{PaymentIntent: stripe.String(paymentIntentID)}
+	params.SetIdempotencyKey(idempotencyKey)
+	refund, err := s.client.V1Refunds.Create(ctx, params)
+	if err == nil {
+		return refund.ID, nil
+	}
+	var stripeErr *stripe.Error
+	if errors.As(err, &stripeErr) {
+		if stripeErr.Code == stripe.ErrorCodeChargeAlreadyRefunded {
+			if id, ok := s.existingRefund(ctx, paymentIntentID); ok {
+				return id, nil
+			}
+		}
+		if stripeErr.HTTPStatusCode >= 400 && stripeErr.HTTPStatusCode < 500 {
+			return "", &RefusedError{Message: stripeErr.Msg}
+		}
+	}
+	return "", fmt.Errorf("stripe: refund: %w", err)
+}
+
+// existingRefund finds the payment's refund that went through (or is going).
+func (s *Stripe) existingRefund(ctx context.Context, paymentIntentID string) (string, bool) {
+	params := &stripe.RefundListParams{PaymentIntent: stripe.String(paymentIntentID)}
+	for refund, err := range s.client.V1Refunds.List(ctx, params).All(ctx) {
+		if err != nil {
+			return "", false
+		}
+		if refund.Status == stripe.RefundStatusSucceeded || refund.Status == stripe.RefundStatusPending {
+			return refund.ID, true
+		}
+	}
+	return "", false
+}
+
 func (s *Stripe) ParseEvent(payload []byte, signature string) (Event, error) {
 	var (
 		event stripe.Event

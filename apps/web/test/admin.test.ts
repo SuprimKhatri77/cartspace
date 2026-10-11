@@ -14,6 +14,14 @@ import {
   pageWindow,
   parseAdminProductFilters,
 } from "@/modules/admin/lib/filters";
+import {
+  adminOrdersQuery,
+  adminOrdersSearch,
+  adminReviewsQuery,
+  adminReviewsSearch,
+  parseAdminOrderFilters,
+  parseAdminReviewFilters,
+} from "@/modules/admin/lib/order-filters";
 import { move, rejectImage } from "@/modules/admin/lib/upload";
 
 describe("admin product filters", () => {
@@ -141,5 +149,41 @@ describe("admin helpers", () => {
     expect(withoutErrors(errors, "name")).toEqual({ price: "Enter a price" });
     // unchanged errors keep their identity (no re-render)
     expect(withoutErrors(errors, "stock")).toBe(errors);
+  });
+});
+
+describe("admin order and review filters", () => {
+  test("orders: parse, query and URL", () => {
+    expect(parseAdminOrderFilters({})).toEqual({ page: 1, q: "", status: "" });
+    const f = parseAdminOrderFilters({
+      status: "paid",
+      q: " CS-1042 ",
+      page: "2",
+    });
+    expect(f).toEqual({ page: 2, q: "CS-1042", status: "paid" });
+    expect(adminOrdersQuery(f)).toEqual({
+      page: 2,
+      q: "CS-1042",
+      status: "paid",
+    });
+    expect(adminOrdersSearch(f)).toBe("?status=paid&q=CS-1042&page=2");
+    expect(parseAdminOrderFilters({ status: "lost" }).status).toBe("");
+    expect(adminOrdersSearch(parseAdminOrderFilters({}))).toBe("");
+  });
+
+  test("reviews: parse, query and URL", () => {
+    const f = parseAdminReviewFilters({ status: "hidden", rating: "1" });
+    expect(f).toEqual({ page: 1, status: "hidden", rating: 1 });
+    expect(adminReviewsQuery(f)).toEqual({
+      page: 1,
+      status: "hidden",
+      rating: 1,
+    });
+    expect(adminReviewsSearch(f)).toBe("?status=hidden&rating=1");
+    expect(parseAdminReviewFilters({ rating: "6", status: "x" })).toEqual({
+      page: 1,
+      status: "",
+      rating: null,
+    });
   });
 });

@@ -134,6 +134,13 @@ export const OrderSchema = z
     cancelled_at: Timestamp.nullable(),
     created_at: Timestamp,
     updated_at: Timestamp,
+    shipped_at: Timestamp.nullable(),
+    delivered_at: Timestamp.nullable(),
+    refunded_at: Timestamp.nullable(),
+    tracking_number: z
+      .string()
+      .nullable()
+      .describe("The carrier's, when the order shipped with one"),
   })
   .meta({ id: "Order" });
 export type Order = z.infer<typeof OrderSchema>;

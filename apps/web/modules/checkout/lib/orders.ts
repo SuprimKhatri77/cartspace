@@ -1,4 +1,4 @@
-import type { OrderStatus } from "@repo/types";
+import type { Order, OrderStatus } from "@repo/types";
 
 /** "CS-1042" */
 export function orderLabel(number: number): string {
@@ -35,4 +35,32 @@ const dateFormat = new Intl.DateTimeFormat("en-GB", {
 /** "10 October 2026", in UTC so the server and browser agree. */
 export function formatOrderDate(iso: string): string {
   return dateFormat.format(new Date(iso));
+}
+
+/** When an order reached a step of the timeline, if it has. */
+export function stepDate(
+  order: Pick<Order, "paid_at" | "shipped_at" | "delivered_at">,
+  step: OrderStatus,
+): string | null {
+  switch (step) {
+    case "paid":
+      return order.paid_at;
+    case "shipped":
+      return order.shipped_at;
+    case "delivered":
+      return order.delivered_at;
+    default:
+      return null;
+  }
+}
+
+const shortDate = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+});
+
+/** "12 Oct", in UTC like formatOrderDate. */
+export function formatShortDate(iso: string): string {
+  return shortDate.format(new Date(iso));
 }

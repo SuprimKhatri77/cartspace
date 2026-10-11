@@ -58,6 +58,9 @@ const (
 	InvalidOrderNumber      = "INVALID_ORDER_NUMBER"
 	AddressNotFound         = "ADDRESS_NOT_FOUND"
 	InvalidAddressID        = "INVALID_ADDRESS_ID"
+	InvalidOrderTransition  = "INVALID_ORDER_TRANSITION"
+	OrderAlreadyPaid        = "ORDER_ALREADY_PAID"
+	RefundRefused           = "REFUND_REFUSED"
 
 	// wishlist
 	WishlistFull = "WISHLIST_FULL"
@@ -65,4 +68,5 @@ const (
 	// reviews
 	NotVerifiedBuyer = "NOT_VERIFIED_BUYER"
 	ReviewNotFound   = "REVIEW_NOT_FOUND"
+	InvalidReviewID  = "INVALID_REVIEW_ID"
 )

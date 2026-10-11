@@ -53,6 +53,9 @@ export const ErrorCodeSchema = z
     "INVALID_WEBHOOK_SIGNATURE",
     "INVALID_SESSION_ID",
     "ORDER_NOT_FOUND",
+    "INVALID_ORDER_TRANSITION",
+    "ORDER_ALREADY_PAID",
+    "REFUND_REFUSED",
     "INVALID_ORDER_NUMBER",
     "ADDRESS_NOT_FOUND",
     "INVALID_ADDRESS_ID",
@@ -61,6 +64,7 @@ export const ErrorCodeSchema = z
     // reviews
     "NOT_VERIFIED_BUYER",
     "REVIEW_NOT_FOUND",
+    "INVALID_REVIEW_ID",
   ])
   .meta({ id: "ErrorCode", description: "Machine-readable failure code." });
 

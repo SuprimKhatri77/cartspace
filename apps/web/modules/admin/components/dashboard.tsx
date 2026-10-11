@@ -141,7 +141,17 @@ export function Dashboard() {
         </Panel>
       </div>
 
-      <Panel title="Recent orders">
+      <Panel
+        title="Recent orders"
+        action={
+          <Link
+            href="/admin/orders"
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            All orders
+          </Link>
+        }
+      >
         {stats.recent_orders.length === 0 ? (
           <p className="text-sm text-muted-foreground">No orders yet.</p>
         ) : (
@@ -165,7 +175,12 @@ export function Dashboard() {
                 {stats.recent_orders.map((order) => (
                   <tr key={order.id}>
                     <td className="h-12 px-5 font-mono text-xs">
-                      {orderLabel(order.number)}
+                      <Link
+                        href={`/admin/orders/${order.number}`}
+                        className="hover:underline"
+                      >
+                        {orderLabel(order.number)}
+                      </Link>
                     </td>
                     <td className="max-w-[14rem] truncate px-5">
                       {order.email}

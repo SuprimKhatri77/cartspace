@@ -66,21 +66,26 @@ type Order struct {
 	CancelledAt     pgtype.Timestamptz `json:"cancelled_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ShippedAt       pgtype.Timestamptz `json:"shipped_at"`
+	DeliveredAt     pgtype.Timestamptz `json:"delivered_at"`
+	RefundedAt      pgtype.Timestamptz `json:"refunded_at"`
+	TrackingNumber  pgtype.Text        `json:"tracking_number"`
 }
 
 type OrderItem struct {
-	ID          pgtype.UUID     `json:"id"`
-	OrderID     pgtype.UUID     `json:"order_id"`
-	VariantID   pgtype.UUID     `json:"variant_id"`
-	ProductID   pgtype.UUID     `json:"product_id"`
-	ProductName string          `json:"product_name"`
-	ProductSlug string          `json:"product_slug"`
-	Sku         pgtype.Text     `json:"sku"`
-	Options     json.RawMessage `json:"options"`
-	Image       string          `json:"image"`
-	UnitPrice   int32           `json:"unit_price"`
-	Quantity    int32           `json:"quantity"`
-	LineTotal   int32           `json:"line_total"`
+	ID             pgtype.UUID     `json:"id"`
+	OrderID        pgtype.UUID     `json:"order_id"`
+	VariantID      pgtype.UUID     `json:"variant_id"`
+	ProductID      pgtype.UUID     `json:"product_id"`
+	ProductName    string          `json:"product_name"`
+	ProductSlug    string          `json:"product_slug"`
+	Sku            pgtype.Text     `json:"sku"`
+	Options        json.RawMessage `json:"options"`
+	Image          string          `json:"image"`
+	UnitPrice      int32           `json:"unit_price"`
+	Quantity       int32           `json:"quantity"`
+	LineTotal      int32           `json:"line_total"`
+	StockShortfall int32           `json:"-"`
 }
 
 type Payment struct {
@@ -91,6 +96,8 @@ type Payment struct {
 	Amount                int32              `json:"amount"`
 	Currency              string             `json:"currency"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	StripeRefundID        pgtype.Text        `json:"stripe_refund_id"`
+	RefundedAt            pgtype.Timestamptz `json:"refunded_at"`
 }
 
 type Product struct {
