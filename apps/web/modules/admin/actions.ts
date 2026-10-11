@@ -1,8 +1,10 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { updateTag } from "next/cache";
-import { CATALOG_TAG } from "@/lib/api/public";
+import { CATALOG_TAG, SETTINGS_TAG } from "@/lib/api/public";
 import { fetchCurrentUser } from "@/lib/auth/session";
+import { THEME_COOKIE } from "@/lib/themes";
 
 /**
  * Drops the storefront's cached catalog (categories, listings, product
@@ -17,4 +19,17 @@ export async function revalidateCatalog(): Promise<void> {
   const user = await fetchCurrentUser().catch(() => null);
   if (user?.role !== "admin") return;
   updateTag(CATALOG_TAG);
+}
+
+/**
+ * After an admin saves the store's theme: expires the cached setting, so
+ * every page renders the new theme next, and clears this browser's demo
+ * picker choice, which would otherwise keep overriding it here. Admins
+ * only, checked against the API like revalidateCatalog.
+ */
+export async function revalidateStoreSettings(): Promise<void> {
+  const user = await fetchCurrentUser().catch(() => null);
+  if (user?.role !== "admin") return;
+  updateTag(SETTINGS_TAG);
+  (await cookies()).delete(THEME_COOKIE);
 }

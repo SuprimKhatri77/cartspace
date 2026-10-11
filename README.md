@@ -23,7 +23,7 @@ a full-stack e-commerce store: a go/gin api and a next.js storefront with an adm
 - stripe hosted checkout with saved addresses, stock reserved while you pay, flat-rate shipping that's free over a threshold
 - order history with a status timeline, tracking number and refund date
 - wishlist, and reviews from verified buyers (a rating summary with a distribution, one review per product)
-- three light themes (editorial, studio, botanical), plus a demo-only theme picker for showing the store to clients
+- three light themes (editorial, studio, botanical), chosen in the admin with live previews, plus a demo-only theme picker for showing the store to clients
 
 **admin** (`/admin`, admin role only)
 
@@ -32,6 +32,7 @@ a full-stack e-commerce store: a go/gin api and a next.js storefront with an adm
 - categories: a tree editor (add, rename, move under another parent, delete)
 - orders: status tabs and search; ship (with tracking), deliver, cancel and refund through stripe, with optional restock
 - reviews: publish or hide, which updates the product's rating
+- settings: the store's theme, with a live preview of each
 
 ## stack
 
@@ -196,13 +197,14 @@ the admin uploads images straight from the browser with a signature from `POST /
 
 the store ships three light themes: **editorial** (warm paper, a light serif, square corners; the default), **studio** (crisp white, bold sans-serif, soft corners) and **botanical** (cream and forest green, a soft serif, rounded shapes).
 
-- `STORE_THEME` picks the store's look.
+- the store owner picks the theme in **admin → settings**. each option shows a live preview in its own theme, and choosing one previews it across the admin before saving. saving applies it to every page at once: the setting is cached in next's data cache, and the cache is expired on save.
+- `STORE_THEME` is the fallback while the api can't be reached (default: editorial).
 - `DEMO_THEME_PICKER=true` adds a floating picker in the bottom-right corner for demos. A visitor's pick is kept in a cookie and applied on the server, so pages never flash the wrong theme. Leave it off for a real store.
 
 a theme is a `[data-theme="…"]` block of tokens in `apps/web/app/globals.css`: colours, the headline font and its style, and four corner radii (`rounded-control`, `rounded-field`, `rounded-panel`, `rounded-media`). to add a theme:
 
 1. add that block to `globals.css`
-2. add an entry to `THEMES` in `apps/web/lib/themes.ts`
+2. add an entry to `THEMES` in `apps/web/lib/themes.ts`, its id to `StoreThemeSchema` in `packages/types/src/settings` (then `bun run generate`), and to `StoreThemes` and the `oneof` in `apps/api/internal/types/settings.go`
 3. load a new font in `app/layout.tsx` with `preload: false`, if the theme needs one
 
 ## scripts

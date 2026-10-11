@@ -220,4 +220,21 @@ export function registerAdminPaths() {
       404: "No such review (REVIEW_NOT_FOUND)",
     },
   });
+
+  operation({
+    method: "put",
+    path: "/api/v1/admin/settings",
+    operationId: "adminSetStoreTheme",
+    tag: "Admin",
+    summary: "Change the store's theme",
+    description: "The storefront switches to the theme on its next render.",
+    auth: "admin",
+    request: body(schemas.StoreThemeBodySchema),
+    success: {
+      status: 200,
+      description: "Store theme updated",
+      schema: schemas.StoreSettingsResponseSchema,
+    },
+    errors: { 400: "Unknown theme (VALIDATION_FAILED)" },
+  });
 }

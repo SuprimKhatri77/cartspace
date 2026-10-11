@@ -24,4 +24,6 @@ func setupAdminRoutes(router *gin.RouterGroup, cfg config.Config) {
 
 	group.GET("/reviews", admin.ListReviews(cfg.Queries))
 	group.PUT("/reviews/:id/status", admin.SetReviewStatus(cfg.Queries))
+
+	group.PUT("/settings", admin.SetStoreTheme(cfg.Queries))
 }

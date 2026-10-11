@@ -9,5 +9,6 @@ export * from "./variant/variant";
 export * from "./cart/cart";
 export * from "./order/order";
 export * from "./wishlist/wishlist";
+export * from "./settings/settings";
 export * from "./review/review";
 export * from "./admin/admin";

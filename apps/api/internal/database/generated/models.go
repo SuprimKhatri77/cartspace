@@ -173,6 +173,12 @@ type Session struct {
 	RevokedAt         pgtype.Timestamptz `json:"revoked_at"`
 }
 
+type StoreSetting struct {
+	ID        bool               `json:"id"`
+	Theme     string             `json:"theme"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
 type StorefrontProduct struct {
 	ID             pgtype.UUID        `json:"id"`
 	Name           string             `json:"name"`
