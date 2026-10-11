@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import { MinimalHeader } from "@/components/layout/minimal-header";
 import { site } from "@/lib/site";
 
 export default function AuthLayout({
@@ -28,11 +28,7 @@ export default function AuthLayout({
       </div>
 
       <div className="flex flex-col">
-        <div className="flex h-16 items-center px-6 sm:px-10">
-          <Link href="/" className="font-serif text-[1.65rem] leading-none">
-            {site.name}
-          </Link>
-        </div>
+        <MinimalHeader className="px-6 sm:px-10" />
         <div className="flex flex-1 items-center justify-center px-6 py-12 sm:px-10">
           {children}
         </div>
