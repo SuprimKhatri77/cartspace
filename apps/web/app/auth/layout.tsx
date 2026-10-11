@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { MinimalHeader } from "@/components/layout/minimal-header";
 import { site } from "@/lib/site";
+
+export const metadata: Metadata = { robots: { index: false } };
 
 export default function AuthLayout({
   children,

@@ -1,4 +1,8 @@
+import type { Metadata } from "next";
 import { Reveal } from "@/components/motion/reveal";
+import { JsonLd } from "@/components/seo/json-ld";
+import { storeLd } from "@/lib/seo/structured-data";
+import { siteUrl } from "@/lib/site-url";
 import { getCollections, getListing } from "@/modules/catalog/api";
 import { ProductGrid } from "@/modules/catalog/components/product-grid";
 import { ProductRail } from "@/modules/catalog/components/product-rail";
@@ -9,6 +13,8 @@ import { Hero } from "@/modules/home/components/hero";
 import { SectionHeading } from "@/modules/home/components/section-heading";
 import { StoryBand } from "@/modules/home/components/story-band";
 import { ValueProps } from "@/modules/home/components/value-props";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 export default async function LandingPage() {
   const [collections, featured, newest] = await Promise.all([
@@ -21,6 +27,7 @@ export default async function LandingPage() {
 
   return (
     <div className="space-y-28 sm:space-y-36">
+      <JsonLd data={storeLd(siteUrl())} />
       <Hero />
 
       {collections.length > 0 && (

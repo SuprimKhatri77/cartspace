@@ -1,7 +1,16 @@
 import type { Metadata } from "next";
 import { ReviewsSection } from "@/modules/reviews/components/reviews-section";
 import { notFound } from "next/navigation";
-import { CURRENCY } from "@/lib/money";
+import { JsonLd } from "@/components/seo/json-ld";
+import { formatPriceShort } from "@/lib/money";
+import {
+  breadcrumbLd,
+  categoryCrumbs,
+  productLd,
+} from "@/lib/seo/structured-data";
+import { metaDescription } from "@/lib/seo/text";
+import { site } from "@/lib/site";
+import { siteUrl } from "@/lib/site-url";
 import { getCategories, getProductPage } from "@/modules/catalog/api";
 import { Breadcrumbs } from "@/modules/catalog/components/breadcrumbs";
 import { ProductRail } from "@/modules/catalog/components/product-rail";
@@ -21,12 +30,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { product_detail: product } = page;
   return {
     title: product.name,
-    description: product.description ?? undefined,
-    openGraph: {
-      title: product.name,
-      description: product.description ?? undefined,
-      images: product.images.slice(0, 1),
-    },
+    description: metaDescription(
+      product.description ??
+        `${product.name}, ${formatPriceShort(product.price)} at ${site.name}.`,
+    ),
+    // ?variant= links all fold into the product's one URL.
+    alternates: { canonical: `/products/${product.slug}` },
   };
 }
 
@@ -54,39 +63,18 @@ export default async function ProductPage({ params, searchParams }: Props) {
     variants[0]?.id ??
     product.variant_id;
 
-  const inStock = variants.some((v) => v.stock > 0);
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name,
-    description: product.description ?? undefined,
-    image: product.images,
-    offers: {
-      "@type": "Offer",
-      price: (product.price / 100).toFixed(2),
-      priceCurrency: CURRENCY,
-      availability: inStock
-        ? "https://schema.org/InStock"
-        : "https://schema.org/OutOfStock",
-    },
-    ...(product.rating_count > 0 && {
-      aggregateRating: {
-        "@type": "AggregateRating",
-        ratingValue: product.rating_avg,
-        reviewCount: product.rating_count,
-      },
-    }),
-  };
+  const origin = siteUrl();
+  const structured = [
+    productLd({ origin, product, variants, path }),
+    breadcrumbLd(origin, [
+      ...categoryCrumbs(path),
+      { name: product.name, path: `/products/${product.slug}` },
+    ]),
+  ];
 
   return (
     <div className="space-y-28 pt-4 sm:pt-8">
-      <script
-        type="application/ld+json"
-        // JSON.stringify output with "<" escaped can't close the script tag.
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
-        }}
-      />
+      <JsonLd data={structured} />
       <div className="container-page">
         <ProductView
           // A new product starts from its own default variant.
