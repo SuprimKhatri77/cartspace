@@ -33,7 +33,14 @@ export function ProductGallery({
   }
 
   return (
-    <div className="lg:grid lg:grid-cols-[4.5rem_1fr] lg:gap-4">
+    // The thumbnail rail only renders for two or more photos; without it, a
+    // two-column grid would put the main image in the 4.5rem rail column.
+    <div
+      className={cn(
+        "lg:grid lg:gap-4",
+        images.length > 1 && "lg:grid-cols-[4.5rem_1fr]",
+      )}
+    >
       {/* Thumbnails (desktop) */}
       {images.length > 1 && (
         <ul
