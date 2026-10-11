@@ -7,6 +7,7 @@ import { AnnouncementBar } from "@/components/layout/announcement-bar";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { getSessionUser } from "@/lib/auth/session";
+import { PendingIntentRunner } from "@/modules/auth/components/pending-intent";
 import { getServerCart } from "@/modules/cart/api";
 import { cartKeys } from "@/modules/cart/keys";
 
@@ -35,6 +36,7 @@ export default async function ShopLayout({
         {children}
       </main>
       <SiteFooter />
+      <PendingIntentRunner />
     </HydrationBoundary>
   );
 }

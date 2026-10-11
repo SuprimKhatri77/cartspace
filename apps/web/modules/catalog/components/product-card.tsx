@@ -32,6 +32,7 @@ export function ProductCard({
   const [image, hover] = product.images;
   const onOffer =
     product.offer_price !== null && product.offer_price < product.selling_price;
+  const soldOut = !product.in_stock;
 
   return (
     <div
@@ -56,6 +57,8 @@ export function ProductCard({
               className={cn(
                 "object-cover transition-[transform,opacity] duration-[1200ms] ease-out-expo group-hover:scale-[1.035]",
                 hover && "group-hover:opacity-0",
+                // Still browsable, but plainly not for sale right now.
+                soldOut && "opacity-60 grayscale-[0.4]",
               )}
             />
           )}
@@ -69,16 +72,19 @@ export function ProductCard({
               className="scale-[1.06] object-cover opacity-0 transition-[transform,opacity] duration-[1200ms] ease-out-expo group-hover:scale-100 group-hover:opacity-100"
             />
           )}
-          {onOffer && product.offer_price !== null && (
+          {soldOut ? (
+            <span className="absolute top-3 left-3 rounded-control bg-foreground px-2 py-1 font-mono text-[0.625rem] tracking-[0.14em] text-background uppercase">
+              Sold out
+            </span>
+          ) : onOffer && product.offer_price !== null ? (
             <span className="absolute top-3 left-3 rounded-control bg-clay px-2 py-1 font-mono text-[0.625rem] tracking-[0.14em] text-clay-foreground uppercase">
               −{percentOff(product.selling_price, product.offer_price)}%
             </span>
-          )}
-          {product.is_featured && !onOffer && (
+          ) : product.is_featured ? (
             <span className="absolute top-3 left-3 rounded-control bg-background/85 px-2 py-1 font-mono text-[0.625rem] tracking-[0.14em] uppercase backdrop-blur">
               Editor&apos;s pick
             </span>
-          )}
+          ) : null}
         </div>
         <div className="flex items-start justify-between gap-3 text-[0.8125rem] leading-snug">
           <div className="min-w-0 space-y-1.5">

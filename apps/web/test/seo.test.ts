@@ -35,6 +35,7 @@ const product: ProductDetail = {
   selling_price: 8900,
   offer_price: null,
   price: 8900,
+  in_stock: true,
   stock: 3,
   variant_images: [],
 };

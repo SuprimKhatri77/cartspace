@@ -210,6 +210,7 @@ type StorefrontProduct struct {
 	SellingPrice   int32              `json:"selling_price"`
 	OfferPrice     pgtype.Int4        `json:"offer_price"`
 	Price          int32              `json:"price"`
+	InStock        bool               `json:"in_stock"`
 }
 
 type StorefrontVariant struct {

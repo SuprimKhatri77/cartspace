@@ -45,6 +45,9 @@ const storefrontPrice = {
 export const ProductWithPriceSchema = ProductSchema.extend({
   variant_id: Uuid.describe("The default variant"),
   ...storefrontPrice,
+  in_stock: z
+    .boolean()
+    .describe("Whether any active variant has stock (false: sold out)"),
 }).meta({
   id: "ProductWithPrice",
   description: "A product priced by its default variant (storefront listings).",

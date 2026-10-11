@@ -654,6 +654,10 @@
             "type": "integer",
             "minimum": 0,
             "description": "What the customer pays: the active offer, else the selling price"
+          },
+          "in_stock": {
+            "type": "boolean",
+            "description": "Whether any active variant has stock (false: sold out)"
           }
         },
         "required": [
@@ -674,7 +678,8 @@
           "variant_id",
           "selling_price",
           "offer_price",
-          "price"
+          "price",
+          "in_stock"
         ],
         "description": "A product priced by its default variant (storefront listings)."
       },
@@ -848,6 +853,10 @@
             "minimum": 0,
             "description": "What the customer pays: the active offer, else the selling price"
           },
+          "in_stock": {
+            "type": "boolean",
+            "description": "Whether any active variant has stock (false: sold out)"
+          },
           "stock": {
             "type": "integer",
             "minimum": 0
@@ -879,6 +888,7 @@
           "selling_price",
           "offer_price",
           "price",
+          "in_stock",
           "stock",
           "variant_images"
         ],
@@ -2581,6 +2591,10 @@
             "minimum": 0,
             "description": "What the customer pays: the active offer, else the selling price"
           },
+          "in_stock": {
+            "type": "boolean",
+            "description": "Whether any active variant has stock (false: sold out)"
+          },
           "saved_at": {
             "type": "string",
             "format": "date-time"
@@ -2589,10 +2603,6 @@
             "type": "integer",
             "minimum": 0,
             "description": "Active variants; with more than one, a size or colour must be chosen"
-          },
-          "in_stock": {
-            "type": "boolean",
-            "description": "Whether any active variant has stock"
           }
         },
         "required": [
@@ -2614,9 +2624,9 @@
           "selling_price",
           "offer_price",
           "price",
+          "in_stock",
           "saved_at",
-          "variant_count",
-          "in_stock"
+          "variant_count"
         ],
         "description": "A saved product, still on sale."
       },

@@ -22,13 +22,12 @@ JOIN storefront_products sp ON sp.id = w.product_id
 WHERE w.user_id = $1;
 
 -- name: ListWishlistProducts :many
--- variant_count and in_stock tell the shopper whether one tap can add it to
--- the bag (a single variant in stock) or a size/colour must be chosen first.
+-- variant_count and in_stock (from the view) tell the shopper whether one
+-- tap can add it to the bag (a single variant in stock) or a size/colour
+-- must be chosen first.
 SELECT sp.*, w.created_at AS saved_at,
     (SELECT COUNT(*) FROM product_variants v
-     WHERE v.product_id = sp.id AND v.is_active)::int AS variant_count,
-    EXISTS (SELECT 1 FROM product_variants v
-            WHERE v.product_id = sp.id AND v.is_active AND v.stock > 0) AS in_stock
+     WHERE v.product_id = sp.id AND v.is_active)::int AS variant_count
 FROM wishlist_items w
 JOIN storefront_products sp ON sp.id = w.product_id
 WHERE w.user_id = $1

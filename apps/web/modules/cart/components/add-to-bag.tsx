@@ -7,6 +7,7 @@ import { CheckIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { loginPath } from "@/lib/auth/redirect";
 import { EASE_OUT } from "@/lib/motion";
+import { rememberIntent } from "@/modules/auth/lib/pending-intent";
 import { useAuth } from "@/providers/auth-provider";
 import { useCartMutations } from "../hooks/use-cart-mutations";
 import type { LinePreview } from "../lib/cart-math";
@@ -18,7 +19,7 @@ const ADDED_FOR = 1800;
  * Adds one of the selected variant. The bag count and the label change at
  * once; a toast confirms with "View bag" once the API agrees, or the add
  * rolls back with its reason. Signed-out shoppers go to sign in and come
- * back to this variant.
+ * back to this variant, which is then added for them.
  */
 export function AddToBag({
   preview,
@@ -48,7 +49,8 @@ export function AddToBag({
 
   function onClick() {
     if (!user) {
-      // Back to this exact variant after signing in.
+      // Back to this exact variant after signing in, and into the bag.
+      rememberIntent({ kind: "bag", path: pathname, preview, at: Date.now() });
       router.push(loginPath(pathname + window.location.search));
       return;
     }

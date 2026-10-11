@@ -17,6 +17,7 @@ import {
 } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
 import { loginPath } from "@/lib/auth/redirect";
+import { rememberIntent } from "@/modules/auth/lib/pending-intent";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { useAuth } from "@/providers/auth-provider";
 import { wishlistKeys } from "./keys";
@@ -115,6 +116,16 @@ export function useToggleWishlist() {
 
   return (id: string, save: boolean, name: string) => {
     if (!userId) {
+      // Saved for them once they're back from signing in.
+      if (save) {
+        rememberIntent({
+          kind: "save",
+          path: pathname,
+          productId: id,
+          name,
+          at: Date.now(),
+        });
+      }
       router.push(loginPath(pathname + window.location.search));
       return;
     }
