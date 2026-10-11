@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import { AccountNav } from "@/modules/account/components/account-nav";
+
+export const metadata: Metadata = { robots: { index: false } };
 
 export default function AccountLayout({
   children,

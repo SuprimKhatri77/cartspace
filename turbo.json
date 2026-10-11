@@ -11,7 +11,10 @@
         "NEXT_PUBLIC_API_URL",
         "COOKIE_DOMAIN",
         "STORE_THEME",
-        "DEMO_THEME_PICKER"
+        "DEMO_THEME_PICKER",
+        "FRONTEND_URL",
+        "VERCEL_ENV",
+        "VERCEL_PROJECT_PRODUCTION_URL"
       ]
     },
     "generate": {
@@ -33,7 +36,8 @@
         "NEXT_DIST_DIR",
         "TURBOPACK_MEMORY_LIMIT_MB",
         "STORE_THEME",
-        "DEMO_THEME_PICKER"
+        "DEMO_THEME_PICKER",
+        "FRONTEND_URL"
       ]
     }
   }

@@ -21,6 +21,10 @@ export async function generateMetadata({
   }
   return {
     title,
+    // Filters and sorts fold into the plain listing (or the picks).
+    alternates: {
+      canonical: filters.featured ? "/shop?featured=true" : "/shop",
+    },
     description: filters.featured
       ? "The pieces we reach for most."
       : "Every piece in the cartspace collection.",

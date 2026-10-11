@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getCategories } from "@/modules/catalog/api";
+import { JsonLd } from "@/components/seo/json-ld";
+import { breadcrumbLd, categoryCrumbs } from "@/lib/seo/structured-data";
+import { site } from "@/lib/site";
+import { siteUrl } from "@/lib/site-url";
+import { getCategories, getListing } from "@/modules/catalog/api";
 import { Breadcrumbs } from "@/modules/catalog/components/breadcrumbs";
 import { CollectionHeader } from "@/modules/catalog/components/collection-header";
 import { ListingPage } from "@/modules/catalog/components/listing-page";
@@ -8,7 +12,10 @@ import {
   categoryPath,
   childCategories,
 } from "@/modules/catalog/lib/category-tree";
-import type { SearchParams } from "@/modules/catalog/lib/filters";
+import {
+  DEFAULT_FILTERS,
+  type SearchParams,
+} from "@/modules/catalog/lib/filters";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -17,8 +24,21 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const category = (await getCategories()).find((c) => c.slug === slug);
-  return { title: category?.name ?? "Collection" };
+  const [categories, listing] = await Promise.all([
+    getCategories(),
+    getListing(slug, DEFAULT_FILTERS),
+  ]);
+  const category = categories.find((c) => c.slug === slug);
+  if (!category) return { title: "Collection" };
+  const total = listing?.meta.total ?? 0;
+  return {
+    title: category.name,
+    description: `Shop ${category.name.toLowerCase()} at ${site.name}: ${total} ${
+      total === 1 ? "piece" : "pieces"
+    }, made to last and chosen with care.`,
+    // Filtered and sorted views fold into the collection's one URL.
+    alternates: { canonical: `/categories/${category.slug}` },
+  };
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
@@ -56,6 +76,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   return (
     <div className="container-page">
+      <JsonLd data={breadcrumbLd(siteUrl(), categoryCrumbs(path))} />
       <CollectionHeader
         eyebrow={parent ? parent.name : "Collection"}
         title={`${category.name}.`}

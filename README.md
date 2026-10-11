@@ -30,6 +30,7 @@ a full-stack e-commerce store: a go/gin api and a next.js storefront with an adm
 - order emails: confirmed, shipped (with tracking) and refunded, html with a plain-text part
 - wishlist, and reviews from verified buyers (a rating summary with a distribution, one review per product)
 - three light themes (editorial, studio, botanical), chosen in the admin with live previews, plus a demo-only theme picker for showing the store to clients
+- seo: canonical urls, a sitemap and robots.txt, generated share images for products and collections, and json-ld (products with per-variant offers, shipping and returns; breadcrumbs; the store)
 
 **admin** (`/admin`, admin role only)
 
