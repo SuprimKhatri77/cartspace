@@ -22,7 +22,9 @@ export function Providers({
         <Toaster
           position="bottom-right"
           mobileOffset={{
-            bottom: "calc(env(safe-area-inset-bottom) + 16px)",
+            // --toast-lift: the product page's buy bar, while it shows.
+            bottom:
+              "calc(env(safe-area-inset-bottom) + 16px + var(--toast-lift, 0px))",
             left: 16,
             right: 16,
           }}

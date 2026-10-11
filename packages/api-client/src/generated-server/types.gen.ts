@@ -214,6 +214,10 @@ export type ProductWithPrice = {
      * What the customer pays: the active offer, else the selling price
      */
     price: number;
+    /**
+     * Whether any active variant has stock (false: sold out)
+     */
+    in_stock: boolean;
 };
 
 export type FilterOption = {
@@ -288,6 +292,10 @@ export type ProductDetail = {
      * What the customer pays: the active offer, else the selling price
      */
     price: number;
+    /**
+     * Whether any active variant has stock (false: sold out)
+     */
+    in_stock: boolean;
     stock: number;
     variant_images: Array<string>;
 };
@@ -838,15 +846,15 @@ export type WishlistProduct = {
      * What the customer pays: the active offer, else the selling price
      */
     price: number;
+    /**
+     * Whether any active variant has stock (false: sold out)
+     */
+    in_stock: boolean;
     saved_at: string;
     /**
      * Active variants; with more than one, a size or colour must be chosen
      */
     variant_count: number;
-    /**
-     * Whether any active variant has stock
-     */
-    in_stock: boolean;
 };
 
 export type WishlistIdsResponse = {

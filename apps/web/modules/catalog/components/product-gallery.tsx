@@ -5,11 +5,13 @@ import Image from "next/image";
 import { AnimatePresence, m } from "motion/react";
 import { EASE_OUT } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import { PhotoViewer } from "./photo-viewer";
 
 /**
  * Desktop: a thumbnail rail beside a large image that crossfades between
  * photos and zooms under the cursor. Mobile: a swipeable scroll-snap strip
- * with position dots. A new image set (another variant) starts at photo 1.
+ * with position dots. Clicking or tapping a photo opens it full screen. A
+ * new image set (another variant) starts at photo 1.
  */
 const SIZES = "(min-width: 1024px) 50vw, 100vw";
 
@@ -22,6 +24,8 @@ export function ProductGallery({
 }) {
   const [index, setIndex] = useState(0);
   const current = images[Math.min(index, images.length - 1)];
+  // The full-screen viewer, and the photo it opens on.
+  const [viewer, setViewer] = useState<number | null>(null);
   const key = images.join("|");
 
   // Reset to the first photo when the image set changes. Adjusting state
@@ -80,20 +84,45 @@ export function ProductGallery({
       )}
 
       {/* Main image (desktop) */}
-      {current && <ZoomImage src={current} alt={alt} />}
+      {current && (
+        <ZoomImage
+          src={current}
+          alt={alt}
+          onOpen={() => setViewer(Math.min(index, images.length - 1))}
+        />
+      )}
 
       {/* Swipe strip (mobile) */}
-      <MobileStrip key={key} images={images} alt={alt} />
+      <MobileStrip key={key} images={images} alt={alt} onOpen={setViewer} />
+
+      <PhotoViewer
+        images={images}
+        alt={alt}
+        open={viewer !== null}
+        start={viewer ?? 0}
+        onOpenChange={(open) => !open && setViewer(null)}
+      />
     </div>
   );
 }
 
-function ZoomImage({ src, alt }: { src: string; alt: string }) {
+function ZoomImage({
+  src,
+  alt,
+  onOpen,
+}: {
+  src: string;
+  alt: string;
+  onOpen: () => void;
+}) {
   const [zoom, setZoom] = useState(false);
 
   return (
-    <div
-      className="relative hidden aspect-[4/5] cursor-zoom-in overflow-hidden rounded-media bg-surface lg:block"
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`View ${alt} photos full screen`}
+      className="relative hidden aspect-[4/5] w-full cursor-zoom-in overflow-hidden rounded-media bg-surface outline-none focus-visible:ring-2 focus-visible:ring-ring lg:block"
       onMouseEnter={() => setZoom(true)}
       onMouseLeave={() => setZoom(false)}
       onMouseMove={(e) => {
@@ -133,11 +162,19 @@ function ZoomImage({ src, alt }: { src: string; alt: string }) {
           />
         </m.div>
       </AnimatePresence>
-    </div>
+    </button>
   );
 }
 
-function MobileStrip({ images, alt }: { images: string[]; alt: string }) {
+function MobileStrip({
+  images,
+  alt,
+  onOpen,
+}: {
+  images: string[];
+  alt: string;
+  onOpen: (index: number) => void;
+}) {
   const strip = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
 
@@ -160,8 +197,11 @@ function MobileStrip({ images, alt }: { images: string[]; alt: string }) {
         aria-label="Product photos"
       >
         {images.map((src, i) => (
-          <div
+          <button
             key={src}
+            type="button"
+            onClick={() => onOpen(i)}
+            aria-label={`View photo ${i + 1} of ${images.length} full screen`}
             className="relative aspect-[4/5] w-full shrink-0 snap-center overflow-hidden rounded-media bg-surface"
           >
             <Image
@@ -175,22 +215,33 @@ function MobileStrip({ images, alt }: { images: string[]; alt: string }) {
               sizes={SIZES}
               className="object-cover"
             />
-          </div>
+          </button>
         ))}
       </div>
       {images.length > 1 && (
-        <div
-          className="absolute inset-x-0 bottom-4 flex justify-center gap-1.5"
-          aria-hidden
-        >
+        <div className="absolute inset-x-0 bottom-2 flex justify-center">
           {images.map((src, i) => (
-            <span
+            // A 24px tap target around each small dot.
+            <button
               key={src}
-              className={cn(
-                "h-1 rounded-full bg-foreground/80 transition-all duration-500 ease-out-expo",
-                i === active ? "w-5" : "w-1 bg-foreground/35",
-              )}
-            />
+              type="button"
+              onClick={() =>
+                strip.current?.scrollTo({
+                  left: i * strip.current.clientWidth,
+                  behavior: "smooth",
+                })
+              }
+              aria-label={`Show photo ${i + 1} of ${images.length}`}
+              aria-current={i === active}
+              className="flex h-6 items-center px-[3px]"
+            >
+              <span
+                className={cn(
+                  "h-1 rounded-full bg-foreground/80 transition-all duration-500 ease-out-expo",
+                  i === active ? "w-5" : "w-1 bg-foreground/35",
+                )}
+              />
+            </button>
           ))}
         </div>
       )}

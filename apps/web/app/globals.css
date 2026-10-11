@@ -316,6 +316,13 @@
   }
 }
 
+/* Room under the page for the product page's phone buy bar. */
+@media (width < 64rem) {
+  body:has([data-buy-bar]) {
+    padding-bottom: 4.75rem;
+  }
+}
+
 @keyframes skeleton-shimmer {
   100% {
     transform: translateX(100%);

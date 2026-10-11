@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 import {
   ArrowCounterClockwiseIcon,
@@ -24,6 +24,7 @@ import { WishlistButton } from "@/modules/wishlist/components/wishlist-button";
 import { optionGroups, pickOption, selectionOf } from "../lib/variants";
 import { Price } from "./price";
 import { ProductGallery } from "./product-gallery";
+import { StickyBuyBar } from "./sticky-buy-bar";
 import { VariantSelector } from "./variant-selector";
 
 // Dates render on the server and the client: pin the zone so they match.
@@ -65,6 +66,9 @@ export function ProductView({
   const offer = variant ? variant.offer_price : product.offer_price;
   const stock = variant?.stock ?? product.stock;
   const groups = optionGroups(variants);
+  const preview = productPreview(product, variant);
+  // The page's own buy button; the phone bar shows once it scrolls away.
+  const buyRow = useRef<HTMLDivElement>(null);
   const selection = variant ? selectionOf(variant) : {};
 
   function choose(name: string, value: string) {
@@ -144,11 +148,8 @@ export function ProductView({
         )}
 
         <div className="space-y-4">
-          <div className="flex gap-2">
-            <AddToBag
-              preview={productPreview(product, variant)}
-              stock={stock}
-            />
+          <div ref={buyRow} className="flex gap-2">
+            <AddToBag preview={preview} stock={stock} />
             <WishlistButton
               productId={product.id}
               name={product.name}
@@ -227,6 +228,15 @@ export function ProductView({
           </AccordionItem>
         </Accordion>
       </div>
+
+      <StickyBuyBar
+        anchor={buyRow}
+        preview={preview}
+        stock={stock}
+        price={price}
+        selling={selling}
+        offer={offer}
+      />
     </div>
   );
 }

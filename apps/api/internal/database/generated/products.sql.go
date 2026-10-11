@@ -307,7 +307,7 @@ func (q *Queries) GetProductBySlug(ctx context.Context, slug string) (Product, e
 
 const getProductWithDefaultVariantBySlug = `-- name: GetProductWithDefaultVariantBySlug :one
 SELECT
-    sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.rating_count, sp.rating_avg, sp.variant_id, sp.selling_price, sp.offer_price, sp.price,
+    sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.rating_count, sp.rating_avg, sp.variant_id, sp.selling_price, sp.offer_price, sp.price, sp.in_stock,
     pv.stock,
     pv.images AS variant_images
 FROM storefront_products sp
@@ -334,6 +334,7 @@ type GetProductWithDefaultVariantBySlugRow struct {
 	SellingPrice   int32              `json:"selling_price"`
 	OfferPrice     pgtype.Int4        `json:"offer_price"`
 	Price          int32              `json:"price"`
+	InStock        bool               `json:"in_stock"`
 	Stock          int32              `json:"stock"`
 	VariantImages  []string           `json:"variant_images"`
 }
@@ -360,6 +361,7 @@ func (q *Queries) GetProductWithDefaultVariantBySlug(ctx context.Context, slug s
 		&i.SellingPrice,
 		&i.OfferPrice,
 		&i.Price,
+		&i.InStock,
 		&i.Stock,
 		&i.VariantImages,
 	)
@@ -367,7 +369,7 @@ func (q *Queries) GetProductWithDefaultVariantBySlug(ctx context.Context, slug s
 }
 
 const getRelatedProducts = `-- name: GetRelatedProducts :many
-SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.rating_count, sp.rating_avg, sp.variant_id, sp.selling_price, sp.offer_price, sp.price
+SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.rating_count, sp.rating_avg, sp.variant_id, sp.selling_price, sp.offer_price, sp.price, sp.in_stock
 FROM storefront_products sp
 WHERE sp.category_id = (SELECT pr.category_id FROM products pr WHERE pr.slug = $1)
 AND sp.slug != $1
@@ -403,6 +405,7 @@ func (q *Queries) GetRelatedProducts(ctx context.Context, slug string) ([]Storef
 			&i.SellingPrice,
 			&i.OfferPrice,
 			&i.Price,
+			&i.InStock,
 		); err != nil {
 			return nil, err
 		}
@@ -590,7 +593,7 @@ WITH RECURSIVE subtree AS (
     UNION
     SELECT c.id FROM categories c JOIN subtree s ON c.parent_id = s.id
 )
-SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.rating_count, sp.rating_avg, sp.variant_id, sp.selling_price, sp.offer_price, sp.price
+SELECT sp.id, sp.name, sp.slug, sp.category_id, sp.description, sp.features, sp.images, sp.image_public_ids, sp.is_active, sp.is_featured, sp.created_at, sp.updated_at, sp.rating_count, sp.rating_avg, sp.variant_id, sp.selling_price, sp.offer_price, sp.price, sp.in_stock
 FROM storefront_products sp
 WHERE ($1::text IS NULL OR sp.category_id IN (SELECT id FROM subtree))
 AND (NOT $2::bool OR sp.is_featured)
@@ -681,6 +684,7 @@ func (q *Queries) ListStorefrontProducts(ctx context.Context, arg ListStorefront
 			&i.SellingPrice,
 			&i.OfferPrice,
 			&i.Price,
+			&i.InStock,
 		); err != nil {
 			return nil, err
 		}
