@@ -22,6 +22,10 @@ func setupAdminRoutes(router *gin.RouterGroup, cfg config.Config) {
 	orders.POST("/:number/cancel", admin.CancelOrder(cfg.Checkout, cfg.Queries))
 	orders.POST("/:number/refund", admin.RefundOrder(cfg.Checkout, cfg.Queries))
 
+	customers := group.Group("/customers")
+	customers.GET("", admin.ListCustomers(cfg.Queries))
+	customers.GET("/:userID", admin.GetCustomer(cfg.Queries))
+
 	group.GET("/reviews", admin.ListReviews(cfg.Queries))
 	group.PUT("/reviews/:id/status", admin.SetReviewStatus(cfg.Queries))
 

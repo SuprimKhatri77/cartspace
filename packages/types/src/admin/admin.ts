@@ -7,6 +7,7 @@ import {
   Uuid,
 } from "../api/response";
 import {
+  AddressSchema,
   OrderItemSchema,
   OrderSchema,
   OrderStatusSchema,
@@ -253,3 +254,61 @@ export const AdminReviewListResponseSchema = paginatedResponse(
 export const AdminReviewResponseSchema = successResponse(
   AdminReviewSchema,
 ).meta({ id: "AdminReviewResponse" });
+
+// Customers: "orders" are placed orders (not abandoned checkouts), "spend"
+// is paid, shipped and delivered orders (refunds don't count).
+
+export const AdminCustomerRowSchema = z
+  .object({
+    id: Uuid,
+    name: z.string(),
+    email: z.string(),
+    created_at: Timestamp,
+    orders: z.int().nonnegative(),
+    spend: Cents,
+    last_order_at: Timestamp.nullable().describe("null before the first"),
+  })
+  .meta({ id: "AdminCustomerRow" });
+export type AdminCustomerRow = z.infer<typeof AdminCustomerRowSchema>;
+
+export const AdminCustomerListResponseSchema = paginatedResponse(
+  AdminCustomerRowSchema,
+).meta({ id: "AdminCustomerListResponse" });
+
+export const AdminCustomerSchema = z
+  .object({
+    id: Uuid,
+    name: z.string(),
+    email: z.string(),
+    created_at: Timestamp,
+    orders: z.int().nonnegative(),
+    spend: Cents,
+    paid_orders: z.int().nonnegative().describe("Paid, shipped or delivered"),
+    average_order_value: Cents.describe("Spend per paid order"),
+    first_order_at: Timestamp.nullable(),
+    last_order_at: Timestamp.nullable(),
+    addresses: z.array(AddressSchema),
+    reviews: z
+      .array(
+        z.object({
+          id: Uuid,
+          rating: z.int().min(1).max(5),
+          title: z.string(),
+          body: z.string(),
+          status: ReviewStatusSchema,
+          created_at: Timestamp,
+          product_id: Uuid,
+          product_name: z.string(),
+        }),
+      )
+      .describe("The 10 latest"),
+  })
+  .meta({
+    id: "AdminCustomer",
+    description: "Orders come from adminListOrders with customer=",
+  });
+export type AdminCustomer = z.infer<typeof AdminCustomerSchema>;
+
+export const AdminCustomerResponseSchema = successResponse(
+  AdminCustomerSchema,
+).meta({ id: "AdminCustomerResponse" });

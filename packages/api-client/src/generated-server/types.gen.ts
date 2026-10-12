@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -1168,6 +1168,68 @@ export type AdminOrderRow = {
     item_count: number;
     created_at: string;
     paid_at: string | null;
+};
+
+export type AdminCustomerListResponse = {
+    success: true;
+    message: string;
+    data: Array<AdminCustomerRow>;
+    meta: PaginationMeta;
+};
+
+export type AdminCustomerRow = {
+    id: string;
+    name: string;
+    email: string;
+    created_at: string;
+    orders: number;
+    spend: number;
+    /**
+     * null before the first
+     */
+    last_order_at: string | null;
+};
+
+export type AdminCustomerResponse = {
+    success: true;
+    message: string;
+    data: AdminCustomer;
+};
+
+/**
+ * Orders come from adminListOrders with customer=
+ */
+export type AdminCustomer = {
+    id: string;
+    name: string;
+    email: string;
+    created_at: string;
+    orders: number;
+    spend: number;
+    /**
+     * Paid, shipped or delivered
+     */
+    paid_orders: number;
+    /**
+     * Spend per paid order
+     */
+    average_order_value: number;
+    first_order_at: string | null;
+    last_order_at: string | null;
+    addresses: Array<Address>;
+    /**
+     * The 10 latest
+     */
+    reviews: Array<{
+        id: string;
+        rating: number;
+        title: string;
+        body: string;
+        status: ReviewStatus;
+        created_at: string;
+        product_id: string;
+        product_name: string;
+    }>;
 };
 
 export type AdminOrderDetailResponse = {
@@ -3327,6 +3389,7 @@ export type AdminListOrdersData = {
         page?: number;
         status?: OrderStatus;
         q?: string;
+        customer?: string;
     };
     url: '/api/v1/admin/orders';
 };
@@ -3360,6 +3423,89 @@ export type AdminListOrdersResponses = {
 };
 
 export type AdminListOrdersResponse = AdminListOrdersResponses[keyof AdminListOrdersResponses];
+
+export type AdminListCustomersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        page?: number;
+        q?: string;
+    };
+    url: '/api/v1/admin/customers';
+};
+
+export type AdminListCustomersErrors = {
+    /**
+     * Invalid page or search (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminListCustomersError = AdminListCustomersErrors[keyof AdminListCustomersErrors];
+
+export type AdminListCustomersResponses = {
+    /**
+     * Customers fetched
+     */
+    200: AdminCustomerListResponse;
+};
+
+export type AdminListCustomersResponse = AdminListCustomersResponses[keyof AdminListCustomersResponses];
+
+export type AdminGetCustomerData = {
+    body?: never;
+    path: {
+        userID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/customers/{userID}';
+};
+
+export type AdminGetCustomerErrors = {
+    /**
+     * Invalid id (INVALID_USER_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No customer with that id (CUSTOMER_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminGetCustomerError = AdminGetCustomerErrors[keyof AdminGetCustomerErrors];
+
+export type AdminGetCustomerResponses = {
+    /**
+     * Customer fetched
+     */
+    200: AdminCustomerResponse;
+};
+
+export type AdminGetCustomerResponse = AdminGetCustomerResponses[keyof AdminGetCustomerResponses];
 
 export type AdminGetOrderData = {
     body?: never;

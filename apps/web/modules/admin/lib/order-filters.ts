@@ -35,19 +35,25 @@ const ORDER_STATUSES: OrderStatus[] = [
   "refunded",
 ];
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** The admin orders table's state, mirrored in its URL. */
 export type AdminOrderFilters = {
   page: number;
   q: string;
   status: OrderStatus | "";
+  /** A customer's user ID, or "" for everyone. */
+  customer: string;
 };
 
 export function parseAdminOrderFilters(params: Params): AdminOrderFilters {
   const status = first(params.status) as OrderStatus;
+  const customer = first(params.customer);
   return {
     page: pageOf(params),
     q: first(params.q).slice(0, 100),
     status: ORDER_STATUSES.includes(status) ? status : "",
+    customer: UUID.test(customer) ? customer.toLowerCase() : "",
   };
 }
 
@@ -56,12 +62,34 @@ export function adminOrdersQuery(f: AdminOrderFilters) {
     page: f.page,
     ...(f.q && { q: f.q }),
     ...(f.status && { status: f.status }),
+    ...(f.customer && { customer: f.customer }),
   };
 }
 
 export function adminOrdersSearch(f: AdminOrderFilters): string {
   return searchOf([
+    ["customer", f.customer],
     ["status", f.status],
+    ["q", f.q],
+    ["page", f.page],
+  ]);
+}
+
+/** The customers table's state, mirrored in its URL. */
+export type AdminCustomerFilters = { page: number; q: string };
+
+export function parseAdminCustomerFilters(
+  params: Params,
+): AdminCustomerFilters {
+  return { page: pageOf(params), q: first(params.q).slice(0, 100) };
+}
+
+export function adminCustomersQuery(f: AdminCustomerFilters) {
+  return { page: f.page, ...(f.q && { q: f.q }) };
+}
+
+export function adminCustomersSearch(f: AdminCustomerFilters): string {
+  return searchOf([
     ["q", f.q],
     ["page", f.page],
   ]);

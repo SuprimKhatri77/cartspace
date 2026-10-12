@@ -87,14 +87,16 @@ JOIN users u ON u.id = o.user_id
 WHERE ($1::text IS NULL OR o.status = $1::text)
   AND ($2::bigint IS NULL OR o.number = $2::bigint)
   AND ($3::text IS NULL OR o.email ILIKE $3::text)
+  AND ($4::uuid IS NULL OR o.user_id = $4::uuid)
 ORDER BY o.created_at DESC, o.id DESC
-LIMIT $5 OFFSET $4
+LIMIT $6 OFFSET $5
 `
 
 type AdminListOrdersParams struct {
 	Status       pgtype.Text `json:"status"`
 	Number       pgtype.Int8 `json:"number"`
 	EmailPattern pgtype.Text `json:"email_pattern"`
+	UserID       pgtype.UUID `json:"user_id"`
 	PageOffset   int32       `json:"page_offset"`
 	PageLimit    int32       `json:"page_limit"`
 }
@@ -117,6 +119,7 @@ func (q *Queries) AdminListOrders(ctx context.Context, arg AdminListOrdersParams
 		arg.Status,
 		arg.Number,
 		arg.EmailPattern,
+		arg.UserID,
 		arg.PageOffset,
 		arg.PageLimit,
 	)
@@ -170,18 +173,25 @@ SELECT COUNT(*) FROM orders o
 WHERE ($1::text IS NULL OR o.status = $1::text)
   AND ($2::bigint IS NULL OR o.number = $2::bigint)
   AND ($3::text IS NULL OR o.email ILIKE $3::text)
+  AND ($4::uuid IS NULL OR o.user_id = $4::uuid)
 `
 
 type CountAdminOrdersParams struct {
 	Status       pgtype.Text `json:"status"`
 	Number       pgtype.Int8 `json:"number"`
 	EmailPattern pgtype.Text `json:"email_pattern"`
+	UserID       pgtype.UUID `json:"user_id"`
 }
 
-// Admin: every order, filtered by status and either an order number or a
-// piece of the email (both optional).
+// Admin: every order, filtered by status, either an order number or a
+// piece of the email, and a customer (all optional).
 func (q *Queries) CountAdminOrders(ctx context.Context, arg CountAdminOrdersParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countAdminOrders, arg.Status, arg.Number, arg.EmailPattern)
+	row := q.db.QueryRow(ctx, countAdminOrders,
+		arg.Status,
+		arg.Number,
+		arg.EmailPattern,
+		arg.UserID,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

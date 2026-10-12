@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Uuid } from "@repo/types";
 import { schemas } from "../schemas.ts";
 import { body, operation } from "./shared.ts";
 
@@ -55,13 +56,14 @@ export function registerAdminPaths() {
     tag: "Admin",
     summary: "All orders",
     description:
-      "Newest first, 20 per page. q is an order number (1042, CS-1042 or #1042) or a piece of the customer's email.",
+      "Newest first, 20 per page. q is an order number (1042, CS-1042 or #1042) or a piece of the customer's email; customer is a user ID.",
     auth: "admin",
     request: {
       query: z.object({
         page,
         status: schemas.OrderStatusSchema.optional(),
         q: z.string().max(100).optional(),
+        customer: Uuid.optional(),
       }),
     },
     success: {
@@ -71,6 +73,49 @@ export function registerAdminPaths() {
     },
     errors: {
       400: "Invalid page or filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)",
+    },
+  });
+
+  operation({
+    method: "get",
+    path: "/api/v1/admin/customers",
+    operationId: "adminListCustomers",
+    tag: "Admin",
+    summary: "Customer accounts",
+    description:
+      "Newest first, 20 per page, with each one's placed orders, spend (paid, shipped and delivered) and last order. q is a piece of the name or email.",
+    auth: "admin",
+    request: {
+      query: z.object({ page, q: z.string().max(100).optional() }),
+    },
+    success: {
+      status: 200,
+      description: "Customers fetched",
+      schema: schemas.AdminCustomerListResponseSchema,
+    },
+    errors: {
+      400: "Invalid page or search (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)",
+    },
+  });
+
+  operation({
+    method: "get",
+    path: "/api/v1/admin/customers/{userID}",
+    operationId: "adminGetCustomer",
+    tag: "Admin",
+    summary: "A customer",
+    description:
+      "Their totals, saved addresses and latest reviews. Admin accounts aren't customers.",
+    auth: "admin",
+    request: { params: z.object({ userID: Uuid }) },
+    success: {
+      status: 200,
+      description: "Customer fetched",
+      schema: schemas.AdminCustomerResponseSchema,
+    },
+    errors: {
+      400: "Invalid id (INVALID_USER_ID)",
+      404: "No customer with that id (CUSTOMER_NOT_FOUND)",
     },
   });
 

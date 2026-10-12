@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowCounterClockwiseIcon,
-  ArrowLeftIcon,
   CheckCircleIcon,
   TruckIcon,
   XCircleIcon,
@@ -42,6 +41,7 @@ import { adminKeys } from "../keys";
 import { useAdminOrder } from "../queries";
 import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { AdminPageHeader } from "./page-header";
+import { BackLink } from "./page-back";
 import { Panel } from "./panel";
 import { OrderStatusBadge } from "./status-badge";
 
@@ -57,18 +57,6 @@ const timeFormat = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
   timeZoneName: "short",
 });
-
-function BackToOrders() {
-  return (
-    <Link
-      href="/admin/orders"
-      className="group mb-6 inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
-    >
-      <ArrowLeftIcon className="size-3.5 transition-transform group-hover:-translate-x-0.5" />
-      Orders
-    </Link>
-  );
-}
 
 /** One order as the shop sees it, with the next steps it can take. */
 export function OrderDetailView({ number }: { number: number }) {
@@ -104,7 +92,12 @@ export function OrderDetailView({ number }: { number: number }) {
       })[action],
     failure: "Couldn't update the order.",
     // Stock (cancel, refund) and revenue (refund) change too.
-    invalidate: [adminKeys.orders(), adminKeys.stats(), adminKeys.products()],
+    invalidate: [
+      adminKeys.orders(),
+      adminKeys.stats(),
+      adminKeys.products(),
+      adminKeys.customers(),
+    ],
     onSuccess: (updated) => {
       queryClient.setQueryData(adminKeys.order(number), updated);
       setOpen(null);
@@ -125,7 +118,7 @@ export function OrderDetailView({ number }: { number: number }) {
   if (order.isPending) {
     return (
       <div aria-busy="true" aria-label="Loading the order">
-        <BackToOrders />
+        <BackLink href="/admin/orders">Orders</BackLink>
         <Skeleton className="mb-8 h-14 w-64" />
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <Skeleton className="h-80" />
@@ -141,7 +134,7 @@ export function OrderDetailView({ number }: { number: number }) {
       code === "ORDER_NOT_FOUND" || code === "INVALID_ORDER_NUMBER";
     return (
       <div>
-        <BackToOrders />
+        <BackLink href="/admin/orders">Orders</BackLink>
         <h1 className="display text-4xl">
           {missing ? "There's no such order." : "The order couldn't load."}
         </h1>
@@ -168,7 +161,7 @@ export function OrderDetailView({ number }: { number: number }) {
 
   return (
     <div>
-      <BackToOrders />
+      <BackLink href="/admin/orders">Orders</BackLink>
       <AdminPageHeader
         eyebrow="Order"
         title={orderLabel(o.number)}
@@ -293,7 +286,13 @@ export function OrderDetailView({ number }: { number: number }) {
 
         <div className="space-y-6">
           <Panel title="Customer">
-            <p className="text-[0.8125rem]">{o.customer.name}</p>
+            <Link
+              href={`/admin/customers/${o.customer.id}`}
+              className="text-[0.8125rem] hover:underline"
+            >
+              {o.customer.name}
+            </Link>
+            <br />
             <a
               href={`mailto:${o.email}`}
               className="text-xs text-muted-foreground hover:text-foreground hover:underline"

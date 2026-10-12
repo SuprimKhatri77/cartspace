@@ -20,6 +20,8 @@ const (
 	Forbidden           = "FORBIDDEN"
 	InvalidTokenClaims  = "INVALID_TOKEN_CLAIMS"
 	UserNotFound        = "USER_NOT_FOUND"
+	InvalidUserID       = "INVALID_USER_ID"
+	CustomerNotFound    = "CUSTOMER_NOT_FOUND"
 	MissingAccessToken  = "MISSING_ACCESS_TOKEN"
 	InvalidAccessToken  = "INVALID_ACCESS_TOKEN"
 	InvalidResetToken   = "INVALID_RESET_TOKEN"
