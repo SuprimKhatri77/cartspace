@@ -9,15 +9,17 @@ import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { deleteAddress } from "@/lib/api/client";
+import { deleteAddress, setDefaultAddress } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
 import { useAuth } from "@/providers/auth-provider";
+import { DefaultTag } from "@/modules/checkout/components/default-tag";
 import { addressKeys } from "@/modules/checkout/keys";
 import { countryName } from "@/modules/checkout/lib/countries";
 import { useAddresses } from "@/modules/checkout/queries";
 
 /**
- * The addresses saved at checkout, newest first, with delete. Checkout
+ * The addresses saved at checkout, the default first, then the newest.
+ * Here one is made the default (checkout picks it first) or deleted: checkout
  * saves at most MAX_ADDRESSES, so this is where room is made for more.
  */
 export function AddressBook() {
@@ -41,6 +43,24 @@ export function AddressBook() {
       setConfirming(null);
       toast.error(
         getApiError(error)?.message ?? "Couldn't remove the address.",
+      );
+    },
+  });
+
+  const makeDefault = useMutation({
+    mutationFn: async (id: string) => {
+      await setDefaultAddress({ path: { addressID: id }, throwOnError: true });
+    },
+    // Stays pending until the list comes back in its new order.
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: addressKeys.mine(userId),
+      });
+      toast("Default address updated");
+    },
+    onError: (error) => {
+      toast.error(
+        getApiError(error)?.message ?? "Couldn't change the default address.",
       );
     },
   });
@@ -103,7 +123,10 @@ export function AddressBook() {
               className="flex flex-col justify-between gap-6 rounded-panel border border-border p-5"
             >
               <address className="space-y-0.5 text-sm not-italic">
-                <p className="font-medium">{a.full_name}</p>
+                <p className="flex items-center gap-2 font-medium">
+                  {a.full_name}
+                  {a.is_default && <DefaultTag />}
+                </p>
                 <p>
                   {a.line1}
                   {a.line2 ? `, ${a.line2}` : ""}
@@ -115,14 +138,32 @@ export function AddressBook() {
                 <p>{countryName(a.country)}</p>
                 <p className="pt-1 text-muted-foreground">{a.phone}</p>
               </address>
-              <button
-                type="button"
-                onClick={() => setConfirming(a)}
-                className="link-underline -my-2 self-start py-2 text-xs text-muted-foreground hover:text-destructive"
-              >
-                Remove
-                <span className="sr-only"> the address for {a.full_name}</span>
-              </button>
+              <div className="-my-2 flex gap-5 text-xs text-muted-foreground">
+                {!a.is_default && (
+                  <button
+                    type="button"
+                    onClick={() => makeDefault.mutate(a.id)}
+                    disabled={makeDefault.isPending}
+                    aria-label={`Make the address for ${a.full_name} the default`}
+                    className="link-underline py-2 hover:text-foreground disabled:pointer-events-none disabled:opacity-60"
+                  >
+                    {makeDefault.isPending && makeDefault.variables === a.id
+                      ? "Saving…"
+                      : "Make default"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setConfirming(a)}
+                  className="link-underline py-2 hover:text-destructive"
+                >
+                  Remove
+                  <span className="sr-only">
+                    {" "}
+                    the address for {a.full_name}
+                  </span>
+                </button>
+              </div>
             </li>
           ))}
         </ul>

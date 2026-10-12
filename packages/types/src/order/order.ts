@@ -59,14 +59,21 @@ export const AddressSchema = z
     region: z.string().nullable(),
     postal_code: z.string(),
     country: CountrySchema,
+    is_default: z
+      .boolean()
+      .describe("Checkout picks it first; at most one per customer"),
     created_at: Timestamp,
   })
   .meta({ id: "Address", description: "A saved shipping address." });
 export type Address = z.infer<typeof AddressSchema>;
 
 export const AddressListResponseSchema = successResponse(
-  z.array(AddressSchema).describe("Newest first, at most 10"),
+  z.array(AddressSchema).describe("The default first, then newest; at most 10"),
 ).meta({ id: "AddressListResponse" });
+
+export const AddressResponseSchema = successResponse(AddressSchema).meta({
+  id: "AddressResponse",
+});
 
 export const CheckoutBodySchema = z
   .object({

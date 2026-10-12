@@ -795,7 +795,7 @@ export type AddressListResponse = {
     success: true;
     message: string;
     /**
-     * Newest first, at most 10
+     * The default first, then newest; at most 10
      */
     data: Array<Address>;
 };
@@ -814,7 +814,17 @@ export type Address = {
     region: string | null;
     postal_code: string;
     country: Country;
+    /**
+     * Checkout picks it first; at most one per customer
+     */
+    is_default: boolean;
     created_at: string;
+};
+
+export type AddressResponse = {
+    success: true;
+    message: string;
+    data: Address;
 };
 
 export type WishlistResponse = {
@@ -2788,6 +2798,45 @@ export type DeleteAddressResponses = {
 };
 
 export type DeleteAddressResponse = DeleteAddressResponses[keyof DeleteAddressResponses];
+
+export type SetDefaultAddressData = {
+    body?: never;
+    path: {
+        addressID: string;
+    };
+    query?: never;
+    url: '/api/v1/addresses/{addressID}/default';
+};
+
+export type SetDefaultAddressErrors = {
+    /**
+     * Invalid id (INVALID_ADDRESS_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * No such address of yours (ADDRESS_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type SetDefaultAddressError = SetDefaultAddressErrors[keyof SetDefaultAddressErrors];
+
+export type SetDefaultAddressResponses = {
+    /**
+     * Default address updated
+     */
+    200: AddressResponse;
+};
+
+export type SetDefaultAddressResponse = SetDefaultAddressResponses[keyof SetDefaultAddressResponses];
 
 export type ListWishlistData = {
     body?: never;

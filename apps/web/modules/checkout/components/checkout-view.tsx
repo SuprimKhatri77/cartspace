@@ -37,6 +37,7 @@ import { useCart } from "@/modules/cart/queries";
 import { countryName } from "../lib/countries";
 import { useAddresses } from "../queries";
 import { AddressForm, EMPTY_ADDRESS, type AddressValues } from "./address-form";
+import { DefaultTag } from "./default-tag";
 
 const NEW = "new";
 
@@ -173,7 +174,8 @@ function CheckoutForm({
   saved: Address[] | undefined;
   savedLoading: boolean;
 }) {
-  // Until the shopper picks, use the newest saved address (or a new one).
+  // Until the shopper picks, use the first saved address (the default, else
+  // the newest) or a new one.
   const [picked, setPicked] = useState<string | null>(null);
   const choice = picked ?? saved?.[0]?.id ?? NEW;
   const [address, setAddress] = useState<AddressValues>(EMPTY_ADDRESS);
@@ -291,7 +293,10 @@ function CheckoutForm({
                       selected={choice === a.id}
                       onSelect={() => setPicked(a.id)}
                     >
-                      <span className="font-medium">{a.full_name}</span>
+                      <span className="flex items-center gap-2 font-medium">
+                        {a.full_name}
+                        {a.is_default && <DefaultTag />}
+                      </span>
                       <span>
                         {a.line1}
                         {a.line2 ? `, ${a.line2}` : ""}

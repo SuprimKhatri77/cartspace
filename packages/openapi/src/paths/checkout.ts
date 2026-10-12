@@ -123,7 +123,8 @@ export function registerCheckoutPaths() {
     operationId: "listAddresses",
     tag: "Orders",
     summary: "My saved addresses",
-    description: "Saved at checkout with save_address; at most 10.",
+    description:
+      "Saved at checkout with save_address; at most 10. The default comes first, then the newest.",
     auth: "user",
     success: {
       status: 200,
@@ -145,6 +146,27 @@ export function registerCheckoutPaths() {
       status: 200,
       description: "Address deleted",
       schema: schemas.MessageResponseSchema,
+    },
+    errors: {
+      400: "Invalid id (INVALID_ADDRESS_ID)",
+      404: "No such address of yours (ADDRESS_NOT_FOUND)",
+    },
+  });
+
+  operation({
+    method: "put",
+    path: "/api/v1/addresses/{addressID}/default",
+    operationId: "setDefaultAddress",
+    tag: "Orders",
+    summary: "Make a saved address the default",
+    description:
+      "Checkout picks the default first. The previous default is unmarked; setting the current one again changes nothing.",
+    auth: "user",
+    request: { params: z.object({ addressID: Uuid }) },
+    success: {
+      status: 200,
+      description: "Default address updated",
+      schema: schemas.AddressResponseSchema,
     },
     errors: {
       400: "Invalid id (INVALID_ADDRESS_ID)",

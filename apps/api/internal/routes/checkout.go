@@ -23,4 +23,5 @@ func setupCheckoutRoutes(router *gin.RouterGroup, cfg config.Config) {
 	addresses := router.Group("/addresses", auth)
 	addresses.GET("", checkout.ListAddresses(cfg.Queries))
 	addresses.DELETE("/:addressID", checkout.DeleteAddress(cfg.Queries))
+	addresses.PUT("/:addressID/default", checkout.SetDefaultAddress(cfg.PgxPool, cfg.Queries))
 }

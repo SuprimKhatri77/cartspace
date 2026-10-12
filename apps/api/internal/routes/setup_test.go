@@ -83,6 +83,7 @@ func TestSetupRegistersAllRoutes(t *testing.T) {
 		"GET /api/v1/orders/:number",
 		"GET /api/v1/addresses",
 		"DELETE /api/v1/addresses/:addressID",
+		"PUT /api/v1/addresses/:addressID/default",
 
 		"GET /api/v1/wishlist",
 		"GET /api/v1/wishlist/ids",
