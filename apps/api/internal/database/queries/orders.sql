@@ -140,14 +140,15 @@ WHERE o.user_id = $1 AND o.status <> 'pending' AND NOT (o.status = 'cancelled' A
 ORDER BY o.created_at DESC, o.id DESC
 LIMIT $2 OFFSET $3;
 
--- Admin: every order, filtered by status and either an order number or a
--- piece of the email (both optional).
+-- Admin: every order, filtered by status, either an order number or a
+-- piece of the email, and a customer (all optional).
 
 -- name: CountAdminOrders :one
 SELECT COUNT(*) FROM orders o
 WHERE (sqlc.narg(status)::text IS NULL OR o.status = sqlc.narg(status)::text)
   AND (sqlc.narg(number)::bigint IS NULL OR o.number = sqlc.narg(number)::bigint)
-  AND (sqlc.narg(email_pattern)::text IS NULL OR o.email ILIKE sqlc.narg(email_pattern)::text);
+  AND (sqlc.narg(email_pattern)::text IS NULL OR o.email ILIKE sqlc.narg(email_pattern)::text)
+  AND (sqlc.narg(user_id)::uuid IS NULL OR o.user_id = sqlc.narg(user_id)::uuid);
 
 -- name: AdminListOrders :many
 SELECT
@@ -159,6 +160,7 @@ JOIN users u ON u.id = o.user_id
 WHERE (sqlc.narg(status)::text IS NULL OR o.status = sqlc.narg(status)::text)
   AND (sqlc.narg(number)::bigint IS NULL OR o.number = sqlc.narg(number)::bigint)
   AND (sqlc.narg(email_pattern)::text IS NULL OR o.email ILIKE sqlc.narg(email_pattern)::text)
+  AND (sqlc.narg(user_id)::uuid IS NULL OR o.user_id = sqlc.narg(user_id)::uuid)
 ORDER BY o.created_at DESC, o.id DESC
 LIMIT @page_limit OFFSET @page_offset;
 

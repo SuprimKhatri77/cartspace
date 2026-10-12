@@ -81,6 +81,8 @@ func TestSetupRegistersAllRoutes(t *testing.T) {
 		"POST /api/v1/webhooks/stripe",
 		"GET /api/v1/orders",
 		"GET /api/v1/orders/:number",
+		"GET /api/v1/admin/customers",
+		"GET /api/v1/admin/customers/:userID",
 		"GET /api/v1/addresses",
 		"DELETE /api/v1/addresses/:addressID",
 		"PUT /api/v1/addresses/:addressID/default",

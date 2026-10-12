@@ -30,7 +30,7 @@ var orderStatuses = map[string]bool{
 
 // orderFilters reads status and q. q is an order number ("1042",
 // "CS-1042", "#1042") or else a piece of the customer's email.
-func orderFilters(c *gin.Context) (status, email pgtype.Text, num pgtype.Int8, ok bool) {
+func orderFilters(c *gin.Context) (status, email pgtype.Text, num pgtype.Int8, customer pgtype.UUID, ok bool) {
 	if s := c.Query("status"); s != "" {
 		if !orderStatuses[s] {
 			httpx.Fail(c, http.StatusBadRequest, constants.InvalidQueryParam,
@@ -49,7 +49,14 @@ func orderFilters(c *gin.Context) (status, email pgtype.Text, num pgtype.Int8, o
 	} else if q != "" {
 		email = pgtype.Text{String: utils.ContainsPattern(q), Valid: true}
 	}
-	return status, email, num, true
+	if id := c.Query("customer"); id != "" {
+		var err error
+		if customer, err = utils.ConvertToUUID(id); err != nil {
+			httpx.Fail(c, http.StatusBadRequest, constants.InvalidQueryParam, "customer must be a user ID")
+			return
+		}
+	}
+	return status, email, num, customer, true
 }
 
 // orderNumber reads "1042", "CS-1042" or "#1042".
@@ -67,12 +74,12 @@ func ListOrders(queries *db.Queries) gin.HandlerFunc {
 		if !ok {
 			return
 		}
-		status, email, number, ok := orderFilters(c)
+		status, email, number, customer, ok := orderFilters(c)
 		if !ok {
 			return
 		}
 
-		total, err := queries.CountAdminOrders(ctx, db.CountAdminOrdersParams{Status: status, Number: number, EmailPattern: email})
+		total, err := queries.CountAdminOrders(ctx, db.CountAdminOrdersParams{Status: status, Number: number, EmailPattern: email, UserID: customer})
 		if err != nil {
 			httpx.Internal(c, "failed to count orders", err)
 			return
@@ -83,7 +90,7 @@ func ListOrders(queries *db.Queries) gin.HandlerFunc {
 		orders := []db.AdminListOrdersRow{}
 		if total > 0 {
 			orders, err = queries.AdminListOrders(ctx, db.AdminListOrdersParams{
-				Status: status, Number: number, EmailPattern: email,
+				Status: status, Number: number, EmailPattern: email, UserID: customer,
 				PageLimit: int32(ordersPageSize), PageOffset: httpx.Offset(page, ordersPageSize),
 			})
 			if err != nil {

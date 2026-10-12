@@ -3,9 +3,11 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { StatsRange } from "@repo/types";
 import {
+  adminGetCustomer,
   adminGetOrder,
   adminGetProduct,
   adminGetStats,
+  adminListCustomers,
   adminListOrders,
   adminListProducts,
   adminListReviews,
@@ -15,8 +17,10 @@ import {
 import { adminKeys } from "./keys";
 import { adminProductsQuery, type AdminProductFilters } from "./lib/filters";
 import {
+  adminCustomersQuery,
   adminOrdersQuery,
   adminReviewsQuery,
+  type AdminCustomerFilters,
   type AdminOrderFilters,
   type AdminReviewFilters,
 } from "./lib/order-filters";
@@ -136,5 +140,35 @@ export function useAdminReviews(filters: AdminReviewFilters) {
       return data;
     },
     placeholderData: keepPreviousData,
+  });
+}
+
+/** One page of the customers table; the last page stays up while the next loads. */
+export function useAdminCustomers(filters: AdminCustomerFilters) {
+  return useQuery({
+    queryKey: adminKeys.customerList(filters),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminListCustomers({
+        query: adminCustomersQuery(filters),
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useAdminCustomer(id: string) {
+  return useQuery({
+    queryKey: adminKeys.customer(id),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminGetCustomer({
+        path: { userID: id },
+        signal,
+        throwOnError: true,
+      });
+      return data.data;
+    },
   });
 }

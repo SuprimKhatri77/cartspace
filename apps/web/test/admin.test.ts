@@ -16,9 +16,12 @@ import {
 } from "@/modules/admin/lib/filters";
 import {
   adminOrdersQuery,
+  adminCustomersQuery,
+  adminCustomersSearch,
   adminOrdersSearch,
   adminReviewsQuery,
   adminReviewsSearch,
+  parseAdminCustomerFilters,
   parseAdminOrderFilters,
   parseAdminReviewFilters,
 } from "@/modules/admin/lib/order-filters";
@@ -154,13 +157,18 @@ describe("admin helpers", () => {
 
 describe("admin order and review filters", () => {
   test("orders: parse, query and URL", () => {
-    expect(parseAdminOrderFilters({})).toEqual({ page: 1, q: "", status: "" });
+    expect(parseAdminOrderFilters({})).toEqual({
+      page: 1,
+      q: "",
+      status: "",
+      customer: "",
+    });
     const f = parseAdminOrderFilters({
       status: "paid",
       q: " CS-1042 ",
       page: "2",
     });
-    expect(f).toEqual({ page: 2, q: "CS-1042", status: "paid" });
+    expect(f).toEqual({ page: 2, q: "CS-1042", status: "paid", customer: "" });
     expect(adminOrdersQuery(f)).toEqual({
       page: 2,
       q: "CS-1042",
@@ -169,6 +177,26 @@ describe("admin order and review filters", () => {
     expect(adminOrdersSearch(f)).toBe("?status=paid&q=CS-1042&page=2");
     expect(parseAdminOrderFilters({ status: "lost" }).status).toBe("");
     expect(adminOrdersSearch(parseAdminOrderFilters({}))).toBe("");
+  });
+
+  test("orders: one customer's, by user ID only", () => {
+    const id = "A13B1D37-6A2B-4E5C-9CAE-857134921FA5";
+    const f = parseAdminOrderFilters({ customer: id, page: "1" });
+    expect(f.customer).toBe(id.toLowerCase());
+    expect(adminOrdersQuery(f)).toEqual({
+      page: 1,
+      customer: id.toLowerCase(),
+    });
+    expect(adminOrdersSearch(f)).toBe(`?customer=${id.toLowerCase()}`);
+    expect(parseAdminOrderFilters({ customer: "1; drop" }).customer).toBe("");
+  });
+
+  test("customers: parse, query and URL", () => {
+    const f = parseAdminCustomerFilters({ q: " ada ", page: "3" });
+    expect(f).toEqual({ page: 3, q: "ada" });
+    expect(adminCustomersQuery(f)).toEqual({ page: 3, q: "ada" });
+    expect(adminCustomersSearch(f)).toBe("?q=ada&page=3");
+    expect(adminCustomersSearch(parseAdminCustomerFilters({}))).toBe("");
   });
 
   test("reviews: parse, query and URL", () => {

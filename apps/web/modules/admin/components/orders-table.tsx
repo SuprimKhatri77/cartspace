@@ -66,7 +66,7 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
 
   const rows = orders.data?.data ?? [];
   const meta = orders.data?.meta;
-  const filtered = Boolean(filters.q || filters.status);
+  const filtered = Boolean(filters.q || filters.status || filters.customer);
 
   return (
     <div className="space-y-5">
@@ -103,6 +103,28 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
         />
       </div>
 
+      {filters.customer && (
+        <div className="flex flex-wrap items-center gap-3 rounded-control border border-border px-3 py-2 text-[0.8125rem]">
+          <span>
+            Showing one customer&apos;s orders.{" "}
+            <Link
+              href={`/admin/customers/${filters.customer}`}
+              className="underline underline-offset-4 hover:text-muted-foreground"
+            >
+              View the customer
+            </Link>
+          </span>
+          <button
+            type="button"
+            onClick={() => setFilters((f) => ({ ...f, customer: "", page: 1 }))}
+            className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <XIcon className="size-3" />
+            Everyone&apos;s orders
+          </button>
+        </div>
+      )}
+
       <div className="flex min-h-6 items-center justify-between gap-3 text-xs text-muted-foreground">
         <p aria-live="polite">
           {meta
@@ -114,7 +136,7 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
             type="button"
             onClick={() => {
               setSearch("");
-              setFilters({ page: 1, q: "", status: "" });
+              setFilters({ page: 1, q: "", status: "", customer: "" });
             }}
             className="inline-flex items-center gap-1 hover:text-foreground"
           >

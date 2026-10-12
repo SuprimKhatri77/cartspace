@@ -92,6 +92,8 @@
           "FORBIDDEN",
           "INVALID_TOKEN_CLAIMS",
           "USER_NOT_FOUND",
+          "INVALID_USER_ID",
+          "CUSTOMER_NOT_FOUND",
           "MISSING_ACCESS_TOKEN",
           "INVALID_ACCESS_TOKEN",
           "INVALID_RESET_TOKEN",
@@ -3590,6 +3592,221 @@
           "paid_at"
         ],
         "description": "A row of the admin orders table."
+      },
+      "AdminCustomerListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCustomerRow"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "meta"
+        ]
+      },
+      "AdminCustomerRow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "orders": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "spend": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "last_order_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "null before the first"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "created_at",
+          "orders",
+          "spend",
+          "last_order_at"
+        ]
+      },
+      "AdminCustomerResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AdminCustomer"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "AdminCustomer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "orders": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "spend": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "paid_orders": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Paid, shipped or delivered"
+          },
+          "average_order_value": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Spend per paid order"
+          },
+          "first_order_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_order_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Address"
+            }
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "rating": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 5
+                },
+                "title": {
+                  "type": "string"
+                },
+                "body": {
+                  "type": "string"
+                },
+                "status": {
+                  "$ref": "#/components/schemas/ReviewStatus"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "product_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "product_name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "rating",
+                "title",
+                "body",
+                "status",
+                "created_at",
+                "product_id",
+                "product_name"
+              ]
+            },
+            "description": "The 10 latest"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "created_at",
+          "orders",
+          "spend",
+          "paid_orders",
+          "average_order_value",
+          "first_order_at",
+          "last_order_at",
+          "addresses",
+          "reviews"
+        ],
+        "description": "Orders come from adminListOrders with customer="
       },
       "AdminOrderDetailResponse": {
         "type": "object",
@@ -8075,7 +8292,7 @@
           "Admin"
         ],
         "summary": "All orders",
-        "description": "Newest first, 20 per page. q is an order number (1042, CS-1042 or #1042) or a piece of the customer's email.",
+        "description": "Newest first, 20 per page. q is an order number (1042, CS-1042 or #1042) or a piece of the customer's email; customer is a user ID.",
         "security": [
           {
             "accessTokenCookie": []
@@ -8107,6 +8324,15 @@
             },
             "required": false,
             "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "customer",
             "in": "query"
           }
         ],
@@ -8143,6 +8369,182 @@
           },
           "403": {
             "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/customers": {
+      "get": {
+        "operationId": "adminListCustomers",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Customer accounts",
+        "description": "Newest first, 20 per page, with each one's placed orders, spend (paid, shipped and delivered) and last order. q is a piece of the name or email.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customers fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCustomerListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid page or search (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/customers/{userID}": {
+      "get": {
+        "operationId": "adminGetCustomer",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "A customer",
+        "description": "Their totals, saved addresses and latest reviews. Admin accounts aren't customers.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "userID",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCustomerResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id (INVALID_USER_ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No customer with that id (CUSTOMER_NOT_FOUND)",
             "content": {
               "application/json": {
                 "schema": {
