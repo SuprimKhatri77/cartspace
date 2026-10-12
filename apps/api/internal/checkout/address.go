@@ -38,7 +38,7 @@ func addressFromRow(a db.Address) types.AddressInput {
 	}
 }
 
-func createAddressParams(userID pgtype.UUID, a types.AddressInput) db.CreateAddressParams {
+func createAddressParams(userID pgtype.UUID, a types.AddressInput, isDefault bool) db.CreateAddressParams {
 	return db.CreateAddressParams{
 		UserID:     userID,
 		FullName:   a.FullName,
@@ -49,6 +49,7 @@ func createAddressParams(userID pgtype.UUID, a types.AddressInput) db.CreateAddr
 		Region:     utils.ToNullableText(a.Region),
 		PostalCode: a.PostalCode,
 		Country:    a.Country,
+		IsDefault:  isDefault,
 	}
 }
 

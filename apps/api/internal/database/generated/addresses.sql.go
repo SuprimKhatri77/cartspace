@@ -32,8 +32,8 @@ func (q *Queries) CountAddresses(ctx context.Context, userID pgtype.UUID) (int64
 }
 
 const createAddress = `-- name: CreateAddress :one
-INSERT INTO addresses (user_id, full_name, phone, line1, line2, city, region, postal_code, country)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO addresses (user_id, full_name, phone, line1, line2, city, region, postal_code, country, is_default)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING id, user_id, full_name, phone, line1, line2, city, region, postal_code, country, created_at, is_default
 `
 
@@ -47,8 +47,10 @@ type CreateAddressParams struct {
 	Region     pgtype.Text `json:"region"`
 	PostalCode string      `json:"postal_code"`
 	Country    string      `json:"country"`
+	IsDefault  bool        `json:"is_default"`
 }
 
+// A new default needs ClearDefaultAddress first (in the same transaction).
 func (q *Queries) CreateAddress(ctx context.Context, arg CreateAddressParams) (Address, error) {
 	row := q.db.QueryRow(ctx, createAddress,
 		arg.UserID,
@@ -60,6 +62,7 @@ func (q *Queries) CreateAddress(ctx context.Context, arg CreateAddressParams) (A
 		arg.Region,
 		arg.PostalCode,
 		arg.Country,
+		arg.IsDefault,
 	)
 	var i Address
 	err := row.Scan(

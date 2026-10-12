@@ -26,6 +26,8 @@ type CheckoutRequest struct {
 	Address   *AddressInput `json:"address"`
 	// SaveAddress adds a new address to the address book.
 	SaveAddress bool `json:"save_address"`
+	// MakeDefault, with SaveAddress, makes the new address the default.
+	MakeDefault bool `json:"make_default"`
 }
 
 type CheckoutResponse struct {

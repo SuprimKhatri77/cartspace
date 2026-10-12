@@ -225,7 +225,9 @@ func reserve(ctx context.Context, qtx *db.Queries, lines []db.GetCartLinesRow) e
 }
 
 // address resolves the shipping address to snapshot on the order, saving a
-// new one to the address book when asked (and there's room).
+// new one to the address book when asked (and there's room), as the default
+// if asked. Two checkouts of one user can't race here: both hold the cart
+// lock. The book is locked in id order, as SetDefaultAddress does.
 func (s *Service) address(ctx context.Context, qtx *db.Queries, userID pgtype.UUID, req types.CheckoutRequest) (json.RawMessage, error) {
 	if req.AddressID != "" {
 		id, err := utils.ConvertToUUID(req.AddressID)
@@ -249,7 +251,15 @@ func (s *Service) address(ctx context.Context, qtx *db.Queries, userID pgtype.UU
 			return nil, fmt.Errorf("count addresses: %w", err)
 		}
 		if count < MaxAddresses {
-			if _, err := qtx.CreateAddress(ctx, createAddressParams(userID, input)); err != nil {
+			if req.MakeDefault {
+				if err := qtx.LockAddresses(ctx, userID); err != nil {
+					return nil, fmt.Errorf("lock addresses: %w", err)
+				}
+				if err := qtx.ClearDefaultAddress(ctx, userID); err != nil {
+					return nil, fmt.Errorf("clear default address: %w", err)
+				}
+			}
+			if _, err := qtx.CreateAddress(ctx, createAddressParams(userID, input, req.MakeDefault)); err != nil {
 				return nil, fmt.Errorf("save address: %w", err)
 			}
 		}

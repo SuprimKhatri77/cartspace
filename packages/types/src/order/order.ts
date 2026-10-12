@@ -83,6 +83,10 @@ export const CheckoutBodySchema = z
       .boolean()
       .optional()
       .describe("Add the new address to the address book"),
+    make_default: z
+      .boolean()
+      .optional()
+      .describe("With save_address: make the new address the default"),
   })
   .meta({
     id: "CheckoutBody",
