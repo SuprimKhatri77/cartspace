@@ -14,6 +14,7 @@ import {
   writeReview,
 } from "@/lib/api/client";
 import { useAuth } from "@/providers/auth-provider";
+import { orderKeys } from "@/modules/checkout/keys";
 import { reviewKeys } from "./keys";
 
 /** A product's published reviews, 10 at a time, with the summary. */
@@ -52,7 +53,10 @@ export function useMyReview(slug: string) {
   });
 }
 
-/** Write, edit and delete my review; both lists refresh after. */
+/**
+ * Write, edit and delete my review; both lists refresh after, and my orders,
+ * which say which of their products I've reviewed.
+ */
 export function useReviewMutations(slug: string) {
   const queryClient = useQueryClient();
   const userId = useAuth((s) => s.user?.id ?? "");
@@ -63,6 +67,7 @@ export function useReviewMutations(slug: string) {
       queryClient.invalidateQueries({
         queryKey: reviewKeys.mine(userId, slug),
       }),
+      queryClient.invalidateQueries({ queryKey: [...orderKeys.all, userId] }),
     ]);
   }
 

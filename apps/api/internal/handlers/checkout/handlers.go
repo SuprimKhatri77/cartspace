@@ -223,15 +223,24 @@ func GetOrder(queries *db.Queries) gin.HandlerFunc {
 }
 
 func respondOrder(c *gin.Context, queries *db.Queries, order db.Order) {
-	items, err := queries.GetOrderItems(c.Request.Context(), order.ID)
+	ctx := c.Request.Context()
+	items, err := queries.GetOrderItems(ctx, order.ID)
 	if err != nil {
 		httpx.Internal(c, "failed to get order items", err)
 		return
 	}
+	reviewed, err := queries.ListReviewedProductIDs(ctx, db.ListReviewedProductIDsParams{OrderID: order.ID, UserID: order.UserID})
+	if err != nil {
+		httpx.Internal(c, "failed to get the order's reviews", err)
+		return
+	}
+	if reviewed == nil {
+		reviewed = []pgtype.UUID{}
+	}
 	c.JSON(http.StatusOK, types.APIResponse{
 		Success: true,
 		Message: "Order fetched",
-		Data:    types.OrderDetail{Order: order, Items: items},
+		Data:    types.OrderDetail{Order: order, Items: items, ReviewedProductIDs: reviewed},
 	})
 }
 

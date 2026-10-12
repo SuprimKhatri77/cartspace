@@ -730,6 +730,10 @@ export type OrderDetail = {
      */
     tracking_number: string | null;
     items: Array<OrderItem>;
+    /**
+     * Products of this order you've reviewed
+     */
+    reviewed_product_ids: Array<string>;
 };
 
 export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';

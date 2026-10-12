@@ -33,6 +33,14 @@ SELECT EXISTS (
     AND o.status IN ('paid', 'shipped', 'delivered')
 );
 
+-- name: ListReviewedProductIDs :many
+-- Products of the order the user has reviewed (a hidden review counts too:
+-- writing again would edit it).
+SELECT DISTINCT r.product_id
+FROM reviews r
+JOIN order_items oi ON oi.product_id = r.product_id
+WHERE oi.order_id = @order_id AND r.user_id = @user_id;
+
 -- name: UpsertReview :one
 -- Writing again edits the review; a hidden review stays hidden.
 INSERT INTO reviews (product_id, user_id, rating, title, body)
