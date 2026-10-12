@@ -21,7 +21,12 @@ import {
   adminOrdersSearch,
   adminReviewsQuery,
   adminReviewsSearch,
+  adminEmailsSearch,
+  adminInventoryQuery,
+  adminInventorySearch,
   parseAdminCustomerFilters,
+  parseAdminEmailFilters,
+  parseAdminInventoryFilters,
   parseAdminOrderFilters,
   parseAdminReviewFilters,
 } from "@/modules/admin/lib/order-filters";
@@ -189,6 +194,48 @@ describe("admin order and review filters", () => {
     });
     expect(adminOrdersSearch(f)).toBe(`?customer=${id.toLowerCase()}`);
     expect(parseAdminOrderFilters({ customer: "1; drop" }).customer).toBe("");
+  });
+
+  test("inventory: parse, query and URL", () => {
+    const f = parseAdminInventoryFilters({
+      stock: "low",
+      q: "boot",
+      category: "shoes",
+      hidden: "true",
+      page: "2",
+    });
+    expect(f).toEqual({
+      page: 2,
+      q: "boot",
+      stock: "low",
+      category: "shoes",
+      hidden: true,
+    });
+    expect(adminInventoryQuery(f)).toEqual({
+      page: 2,
+      q: "boot",
+      stock: "low",
+      category: "shoes",
+      hidden: true,
+    });
+    expect(adminInventorySearch(f)).toBe(
+      "?stock=low&q=boot&category=shoes&hidden=true&page=2",
+    );
+    const junk = parseAdminInventoryFilters({ stock: "lots", hidden: "1" });
+    expect(junk.stock).toBe("");
+    expect(junk.hidden).toBe(false);
+    expect(adminInventorySearch(junk)).toBe("");
+  });
+
+  test("emails: parse and URL", () => {
+    expect(parseAdminEmailFilters({ status: "failed" })).toEqual({
+      page: 1,
+      status: "failed",
+    });
+    expect(parseAdminEmailFilters({ status: "bounced" }).status).toBe("");
+    expect(adminEmailsSearch({ page: 2, status: "sent" })).toBe(
+      "?status=sent&page=2",
+    );
   });
 
   test("customers: parse, query and URL", () => {

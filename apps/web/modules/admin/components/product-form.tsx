@@ -133,7 +133,12 @@ export function ProductForm({ product }: { product?: Product }) {
     success: product
       ? "Product saved"
       : "Product created. Now add its variants.",
-    invalidate: [adminKeys.products(), adminKeys.stats()],
+    invalidate: [
+      adminKeys.products(),
+      adminKeys.stats(),
+      adminKeys.inventory(),
+      adminKeys.counts(),
+    ],
     onSuccess: (saved) => {
       setSaved(JSON.stringify(bodyOf(valuesOf(saved), imagesOf(saved))));
       queryClient.setQueryData(adminKeys.product(saved.id), saved);

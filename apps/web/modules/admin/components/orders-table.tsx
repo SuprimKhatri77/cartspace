@@ -24,7 +24,7 @@ import {
   adminOrdersSearch,
   type AdminOrderFilters,
 } from "../lib/order-filters";
-import { useAdminOrders } from "../queries";
+import { useAdminCounts, useAdminOrders } from "../queries";
 import { PageNav } from "./page-nav";
 import { OrderStatusBadge } from "./status-badge";
 
@@ -46,6 +46,9 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
   const [search, setSearch] = useState(initial.q);
   const debounced = useDebouncedValue(search.trim(), 300);
   const orders = useAdminOrders(filters);
+  // Store-wide counts, so only shown while nothing narrows the list.
+  const allCounts = useAdminCounts().data?.orders_by_status;
+  const counts = filters.q || filters.customer ? undefined : allCounts;
 
   useEffect(() => {
     setFilters((f) =>
@@ -86,6 +89,13 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
             className="-mb-px shrink-0 border-b-2 border-transparent px-3 pb-3 text-[0.8125rem] text-muted-foreground transition-colors hover:text-foreground aria-pressed:border-foreground aria-pressed:text-foreground"
           >
             {tab.label}
+            {counts && (
+              <span className="ml-1.5 font-mono text-[0.625rem] text-muted-foreground tabular-nums">
+                {tab.status === ""
+                  ? Object.values(counts).reduce((a, b) => a + b, 0)
+                  : counts[tab.status]}
+              </span>
+            )}
           </button>
         ))}
       </div>

@@ -30,7 +30,8 @@ export default function AdminLayout({
           </span>
           <span className="eyebrow">Admin</span>
         </Link>
-        <div className="flex flex-1 flex-col justify-between py-6">
+        {/* Scrolls on short screens instead of spilling past the sidebar. */}
+        <div className="flex min-h-0 flex-1 flex-col justify-between gap-8 overflow-y-auto py-6">
           <AdminNav />
           <AdminAccount />
         </div>

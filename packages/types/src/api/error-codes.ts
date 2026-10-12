@@ -64,6 +64,9 @@ export const ErrorCodeSchema = z
     "ADDRESS_NOT_FOUND",
     "INVALID_ADDRESS_ID",
     // wishlist
+    "INVALID_EMAIL_ID",
+    "EMAIL_NOT_FOUND",
+    "EMAIL_NOT_FAILED",
     "WISHLIST_FULL",
     // reviews
     "NOT_VERIFIED_BUYER",

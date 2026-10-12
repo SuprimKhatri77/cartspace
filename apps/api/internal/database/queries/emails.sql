@@ -37,3 +37,33 @@ WHERE id = @id;
 SELECT sqlc.embed(orders), users.name AS customer_name
 FROM orders JOIN users ON users.id = orders.user_id
 WHERE orders.id = @id;
+
+-- Admin: the outbox, newest first, by status.
+
+-- name: AdminEmailCounts :many
+SELECT status, COUNT(*)::bigint AS count FROM email_outbox GROUP BY status;
+
+-- name: AdminListEmails :many
+SELECT e.id, e.kind, e.status, e.attempts, e.last_error, e.created_at,
+    e.sent_at, e.next_attempt_at, e.requeued_at,
+    o.number AS order_number, o.email
+FROM email_outbox e
+JOIN orders o ON o.id = e.order_id
+WHERE (sqlc.narg(status)::text IS NULL OR e.status = sqlc.narg(status)::text)
+ORDER BY e.created_at DESC, e.id DESC
+LIMIT @page_limit OFFSET @page_offset;
+
+-- name: AdminGetEmail :one
+SELECT e.id, e.kind, e.status, e.attempts, e.last_error, e.created_at,
+    e.sent_at, e.next_attempt_at, e.requeued_at,
+    o.number AS order_number, o.email
+FROM email_outbox e
+JOIN orders o ON o.id = e.order_id
+WHERE e.id = $1;
+
+-- name: AdminRequeueEmail :execrows
+-- Sends a failed email back to the queue for a fresh set of attempts.
+UPDATE email_outbox
+SET status = 'pending', attempts = 0, next_attempt_at = now(),
+    last_error = NULL, requeued_at = now()
+WHERE id = $1 AND status = 'failed';

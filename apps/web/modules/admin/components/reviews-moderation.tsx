@@ -188,7 +188,7 @@ function ReviewCard({ review }: { review: AdminReview }) {
         ? "Hidden from the store; the rating no longer counts it"
         : "Published again",
     failure: "Couldn't update the review.",
-    invalidate: [adminKeys.reviews()],
+    invalidate: [adminKeys.reviews(), adminKeys.stats(), adminKeys.customers()],
     onSuccess: (updated) => {
       // Show the new status at once, in every cached page.
       queryClient.setQueriesData<{ data: AdminReview[] }>(

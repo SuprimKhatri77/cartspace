@@ -12,18 +12,21 @@ import { adminKeys } from "../keys";
 /**
  * A variant's stock, edited in place: the count is saved on Enter or when
  * the field loses focus (an absolute value, so it is safe to resend).
- * Escape puts the saved count back.
+ * Escape puts the saved count back. With `onSaved`, the inventory list is
+ * left to the caller (it patches the row, so a sorted list doesn't jump).
  */
 export function StockInput({
   productId,
   variantId,
   stock,
   label,
+  onSaved,
 }: {
   productId: string;
   variantId: string;
   stock: number;
   label: string;
+  onSaved?: (stock: number) => void;
 }) {
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<string | null>(null);
@@ -46,6 +49,8 @@ export function StockInput({
       adminKeys.variants(productId),
       adminKeys.products(),
       adminKeys.stats(),
+      adminKeys.counts(),
+      ...(onSaved ? [] : [adminKeys.inventory()]),
     ],
     onSuccess: (variant) => {
       // Show the saved count now, not after the refetch.
@@ -56,6 +61,7 @@ export function StockInput({
             v.id === variant.id ? { ...v, stock: variant.stock } : v,
           ),
       );
+      onSaved?.(variant.stock);
       setDraft(null);
       setDone(true);
       setTimeout(() => setDone(false), 1500);

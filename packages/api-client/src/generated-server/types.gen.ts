@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -1170,6 +1170,131 @@ export type AdminOrderRow = {
     paid_at: string | null;
 };
 
+export type AdminCountsResponse = {
+    success: true;
+    message: string;
+    data: AdminCounts;
+};
+
+/**
+ * What's waiting on the admin
+ */
+export type AdminCounts = {
+    orders_by_status: OrderStatusCounts;
+    /**
+     * Paid orders
+     */
+    to_ship: number;
+    /**
+     * Paid orders with an item short of stock
+     */
+    oversold: number;
+    failed_emails: number;
+    /**
+     * Active variants of active products with none left
+     */
+    out_of_stock: number;
+};
+
+/**
+ * Every order by status
+ */
+export type OrderStatusCounts = {
+    pending: number;
+    paid: number;
+    shipped: number;
+    delivered: number;
+    cancelled: number;
+    refunded: number;
+};
+
+export type AdminInventoryResponse = {
+    success: true;
+    message: string;
+    meta: PaginationMeta;
+    data: AdminInventory;
+};
+
+export type AdminInventory = {
+    rows: Array<AdminInventoryRow>;
+    /**
+     * Per stock level, for the other filters
+     */
+    counts: {
+        out_of_stock: number;
+        low: number;
+        in_stock: number;
+    };
+};
+
+export type AdminInventoryRow = {
+    variant_id: string;
+    product_id: string;
+    product_name: string;
+    sku: string | null;
+    stock: number;
+    selling_price: number;
+    is_active: boolean;
+    product_active: boolean;
+    /**
+     * The variant's first image, else the product's
+     */
+    image: string;
+    options: Array<VariantOption>;
+};
+
+/**
+ * None, 1 to 5, or more than 5
+ */
+export type StockLevel = 'out' | 'low' | 'in';
+
+export type AdminEmailListResponse = {
+    success: true;
+    message: string;
+    meta: PaginationMeta;
+    data: AdminEmailList;
+};
+
+export type AdminEmailList = {
+    rows: Array<AdminEmail>;
+    counts: {
+        pending: number;
+        sent: number;
+        failed: number;
+    };
+};
+
+export type AdminEmail = {
+    id: string;
+    kind: 'order_confirmed' | 'order_shipped' | 'order_refunded';
+    status: EmailStatus;
+    attempts: number;
+    last_error: string | null;
+    created_at: string;
+    sent_at: string | null;
+    /**
+     * When a pending one is tried next
+     */
+    next_attempt_at: string;
+    /**
+     * When it was last sent again
+     */
+    requeued_at: string | null;
+    order_number: number;
+    /**
+     * The order's email, where it goes
+     */
+    email: string;
+};
+
+export type EmailStatus = 'pending' | 'sent' | 'failed';
+
+export type AdminEmailResponse = {
+    success: true;
+    message: string;
+    data: AdminEmail;
+};
+
 export type AdminCustomerListResponse = {
     success: true;
     message: string;
@@ -1265,7 +1390,7 @@ export type AdminOrderDetail = {
      * The carrier's, when the order shipped with one
      */
     tracking_number: string | null;
-    items: Array<OrderItem>;
+    items: Array<AdminOrderItem>;
     customer: {
         id: string;
         name: string;
@@ -1285,6 +1410,31 @@ export type AdminOrderDetail = {
         stripe_refund_id: string | null;
         refunded_at: string | null;
     } | null;
+};
+
+export type AdminOrderItem = {
+    id: string;
+    order_id: string;
+    /**
+     * null once the variant is deleted
+     */
+    variant_id: string | null;
+    /**
+     * null once the product is deleted
+     */
+    product_id: string | null;
+    product_name: string;
+    product_slug: string;
+    sku: string | null;
+    options: Array<VariantOption>;
+    image: string;
+    unit_price: number;
+    quantity: number;
+    line_total: number;
+    /**
+     * How many weren't in stock when it was paid for
+     */
+    stock_shortfall: number;
 };
 
 export type ShipOrderBody = {
@@ -3423,6 +3573,175 @@ export type AdminListOrdersResponses = {
 };
 
 export type AdminListOrdersResponse = AdminListOrdersResponses[keyof AdminListOrdersResponses];
+
+export type AdminGetCountsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/counts';
+};
+
+export type AdminGetCountsErrors = {
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminGetCountsError = AdminGetCountsErrors[keyof AdminGetCountsErrors];
+
+export type AdminGetCountsResponses = {
+    /**
+     * Counts fetched
+     */
+    200: AdminCountsResponse;
+};
+
+export type AdminGetCountsResponse = AdminGetCountsResponses[keyof AdminGetCountsResponses];
+
+export type AdminListInventoryData = {
+    body?: never;
+    path?: never;
+    query?: {
+        page?: number;
+        q?: string;
+        /**
+         * A category slug
+         */
+        category?: string;
+        /**
+         * None, 1 to 5, or more than 5
+         */
+        stock?: StockLevel;
+        hidden?: boolean;
+    };
+    url: '/api/v1/admin/inventory';
+};
+
+export type AdminListInventoryErrors = {
+    /**
+     * Invalid page or filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminListInventoryError = AdminListInventoryErrors[keyof AdminListInventoryErrors];
+
+export type AdminListInventoryResponses = {
+    /**
+     * Inventory fetched
+     */
+    200: AdminInventoryResponse;
+};
+
+export type AdminListInventoryResponse = AdminListInventoryResponses[keyof AdminListInventoryResponses];
+
+export type AdminListEmailsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        page?: number;
+        status?: EmailStatus;
+    };
+    url: '/api/v1/admin/emails';
+};
+
+export type AdminListEmailsErrors = {
+    /**
+     * Invalid page or status (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminListEmailsError = AdminListEmailsErrors[keyof AdminListEmailsErrors];
+
+export type AdminListEmailsResponses = {
+    /**
+     * Emails fetched
+     */
+    200: AdminEmailListResponse;
+};
+
+export type AdminListEmailsResponse = AdminListEmailsResponses[keyof AdminListEmailsResponses];
+
+export type AdminRetryEmailData = {
+    body?: never;
+    path: {
+        emailID: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/emails/{emailID}/retry';
+};
+
+export type AdminRetryEmailErrors = {
+    /**
+     * Invalid id (INVALID_EMAIL_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such email (EMAIL_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * It hasn't failed (EMAIL_NOT_FAILED)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminRetryEmailError = AdminRetryEmailErrors[keyof AdminRetryEmailErrors];
+
+export type AdminRetryEmailResponses = {
+    /**
+     * Email queued again
+     */
+    200: AdminEmailResponse;
+};
+
+export type AdminRetryEmailResponse = AdminRetryEmailResponses[keyof AdminRetryEmailResponses];
 
 export type AdminListCustomersData = {
     body?: never;

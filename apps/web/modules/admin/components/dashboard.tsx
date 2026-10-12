@@ -250,12 +250,14 @@ function NeedsAttention({
       icon: EnvelopeSimpleIcon,
       label: "Emails that failed",
       value: attention.failed_emails,
+      href: "/admin/emails?status=failed",
       urgent: true,
     },
     {
       icon: PackageIcon,
       label: "Variants sold out",
       value: attention.out_of_stock,
+      href: "/admin/inventory?stock=out",
     },
   ];
   const clear = rows.every((r) => r.value === 0);
@@ -607,10 +609,15 @@ function LowStock({ items }: { items: AdminStats["low_stock"] }) {
             </li>
           ))}
           {more > 0 && (
-            <li className="py-2.5 text-xs text-muted-foreground">
-              {/* The API sends 10 at most, so a full list may hide more. */}
-              And {items.length === 10 ? "at least " : ""}
-              {more} more.
+            <li className="py-2.5 text-xs">
+              <Link
+                href="/admin/inventory"
+                className="text-muted-foreground hover:text-foreground hover:underline"
+              >
+                {/* The API sends 10 at most, so a full list may hide more. */}
+                And {items.length === 10 ? "at least " : ""}
+                {more} more in the inventory
+              </Link>
             </li>
           )}
         </ul>

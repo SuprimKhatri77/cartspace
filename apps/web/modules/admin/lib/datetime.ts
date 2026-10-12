@@ -17,3 +17,15 @@ export function fromLocalInput(value: string): string | undefined {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
 }
+
+const dateTime = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+/** "12 Oct, 14:05" in the browser's time zone (client-rendered data only). */
+export function formatDateTime(iso: string): string {
+  return dateTime.format(new Date(iso));
+}

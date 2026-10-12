@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
   Cents,
+  MessageResponseSchema,
+  PaginationMetaSchema,
   paginatedResponse,
   successResponse,
   Timestamp,
@@ -12,6 +14,7 @@ import {
   OrderSchema,
   OrderStatusSchema,
 } from "../order/order";
+import { VariantOptionSchema } from "../product/product";
 
 export const ReviewStatusSchema = z
   .enum(["published", "hidden"])
@@ -192,8 +195,15 @@ export const PaymentSchema = z
   .meta({ id: "Payment", description: "The Stripe payment of an order." });
 export type Payment = z.infer<typeof PaymentSchema>;
 
+export const AdminOrderItemSchema = OrderItemSchema.extend({
+  stock_shortfall: z
+    .int()
+    .nonnegative()
+    .describe("How many weren't in stock when it was paid for"),
+}).meta({ id: "AdminOrderItem" });
+
 export const AdminOrderDetailSchema = OrderSchema.extend({
-  items: z.array(OrderItemSchema),
+  items: z.array(AdminOrderItemSchema),
   customer: z.object({ id: Uuid, name: z.string(), email: z.string() }),
   payment: PaymentSchema.nullable().describe("null until the order is paid"),
 }).meta({ id: "AdminOrderDetail" });
@@ -312,3 +322,117 @@ export type AdminCustomer = z.infer<typeof AdminCustomerSchema>;
 export const AdminCustomerResponseSchema = successResponse(
   AdminCustomerSchema,
 ).meta({ id: "AdminCustomerResponse" });
+
+const OrderStatusCountsSchema = z
+  .object({
+    pending: z.int().nonnegative(),
+    paid: z.int().nonnegative(),
+    shipped: z.int().nonnegative(),
+    delivered: z.int().nonnegative(),
+    cancelled: z.int().nonnegative(),
+    refunded: z.int().nonnegative(),
+  })
+  .meta({ id: "OrderStatusCounts", description: "Every order by status" });
+
+export const AdminCountsSchema = z
+  .object({
+    orders_by_status: OrderStatusCountsSchema,
+    to_ship: z.int().nonnegative().describe("Paid orders"),
+    oversold: z
+      .int()
+      .nonnegative()
+      .describe("Paid orders with an item short of stock"),
+    failed_emails: z.int().nonnegative(),
+    out_of_stock: z
+      .int()
+      .nonnegative()
+      .describe("Active variants of active products with none left"),
+  })
+  .meta({ id: "AdminCounts", description: "What's waiting on the admin" });
+export type AdminCounts = z.infer<typeof AdminCountsSchema>;
+
+export const AdminCountsResponseSchema = successResponse(
+  AdminCountsSchema,
+).meta({ id: "AdminCountsResponse" });
+
+export const StockLevelSchema = z
+  .enum(["out", "low", "in"])
+  .meta({ id: "StockLevel", description: "None, 1 to 5, or more than 5" });
+export type StockLevel = z.infer<typeof StockLevelSchema>;
+
+export const AdminInventoryRowSchema = z
+  .object({
+    variant_id: Uuid,
+    product_id: Uuid,
+    product_name: z.string(),
+    sku: z.string().nullable(),
+    stock: z.int().nonnegative(),
+    selling_price: Cents,
+    is_active: z.boolean(),
+    product_active: z.boolean(),
+    image: z.string().describe("The variant's first image, else the product's"),
+    options: z.array(VariantOptionSchema),
+  })
+  .meta({ id: "AdminInventoryRow" });
+export type AdminInventoryRow = z.infer<typeof AdminInventoryRowSchema>;
+
+// A page of rows with counts beside them, so not paginatedResponse.
+export const AdminInventoryResponseSchema = MessageResponseSchema.extend({
+  meta: PaginationMetaSchema,
+  data: z
+    .object({
+      rows: z.array(AdminInventoryRowSchema),
+      counts: z
+        .object({
+          out_of_stock: z.int().nonnegative(),
+          low: z.int().nonnegative(),
+          in_stock: z.int().nonnegative(),
+        })
+        .describe("Per stock level, for the other filters"),
+    })
+    .meta({ id: "AdminInventory" }),
+}).meta({ id: "AdminInventoryResponse" });
+export type AdminInventoryResponse = z.infer<
+  typeof AdminInventoryResponseSchema
+>;
+
+export const EmailStatusSchema = z
+  .enum(["pending", "sent", "failed"])
+  .meta({ id: "EmailStatus" });
+export type EmailStatus = z.infer<typeof EmailStatusSchema>;
+
+export const AdminEmailSchema = z
+  .object({
+    id: Uuid,
+    kind: z.enum(["order_confirmed", "order_shipped", "order_refunded"]),
+    status: EmailStatusSchema,
+    attempts: z.int().nonnegative(),
+    last_error: z.string().nullable(),
+    created_at: Timestamp,
+    sent_at: Timestamp.nullable(),
+    next_attempt_at: Timestamp.describe("When a pending one is tried next"),
+    requeued_at: Timestamp.nullable().describe("When it was last sent again"),
+    order_number: z.int().positive(),
+    email: z.string().describe("The order's email, where it goes"),
+  })
+  .meta({ id: "AdminEmail" });
+export type AdminEmail = z.infer<typeof AdminEmailSchema>;
+
+// A page of rows with counts beside them, so not paginatedResponse.
+export const AdminEmailListResponseSchema = MessageResponseSchema.extend({
+  meta: PaginationMetaSchema,
+  data: z
+    .object({
+      rows: z.array(AdminEmailSchema),
+      counts: z.object({
+        pending: z.int().nonnegative(),
+        sent: z.int().nonnegative(),
+        failed: z.int().nonnegative(),
+      }),
+    })
+    .meta({ id: "AdminEmailList" }),
+}).meta({ id: "AdminEmailListResponse" });
+
+export const AdminEmailResponseSchema = successResponse(AdminEmailSchema).meta({
+  id: "AdminEmailResponse",
+});

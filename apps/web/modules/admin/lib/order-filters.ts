@@ -1,4 +1,9 @@
-import type { OrderStatus, ReviewStatus } from "@repo/types";
+import type {
+  EmailStatus,
+  OrderStatus,
+  ReviewStatus,
+  StockLevel,
+} from "@repo/types";
 
 type Params = Record<string, string | string[] | undefined>;
 
@@ -125,6 +130,75 @@ export function adminReviewsSearch(f: AdminReviewFilters): string {
   return searchOf([
     ["status", f.status],
     ["rating", f.rating ?? undefined],
+    ["page", f.page],
+  ]);
+}
+
+const STOCK_LEVELS: StockLevel[] = ["out", "low", "in"];
+
+/** The inventory table's state, mirrored in its URL. */
+export type AdminInventoryFilters = {
+  page: number;
+  q: string;
+  stock: StockLevel | "";
+  category: string;
+  /** Hidden variants and products too. */
+  hidden: boolean;
+};
+
+export function parseAdminInventoryFilters(
+  params: Params,
+): AdminInventoryFilters {
+  const stock = first(params.stock) as StockLevel;
+  return {
+    page: pageOf(params),
+    q: first(params.q).slice(0, 100),
+    stock: STOCK_LEVELS.includes(stock) ? stock : "",
+    category: first(params.category),
+    hidden: first(params.hidden) === "true",
+  };
+}
+
+export function adminInventoryQuery(f: AdminInventoryFilters) {
+  return {
+    page: f.page,
+    ...(f.q && { q: f.q }),
+    ...(f.stock && { stock: f.stock }),
+    ...(f.category && { category: f.category }),
+    ...(f.hidden && { hidden: true }),
+  };
+}
+
+export function adminInventorySearch(f: AdminInventoryFilters): string {
+  return searchOf([
+    ["stock", f.stock],
+    ["q", f.q],
+    ["category", f.category],
+    ["hidden", f.hidden ? "true" : ""],
+    ["page", f.page],
+  ]);
+}
+
+const EMAIL_STATUSES: EmailStatus[] = ["pending", "sent", "failed"];
+
+/** The email outbox list's state, mirrored in its URL. */
+export type AdminEmailFilters = { page: number; status: EmailStatus | "" };
+
+export function parseAdminEmailFilters(params: Params): AdminEmailFilters {
+  const status = first(params.status) as EmailStatus;
+  return {
+    page: pageOf(params),
+    status: EMAIL_STATUSES.includes(status) ? status : "",
+  };
+}
+
+export function adminEmailsQuery(f: AdminEmailFilters) {
+  return { page: f.page, ...(f.status && { status: f.status }) };
+}
+
+export function adminEmailsSearch(f: AdminEmailFilters): string {
+  return searchOf([
+    ["status", f.status],
     ["page", f.page],
   ]);
 }
