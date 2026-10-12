@@ -42,7 +42,7 @@ import { adminKeys } from "../keys";
 import { useAdminOrder } from "../queries";
 import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { AdminPageHeader } from "./page-header";
-import { Section } from "./product-form";
+import { Panel } from "./panel";
 import { OrderStatusBadge } from "./status-badge";
 
 type Dialogs = "ship" | "deliver" | "cancel" | "refund" | null;
@@ -224,7 +224,7 @@ export function OrderDetailView({ number }: { number: number }) {
       />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
-        <Section title="Items" hint={String(items)} className="[&>div]:p-0">
+        <Panel title="Items" hint={String(items)} className="[&>div]:p-0">
           <ul className="divide-y divide-border">
             {o.items.map((item) => (
               <li key={item.id} className="flex gap-4 px-5 py-4">
@@ -289,10 +289,10 @@ export function OrderDetailView({ number }: { number: number }) {
               <dd className="tabular-nums">{formatPrice(o.total)}</dd>
             </div>
           </dl>
-        </Section>
+        </Panel>
 
         <div className="space-y-6">
-          <Section title="Customer">
+          <Panel title="Customer">
             <p className="text-[0.8125rem]">{o.customer.name}</p>
             <a
               href={`mailto:${o.email}`}
@@ -314,15 +314,15 @@ export function OrderDetailView({ number }: { number: number }) {
               <br />
               <span className="text-muted-foreground">{a.phone}</span>
             </address>
-          </Section>
+          </Panel>
 
-          <Section title="Payment">
+          <Panel title="Payment">
             <Payment order={o} />
-          </Section>
+          </Panel>
 
-          <Section title="Timeline">
+          <Panel title="Timeline">
             <Timeline order={o} />
-          </Section>
+          </Panel>
         </div>
       </div>
 
