@@ -1002,21 +1002,85 @@ export type AdminStatsResponse = {
 };
 
 export type AdminStats = {
+    range: StatsRange;
     /**
-     * Cents, over paid, shipped and delivered orders
+     * The range
      */
-    revenue: number;
-    orders: number;
-    average_order_value: number;
+    current: {
+        /**
+         * Paid, shipped and delivered orders
+         */
+        revenue: number;
+        orders: number;
+        average_order_value: number;
+        new_customers: number;
+    };
+    /**
+     * The same number of days before it
+     */
+    previous: {
+        /**
+         * Paid, shipped and delivered orders
+         */
+        revenue: number;
+        orders: number;
+        average_order_value: number;
+        new_customers: number;
+    };
+    /**
+     * Customer accounts, all time
+     */
     customers: number;
     /**
-     * The last 30 days (UTC), oldest first, every day present
+     * Every day of the range (UTC), oldest first
      */
-    sales_by_day: Array<{
+    series: Array<{
         day: string;
         revenue: number;
         orders: number;
     }>;
+    /**
+     * Every order by status, all time
+     */
+    orders_by_status: {
+        pending: number;
+        paid: number;
+        shipped: number;
+        delivered: number;
+        cancelled: number;
+        refunded: number;
+    };
+    /**
+     * Best sellers by revenue in the range (5 at most)
+     */
+    top_products: Array<{
+        product_id: string;
+        product_name: string;
+        /**
+         * Empty when the product has none
+         */
+        image: string;
+        units: number;
+        revenue: number;
+    }>;
+    needs_attention: {
+        /**
+         * Paid orders
+         */
+        to_ship: number;
+        /**
+         * Paid orders with an item short of stock
+         */
+        oversold: number;
+        /**
+         * Emails given up on
+         */
+        failed_emails: number;
+        /**
+         * Active variants with none left
+         */
+        out_of_stock: number;
+    };
     /**
      * Active variants with 5 or fewer left, lowest first (10 at most)
      */
@@ -1037,7 +1101,27 @@ export type AdminStats = {
         created_at: string;
         paid_at: string | null;
     }>;
+    /**
+     * The 5 latest, hidden ones too
+     */
+    recent_reviews: Array<{
+        id: string;
+        rating: number;
+        title: string;
+        status: ReviewStatus;
+        created_at: string;
+        product_id: string;
+        product_name: string;
+        author_name: string;
+    }>;
 };
+
+/**
+ * Days ending today (UTC)
+ */
+export type StatsRange = '7d' | '30d' | '90d';
+
+export type ReviewStatus = 'published' | 'hidden';
 
 export type UploadSignatureResponse = {
     success: true;
@@ -1176,8 +1260,6 @@ export type AdminReview = {
     author_name: string;
     author_email: string;
 };
-
-export type ReviewStatus = 'published' | 'hidden';
 
 export type AdminReviewResponse = {
     success: true;
@@ -3166,11 +3248,20 @@ export type GetStoreSettingsResponse = GetStoreSettingsResponses[keyof GetStoreS
 export type AdminGetStatsData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * 30d by default
+         */
+        range?: '7d' | '30d' | '90d';
+    };
     url: '/api/v1/admin/stats';
 };
 
 export type AdminGetStatsErrors = {
+    /**
+     * Unknown range (INVALID_QUERY_PARAMETER)
+     */
+    400: ApiError;
     /**
      * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
      */

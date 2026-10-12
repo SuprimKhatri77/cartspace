@@ -25,13 +25,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { adminCreateProduct, adminUpdateProduct } from "@/lib/api/client";
 import { getApiError, mapFieldErrors } from "@/lib/api/errors";
 import { friendlyFieldErrors, withoutErrors } from "@/lib/forms";
-import { cn } from "@/lib/utils";
 import { useAdminMutation } from "../hooks/use-admin-mutation";
 import { adminKeys } from "../keys";
 import { categoryPath, orderTree } from "../lib/categories";
 import type { StoredImage } from "../lib/upload";
 import { useCategoryTree } from "../queries";
 import { ImageManager } from "./image-manager";
+import { Panel } from "./panel";
 
 const MAX_FEATURES = 7;
 
@@ -176,7 +176,7 @@ export function ProductForm({ product }: { product?: Product }) {
       className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start"
     >
       <div className="space-y-6">
-        <Section title="Details">
+        <Panel title="Details">
           <div className="space-y-5">
             <Field data-invalid={Boolean(errors.name)}>
               <FieldLabel
@@ -216,9 +216,9 @@ export function ProductForm({ product }: { product?: Product }) {
               </FieldError>
             </Field>
           </div>
-        </Section>
+        </Panel>
 
-        <Section title="Images" hint={`${images.length} of 5`}>
+        <Panel title="Images" hint={`${images.length} of 5`}>
           <ImageManager
             images={images}
             onChange={(update) => {
@@ -234,9 +234,9 @@ export function ProductForm({ product }: { product?: Product }) {
               {imageError}
             </p>
           )}
-        </Section>
+        </Panel>
 
-        <Section
+        <Panel
           title="Features"
           hint={`${values.features.length} of ${MAX_FEATURES}`}
         >
@@ -298,11 +298,11 @@ export function ProductForm({ product }: { product?: Product }) {
               </Button>
             )}
           </div>
-        </Section>
+        </Panel>
       </div>
 
       <div className="space-y-6 xl:sticky xl:top-24">
-        <Section title="Organisation">
+        <Panel title="Organisation">
           <Field data-invalid={Boolean(errors.category_id)}>
             <FieldLabel
               htmlFor="product-category"
@@ -336,9 +336,9 @@ export function ProductForm({ product }: { product?: Product }) {
               {errors.category_id}
             </FieldError>
           </Field>
-        </Section>
+        </Panel>
 
-        <Section title="Visibility">
+        <Panel title="Visibility">
           <div className="space-y-5">
             <ToggleField
               id="product-active"
@@ -355,7 +355,7 @@ export function ProductForm({ product }: { product?: Product }) {
               onChange={(checked) => set("is_featured", checked)}
             />
           </div>
-        </Section>
+        </Panel>
 
         <div className="sticky bottom-0 -mx-4 border-t border-border bg-background/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 xl:static xl:mx-0 xl:border-0 xl:bg-transparent xl:p-0 xl:backdrop-blur-none">
           <Button
@@ -379,45 +379,6 @@ export function ProductForm({ product }: { product?: Product }) {
         </div>
       </div>
     </form>
-  );
-}
-
-export function Section({
-  title,
-  hint,
-  action,
-  id,
-  children,
-  className,
-}: {
-  title: string;
-  hint?: string;
-  action?: React.ReactNode;
-  id?: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <section
-      id={id}
-      className={cn(
-        "scroll-mt-24 rounded-panel border border-border bg-card",
-        className,
-      )}
-    >
-      <header className="flex min-h-12 items-center justify-between gap-3 border-b border-border px-5 py-2">
-        <h2 className="eyebrow !text-foreground">{title}</h2>
-        <div className="flex items-center gap-3">
-          {hint && (
-            <span className="font-mono text-[0.625rem] text-muted-foreground tabular-nums">
-              {hint}
-            </span>
-          )}
-          {action}
-        </div>
-      </header>
-      <div className="p-5">{children}</div>
-    </section>
   );
 }
 

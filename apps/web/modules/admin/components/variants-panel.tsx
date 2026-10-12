@@ -35,7 +35,7 @@ import { adminKeys } from "../keys";
 import type { StoredImage } from "../lib/upload";
 import { useAdminVariants } from "../queries";
 import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
-import { Section } from "./product-form";
+import { Panel } from "./panel";
 import { ActiveBadge } from "./status-badge";
 import { StockInput } from "./stock-input";
 import { VariantDialog } from "./variant-dialog";
@@ -88,7 +88,7 @@ export function VariantsPanel({
     variants.isSuccess && list.length > 0 && !list.some((v) => v.is_default);
 
   return (
-    <Section
+    <Panel
       id="variants"
       title="Variants"
       hint={variants.isSuccess ? String(list.length) : undefined}
@@ -276,7 +276,7 @@ export function VariantsPanel({
         pending={remove.isPending}
         onConfirm={() => deleting && remove.mutate(deleting)}
       />
-    </Section>
+    </Panel>
   );
 }
 

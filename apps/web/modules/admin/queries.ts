@@ -1,6 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import type { StatsRange } from "@repo/types";
 import {
   adminGetOrder,
   adminGetProduct,
@@ -20,14 +21,20 @@ import {
   type AdminReviewFilters,
 } from "./lib/order-filters";
 
-export function useAdminStats() {
+/** The dashboard for a range; the last range stays up while the next loads. */
+export function useAdminStats(range: StatsRange) {
   return useQuery({
-    queryKey: adminKeys.stats(),
+    queryKey: adminKeys.stats(range),
     queryFn: async ({ signal }) => {
-      const { data } = await adminGetStats({ signal, throwOnError: true });
+      const { data } = await adminGetStats({
+        query: { range },
+        signal,
+        throwOnError: true,
+      });
       return data.data;
     },
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
 }
 

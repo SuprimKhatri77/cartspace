@@ -3087,24 +3087,73 @@
       "AdminStats": {
         "type": "object",
         "properties": {
-          "revenue": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Cents, over paid, shipped and delivered orders"
+          "range": {
+            "$ref": "#/components/schemas/StatsRange"
           },
-          "orders": {
-            "type": "integer",
-            "minimum": 0
+          "current": {
+            "type": "object",
+            "properties": {
+              "revenue": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Paid, shipped and delivered orders"
+              },
+              "orders": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "average_order_value": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "new_customers": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "revenue",
+              "orders",
+              "average_order_value",
+              "new_customers"
+            ],
+            "description": "The range"
           },
-          "average_order_value": {
-            "type": "integer",
-            "minimum": 0
+          "previous": {
+            "type": "object",
+            "properties": {
+              "revenue": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Paid, shipped and delivered orders"
+              },
+              "orders": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "average_order_value": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "new_customers": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "revenue",
+              "orders",
+              "average_order_value",
+              "new_customers"
+            ],
+            "description": "The same number of days before it"
           },
           "customers": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "Customer accounts, all time"
           },
-          "sales_by_day": {
+          "series": {
             "type": "array",
             "items": {
               "type": "object",
@@ -3128,7 +3177,111 @@
                 "orders"
               ]
             },
-            "description": "The last 30 days (UTC), oldest first, every day present"
+            "description": "Every day of the range (UTC), oldest first"
+          },
+          "orders_by_status": {
+            "type": "object",
+            "properties": {
+              "pending": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "paid": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "shipped": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "delivered": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cancelled": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "refunded": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "pending",
+              "paid",
+              "shipped",
+              "delivered",
+              "cancelled",
+              "refunded"
+            ],
+            "description": "Every order by status, all time"
+          },
+          "top_products": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "product_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "product_name": {
+                  "type": "string"
+                },
+                "image": {
+                  "type": "string",
+                  "description": "Empty when the product has none"
+                },
+                "units": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "revenue": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "product_id",
+                "product_name",
+                "image",
+                "units",
+                "revenue"
+              ]
+            },
+            "description": "Best sellers by revenue in the range (5 at most)"
+          },
+          "needs_attention": {
+            "type": "object",
+            "properties": {
+              "to_ship": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Paid orders"
+              },
+              "oversold": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Paid orders with an item short of stock"
+              },
+              "failed_emails": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Emails given up on"
+              },
+              "out_of_stock": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Active variants with none left"
+              }
+            },
+            "required": [
+              "to_ship",
+              "oversold",
+              "failed_emails",
+              "out_of_stock"
+            ]
           },
           "low_stock": {
             "type": "array",
@@ -3216,16 +3369,84 @@
                 "paid_at"
               ]
             }
+          },
+          "recent_reviews": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "rating": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 5
+                },
+                "title": {
+                  "type": "string"
+                },
+                "status": {
+                  "$ref": "#/components/schemas/ReviewStatus"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "product_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "product_name": {
+                  "type": "string"
+                },
+                "author_name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "rating",
+                "title",
+                "status",
+                "created_at",
+                "product_id",
+                "product_name",
+                "author_name"
+              ]
+            },
+            "description": "The 5 latest, hidden ones too"
           }
         },
         "required": [
-          "revenue",
-          "orders",
-          "average_order_value",
+          "range",
+          "current",
+          "previous",
           "customers",
-          "sales_by_day",
+          "series",
+          "orders_by_status",
+          "top_products",
+          "needs_attention",
           "low_stock",
-          "recent_orders"
+          "recent_orders",
+          "recent_reviews"
+        ]
+      },
+      "StatsRange": {
+        "type": "string",
+        "enum": [
+          "7d",
+          "30d",
+          "90d"
+        ],
+        "description": "Days ending today (UTC)"
+      },
+      "ReviewStatus": {
+        "type": "string",
+        "enum": [
+          "published",
+          "hidden"
         ]
       },
       "UploadSignatureResponse": {
@@ -3717,13 +3938,6 @@
           "author_email"
         ],
         "description": "A review with its product and author."
-      },
-      "ReviewStatus": {
-        "type": "string",
-        "enum": [
-          "published",
-          "hidden"
-        ]
       },
       "AdminReviewResponse": {
         "type": "object",
@@ -7720,10 +7934,27 @@
           "Admin"
         ],
         "summary": "Dashboard figures",
-        "description": "Sales (paid, shipped and delivered orders), the last 30 days by day, low stock and recent orders.",
+        "description": "For a range of days ending today (UTC): sales (paid, shipped and delivered orders, by payment date) and sign-ups against the period before, sales by day and best sellers. Also orders by status, what needs attention, low stock, and the latest orders and reviews.",
         "security": [
           {
             "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "7d",
+                "30d",
+                "90d"
+              ],
+              "description": "30d by default"
+            },
+            "required": false,
+            "description": "30d by default",
+            "name": "range",
+            "in": "query"
           }
         ],
         "responses": {
@@ -7733,6 +7964,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminStatsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown range (INVALID_QUERY_PARAMETER)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
                 }
               }
             }

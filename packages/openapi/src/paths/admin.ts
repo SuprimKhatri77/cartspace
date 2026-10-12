@@ -10,13 +10,19 @@ export function registerAdminPaths() {
     tag: "Admin",
     summary: "Dashboard figures",
     description:
-      "Sales (paid, shipped and delivered orders), the last 30 days by day, low stock and recent orders.",
+      "For a range of days ending today (UTC): sales (paid, shipped and delivered orders, by payment date) and sign-ups against the period before, sales by day and best sellers. Also orders by status, what needs attention, low stock, and the latest orders and reviews.",
     auth: "admin",
+    request: {
+      query: z.object({
+        range: schemas.StatsRangeSchema.optional().describe("30d by default"),
+      }),
+    },
     success: {
       status: 200,
       description: "Stats fetched",
       schema: schemas.AdminStatsResponseSchema,
     },
+    errors: { 400: "Unknown range (INVALID_QUERY_PARAMETER)" },
   });
 
   operation({

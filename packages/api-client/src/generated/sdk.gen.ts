@@ -831,7 +831,7 @@ export const getStoreSettings = <ThrowOnError extends boolean = false>(options?:
 /**
  * Dashboard figures
  *
- * Sales (paid, shipped and delivered orders), the last 30 days by day, low stock and recent orders.
+ * For a range of days ending today (UTC): sales (paid, shipped and delivered orders, by payment date) and sign-ups against the period before, sales by day and best sellers. Also orders by status, what needs attention, low stock, and the latest orders and reviews.
  */
 export const adminGetStats = <ThrowOnError extends boolean = false>(options?: Options<AdminGetStatsData, ThrowOnError>): RequestResult<AdminGetStatsResponses, AdminGetStatsErrors, ThrowOnError> => (options?.client ?? client).get<AdminGetStatsResponses, AdminGetStatsErrors, ThrowOnError>({
     responseType: 'json',

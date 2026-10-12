@@ -1,24 +1,32 @@
 -- Admin dashboard. "Sales" are orders that were paid (paid, shipped or
 -- delivered); abandoned checkouts and cancellations don't count.
 
--- name: AdminSalesTotals :one
+-- name: AdminPeriodTotals :one
+-- Sales paid in [from, to).
 SELECT
     COALESCE(SUM(total), 0)::bigint AS revenue,
     COUNT(*)::bigint AS orders
 FROM orders
-WHERE status IN ('paid', 'shipped', 'delivered');
+WHERE status IN ('paid', 'shipped', 'delivered')
+  AND paid_at >= sqlc.arg(from_time)::timestamptz AND paid_at < sqlc.arg(to_time)::timestamptz;
 
 -- name: AdminCustomerCount :one
 SELECT COUNT(*) FROM users WHERE role = 'customer';
 
+-- name: AdminNewCustomers :one
+-- Customer accounts created in [from, to).
+SELECT COUNT(*) FROM users
+WHERE role = 'customer'
+  AND created_at >= sqlc.arg(from_time)::timestamptz AND created_at < sqlc.arg(to_time)::timestamptz;
+
 -- name: AdminSalesByDay :many
--- The last 30 days (UTC), every day present, oldest first.
+-- The last @days days (UTC), every day present, oldest first.
 SELECT
     d.day::date AS day,
     COALESCE(SUM(o.total), 0)::bigint AS revenue,
     COUNT(o.id)::int AS orders
 FROM generate_series(
-    (now() AT TIME ZONE 'UTC')::date - 29,
+    (now() AT TIME ZONE 'UTC')::date - (sqlc.arg(days)::int - 1),
     (now() AT TIME ZONE 'UTC')::date,
     interval '1 day'
 ) AS d(day)
@@ -27,6 +35,55 @@ LEFT JOIN orders o
     AND o.status IN ('paid', 'shipped', 'delivered')
 GROUP BY d.day
 ORDER BY d.day;
+
+-- name: AdminOrdersByStatus :many
+-- Every order by status, as the admin order tabs filter them.
+SELECT status, COUNT(*)::bigint AS count
+FROM orders
+GROUP BY status;
+
+-- name: AdminTopProducts :many
+-- Best sellers by revenue among sales paid in [from, to).
+SELECT
+    p.id AS product_id,
+    p.name AS product_name,
+    COALESCE(p.images[1], MAX(oi.image), '')::text AS image,
+    SUM(oi.quantity)::bigint AS units,
+    SUM(oi.line_total)::bigint AS revenue
+FROM order_items oi
+JOIN orders o ON o.id = oi.order_id
+JOIN products p ON p.id = oi.product_id
+WHERE o.status IN ('paid', 'shipped', 'delivered')
+  AND o.paid_at >= sqlc.arg(from_time)::timestamptz AND o.paid_at < sqlc.arg(to_time)::timestamptz
+GROUP BY p.id
+ORDER BY revenue DESC, units DESC, p.name
+LIMIT 5;
+
+-- name: AdminAttention :one
+-- What needs the admin: paid orders to ship (and those short of stock),
+-- emails given up on, and active variants that are sold out.
+SELECT
+    (SELECT COUNT(*) FROM orders WHERE status = 'paid')::bigint AS to_ship,
+    (
+        SELECT COUNT(DISTINCT o.id) FROM orders o
+        JOIN order_items oi ON oi.order_id = o.id
+        WHERE o.status = 'paid' AND oi.stock_shortfall > 0
+    )::bigint AS oversold,
+    (SELECT COUNT(*) FROM email_outbox WHERE status = 'failed')::bigint AS failed_emails,
+    (
+        SELECT COUNT(*) FROM product_variants pv
+        JOIN products p ON p.id = pv.product_id
+        WHERE pv.is_active AND p.is_active AND pv.stock = 0
+    )::bigint AS out_of_stock;
+
+-- name: AdminRecentReviews :many
+SELECT r.id, r.rating, r.title, r.status, r.created_at,
+    p.id AS product_id, p.name AS product_name, u.name AS author_name
+FROM reviews r
+JOIN products p ON p.id = r.product_id
+JOIN users u ON u.id = r.user_id
+ORDER BY r.created_at DESC, r.id DESC
+LIMIT 5;
 
 -- name: AdminLowStock :many
 SELECT
