@@ -8,8 +8,9 @@ ORDER BY is_default DESC, created_at DESC, id DESC;
 SELECT COUNT(*) FROM addresses WHERE user_id = $1;
 
 -- name: CreateAddress :one
-INSERT INTO addresses (user_id, full_name, phone, line1, line2, city, region, postal_code, country)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+-- A new default needs ClearDefaultAddress first (in the same transaction).
+INSERT INTO addresses (user_id, full_name, phone, line1, line2, city, region, postal_code, country, is_default)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING *;
 
 -- name: GetAddress :one

@@ -57,6 +57,16 @@ func TestNormalizeAddress(t *testing.T) {
 	}
 }
 
+func TestCreateAddressParams(t *testing.T) {
+	a := types.AddressInput{FullName: "Ada", Phone: "5550100", Line1: "1 Main", City: "X", PostalCode: "1", Country: "GB"}
+	for _, isDefault := range []bool{false, true} {
+		got := createAddressParams(pgtype.UUID{}, a, isDefault)
+		if got.IsDefault != isDefault || got.FullName != "Ada" || got.Line2.Valid {
+			t.Errorf("createAddressParams(default=%v) = %+v", isDefault, got)
+		}
+	}
+}
+
 func TestOptionSuffix(t *testing.T) {
 	if got := optionSuffix(nil); got != "" {
 		t.Errorf("nil options = %q", got)

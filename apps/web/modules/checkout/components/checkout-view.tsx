@@ -180,6 +180,9 @@ function CheckoutForm({
   const choice = picked ?? saved?.[0]?.id ?? NEW;
   const [address, setAddress] = useState<AddressValues>(EMPTY_ADDRESS);
   const [save, setSave] = useState(true);
+  // Ticked until the shopper says otherwise if they have no default yet.
+  const [makeDefaultChoice, setMakeDefault] = useState<boolean | null>(null);
+  const makeDefault = makeDefaultChoice ?? !saved?.some((a) => a.is_default);
   // The API saves no more than this many; past it, it ignores the box.
   const bookFull = (saved?.length ?? 0) >= MAX_ADDRESSES;
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -255,7 +258,11 @@ function CheckoutForm({
       return;
     }
     setErrors({});
-    checkout.mutate({ address: parsed.data, save_address: save && !bookFull });
+    checkout.mutate({
+      address: parsed.data,
+      save_address: save && !bookFull,
+      make_default: save && !bookFull && makeDefault,
+    });
   }
 
   const shipping = shippingFor(cart.subtotal);
@@ -340,15 +347,28 @@ function CheckoutForm({
                       .
                     </p>
                   ) : (
-                    <label className="flex items-center gap-3 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={save}
-                        onChange={(e) => setSave(e.target.checked)}
-                        className="size-4 accent-[var(--primary)]"
-                      />
-                      Save this address for next time
-                    </label>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-3 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={save}
+                          onChange={(e) => setSave(e.target.checked)}
+                          className="size-4 accent-[var(--primary)]"
+                        />
+                        Save this address for next time
+                      </label>
+                      {save && (
+                        <label className="animate-rise flex items-center gap-3 pl-7 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={makeDefault}
+                            onChange={(e) => setMakeDefault(e.target.checked)}
+                            className="size-4 accent-[var(--primary)]"
+                          />
+                          Make it my default address
+                        </label>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

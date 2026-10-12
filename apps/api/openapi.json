@@ -2062,6 +2062,10 @@
           "save_address": {
             "type": "boolean",
             "description": "Add the new address to the address book"
+          },
+          "make_default": {
+            "type": "boolean",
+            "description": "With save_address: make the new address the default"
           }
         },
         "description": "Ship to a saved address or a new one: exactly one of the two."

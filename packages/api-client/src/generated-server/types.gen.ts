@@ -689,6 +689,10 @@ export type CheckoutBody = {
      * Add the new address to the address book
      */
     save_address?: boolean;
+    /**
+     * With save_address: make the new address the default
+     */
+    make_default?: boolean;
 };
 
 /**
