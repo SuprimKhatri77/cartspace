@@ -66,6 +66,11 @@ const (
 	OrderAlreadyPaid        = "ORDER_ALREADY_PAID"
 	RefundRefused           = "REFUND_REFUSED"
 
+	// email outbox
+	InvalidEmailID = "INVALID_EMAIL_ID"
+	EmailNotFound  = "EMAIL_NOT_FOUND"
+	EmailNotFailed = "EMAIL_NOT_FAILED"
+
 	// wishlist
 	WishlistFull = "WISHLIST_FULL"
 

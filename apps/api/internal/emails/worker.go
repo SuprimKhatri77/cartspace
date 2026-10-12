@@ -119,7 +119,7 @@ func (w *Worker) deliver(ctx context.Context, row db.EmailOutbox) {
 	record := context.WithoutCancel(ctx)
 	log := slog.With("email", row.Kind, "attempt", row.Attempts)
 
-	if row.CreatedAt.Valid && w.now().Sub(row.CreatedAt.Time) > maxAge {
+	if queued := queuedAt(row); queued.Valid && w.now().Sub(queued.Time) > maxAge {
 		log.Warn("emails: dropped, too old to send")
 		w.fail(record, row, "not sent within 48 hours")
 		return
@@ -203,4 +203,13 @@ func errorText(s string) pgtype.Text {
 		s = strings.ToValidUTF8(s[:lastErrorLen], "")
 	}
 	return pgtype.Text{String: s, Valid: true}
+}
+
+// queuedAt is when the email's current run of attempts began: when it was
+// queued, or when an admin last sent it back to the queue.
+func queuedAt(row db.EmailOutbox) pgtype.Timestamptz {
+	if row.RequeuedAt.Valid {
+		return row.RequeuedAt
+	}
+	return row.CreatedAt
 }

@@ -60,6 +60,7 @@ type EmailOutbox struct {
 	LastError     pgtype.Text        `json:"last_error"`
 	SentAt        pgtype.Timestamptz `json:"sent_at"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	RequeuedAt    pgtype.Timestamptz `json:"requeued_at"`
 }
 
 type Order struct {

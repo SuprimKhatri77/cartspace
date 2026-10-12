@@ -12,6 +12,10 @@ import (
 func setupAdminRoutes(router *gin.RouterGroup, cfg config.Config) {
 	group := router.Group("/admin", middleware.RequireAuth(cfg.Config), middleware.RequireRole(constants.RoleAdmin))
 	group.GET("/stats", admin.GetStats(cfg.Queries))
+	group.GET("/counts", admin.GetCounts(cfg.Queries))
+	group.GET("/inventory", admin.ListInventory(cfg.Queries))
+	group.GET("/emails", admin.ListEmails(cfg.Queries))
+	group.POST("/emails/:emailID/retry", admin.RetryEmail(cfg.Queries))
 	group.POST("/uploads/signature", admin.SignUpload(cfg.CldClient))
 
 	orders := group.Group("/orders")

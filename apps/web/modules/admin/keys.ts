@@ -2,6 +2,8 @@ import type { StatsRange } from "@repo/types";
 import type { AdminProductFilters } from "./lib/filters";
 import type {
   AdminCustomerFilters,
+  AdminEmailFilters,
+  AdminInventoryFilters,
   AdminOrderFilters,
   AdminReviewFilters,
 } from "./lib/order-filters";
@@ -25,6 +27,13 @@ export const adminKeys = {
   orderList: (filters: AdminOrderFilters) =>
     [...adminKeys.orders(), "list", filters] as const,
   order: (number: number) => [...adminKeys.orders(), "detail", number] as const,
+  counts: () => [...adminKeys.all, "counts"] as const,
+  inventory: () => [...adminKeys.all, "inventory"] as const,
+  inventoryList: (filters: AdminInventoryFilters) =>
+    [...adminKeys.inventory(), filters] as const,
+  emails: () => [...adminKeys.all, "emails"] as const,
+  emailList: (filters: AdminEmailFilters) =>
+    [...adminKeys.emails(), filters] as const,
   customers: () => [...adminKeys.all, "customers"] as const,
   customerList: (filters: AdminCustomerFilters) =>
     [...adminKeys.customers(), "list", filters] as const,

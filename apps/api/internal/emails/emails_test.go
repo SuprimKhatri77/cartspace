@@ -213,6 +213,11 @@ func TestWorker(t *testing.T) {
 			r.CreatedAt.Time = now.Add(-maxAge - time.Minute)
 			return r
 		}, wantFail: true},
+		{name: "old but requeued by an admin", row: func(r db.EmailOutbox) db.EmailOutbox {
+			r.CreatedAt.Time = now.Add(-maxAge - time.Hour)
+			r.RequeuedAt = pgtype.Timestamptz{Time: now.Add(-time.Minute), Valid: true}
+			return r
+		}, wantSent: true},
 		{name: "unknown kind", row: func(r db.EmailOutbox) db.EmailOutbox { r.Kind = "order_lost"; return r }, wantFail: true},
 		{name: "database blip retries", orderErr: errors.New("conn reset"), wantRetry: 60},
 		{name: "shutdown leaves it to the lease", cancelled: true, sendErr: context.Canceled},

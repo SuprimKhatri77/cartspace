@@ -50,7 +50,12 @@ export function ProductEditor({ productId }: { productId: string }) {
     failure: "Couldn't delete the product.",
     // Not the product itself: refetching it while the page is still up
     // would flash "doesn't exist" on the way out.
-    invalidate: [adminKeys.productLists(), adminKeys.stats()],
+    invalidate: [
+      adminKeys.productLists(),
+      adminKeys.stats(),
+      adminKeys.inventory(),
+      adminKeys.counts(),
+    ],
     onSuccess: () => router.replace("/admin/products"),
   });
 

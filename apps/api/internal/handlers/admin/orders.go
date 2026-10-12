@@ -162,7 +162,7 @@ func respondOrder(c *gin.Context, queries *db.Queries, order db.Order, message s
 		Message: message,
 		Data: types.AdminOrderDetail{
 			Order:    order,
-			Items:    items,
+			Items:    types.NewAdminOrderItems(items),
 			Customer: types.AdminCustomer{ID: utils.UUIDToString(user.ID), Name: user.Name, Email: user.Email},
 			Payment:  payment,
 		},

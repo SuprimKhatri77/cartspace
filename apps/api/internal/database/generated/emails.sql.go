@@ -11,6 +11,158 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const adminEmailCounts = `-- name: AdminEmailCounts :many
+
+SELECT status, COUNT(*)::bigint AS count FROM email_outbox GROUP BY status
+`
+
+type AdminEmailCountsRow struct {
+	Status string `json:"status"`
+	Count  int64  `json:"count"`
+}
+
+// Admin: the outbox, newest first, by status.
+func (q *Queries) AdminEmailCounts(ctx context.Context) ([]AdminEmailCountsRow, error) {
+	rows, err := q.db.Query(ctx, adminEmailCounts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AdminEmailCountsRow{}
+	for rows.Next() {
+		var i AdminEmailCountsRow
+		if err := rows.Scan(&i.Status, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const adminGetEmail = `-- name: AdminGetEmail :one
+SELECT e.id, e.kind, e.status, e.attempts, e.last_error, e.created_at,
+    e.sent_at, e.next_attempt_at, e.requeued_at,
+    o.number AS order_number, o.email
+FROM email_outbox e
+JOIN orders o ON o.id = e.order_id
+WHERE e.id = $1
+`
+
+type AdminGetEmailRow struct {
+	ID            pgtype.UUID        `json:"id"`
+	Kind          string             `json:"kind"`
+	Status        string             `json:"status"`
+	Attempts      int32              `json:"attempts"`
+	LastError     pgtype.Text        `json:"last_error"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	SentAt        pgtype.Timestamptz `json:"sent_at"`
+	NextAttemptAt pgtype.Timestamptz `json:"next_attempt_at"`
+	RequeuedAt    pgtype.Timestamptz `json:"requeued_at"`
+	OrderNumber   int64              `json:"order_number"`
+	Email         string             `json:"email"`
+}
+
+func (q *Queries) AdminGetEmail(ctx context.Context, id pgtype.UUID) (AdminGetEmailRow, error) {
+	row := q.db.QueryRow(ctx, adminGetEmail, id)
+	var i AdminGetEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Kind,
+		&i.Status,
+		&i.Attempts,
+		&i.LastError,
+		&i.CreatedAt,
+		&i.SentAt,
+		&i.NextAttemptAt,
+		&i.RequeuedAt,
+		&i.OrderNumber,
+		&i.Email,
+	)
+	return i, err
+}
+
+const adminListEmails = `-- name: AdminListEmails :many
+SELECT e.id, e.kind, e.status, e.attempts, e.last_error, e.created_at,
+    e.sent_at, e.next_attempt_at, e.requeued_at,
+    o.number AS order_number, o.email
+FROM email_outbox e
+JOIN orders o ON o.id = e.order_id
+WHERE ($1::text IS NULL OR e.status = $1::text)
+ORDER BY e.created_at DESC, e.id DESC
+LIMIT $3 OFFSET $2
+`
+
+type AdminListEmailsParams struct {
+	Status     pgtype.Text `json:"status"`
+	PageOffset int32       `json:"page_offset"`
+	PageLimit  int32       `json:"page_limit"`
+}
+
+type AdminListEmailsRow struct {
+	ID            pgtype.UUID        `json:"id"`
+	Kind          string             `json:"kind"`
+	Status        string             `json:"status"`
+	Attempts      int32              `json:"attempts"`
+	LastError     pgtype.Text        `json:"last_error"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	SentAt        pgtype.Timestamptz `json:"sent_at"`
+	NextAttemptAt pgtype.Timestamptz `json:"next_attempt_at"`
+	RequeuedAt    pgtype.Timestamptz `json:"requeued_at"`
+	OrderNumber   int64              `json:"order_number"`
+	Email         string             `json:"email"`
+}
+
+func (q *Queries) AdminListEmails(ctx context.Context, arg AdminListEmailsParams) ([]AdminListEmailsRow, error) {
+	rows, err := q.db.Query(ctx, adminListEmails, arg.Status, arg.PageOffset, arg.PageLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AdminListEmailsRow{}
+	for rows.Next() {
+		var i AdminListEmailsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Status,
+			&i.Attempts,
+			&i.LastError,
+			&i.CreatedAt,
+			&i.SentAt,
+			&i.NextAttemptAt,
+			&i.RequeuedAt,
+			&i.OrderNumber,
+			&i.Email,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const adminRequeueEmail = `-- name: AdminRequeueEmail :execrows
+UPDATE email_outbox
+SET status = 'pending', attempts = 0, next_attempt_at = now(),
+    last_error = NULL, requeued_at = now()
+WHERE id = $1 AND status = 'failed'
+`
+
+// Sends a failed email back to the queue for a fresh set of attempts.
+func (q *Queries) AdminRequeueEmail(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, adminRequeueEmail, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const claimDueEmails = `-- name: ClaimDueEmails :many
 UPDATE email_outbox
 SET next_attempt_at = now() + make_interval(secs => $1::int),
@@ -22,7 +174,7 @@ WHERE id IN (
     LIMIT $2
     FOR UPDATE SKIP LOCKED
 )
-RETURNING id, kind, order_id, status, attempts, next_attempt_at, last_error, sent_at, created_at
+RETURNING id, kind, order_id, status, attempts, next_attempt_at, last_error, sent_at, created_at, requeued_at
 `
 
 type ClaimDueEmailsParams struct {
@@ -52,6 +204,7 @@ func (q *Queries) ClaimDueEmails(ctx context.Context, arg ClaimDueEmailsParams) 
 			&i.LastError,
 			&i.SentAt,
 			&i.CreatedAt,
+			&i.RequeuedAt,
 		); err != nil {
 			return nil, err
 		}

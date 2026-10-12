@@ -78,6 +78,94 @@ export function registerAdminPaths() {
 
   operation({
     method: "get",
+    path: "/api/v1/admin/counts",
+    operationId: "adminGetCounts",
+    tag: "Admin",
+    summary: "What's waiting",
+    description:
+      "Orders by status, paid orders short of stock, failed emails and sold-out variants: the nav badges and order tabs.",
+    auth: "admin",
+    success: {
+      status: 200,
+      description: "Counts fetched",
+      schema: schemas.AdminCountsResponseSchema,
+    },
+  });
+
+  operation({
+    method: "get",
+    path: "/api/v1/admin/inventory",
+    operationId: "adminListInventory",
+    tag: "Admin",
+    summary: "Stock by variant",
+    description:
+      "One row per variant on sale (hidden=true adds hidden variants and products), lowest stock first, 25 per page, with the count at each stock level. q is a piece of the product name or SKU; category includes its subcategories.",
+    auth: "admin",
+    request: {
+      query: z.object({
+        page,
+        q: z.string().max(100).optional(),
+        category: z.string().optional().describe("A category slug"),
+        stock: schemas.StockLevelSchema.optional(),
+        hidden: z.boolean().optional(),
+      }),
+    },
+    success: {
+      status: 200,
+      description: "Inventory fetched",
+      schema: schemas.AdminInventoryResponseSchema,
+    },
+    errors: {
+      400: "Invalid page or filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)",
+    },
+  });
+
+  operation({
+    method: "get",
+    path: "/api/v1/admin/emails",
+    operationId: "adminListEmails",
+    tag: "Admin",
+    summary: "The email outbox",
+    description:
+      "Order emails, newest first, 25 per page, with the count of each status.",
+    auth: "admin",
+    request: {
+      query: z.object({ page, status: schemas.EmailStatusSchema.optional() }),
+    },
+    success: {
+      status: 200,
+      description: "Emails fetched",
+      schema: schemas.AdminEmailListResponseSchema,
+    },
+    errors: {
+      400: "Invalid page or status (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)",
+    },
+  });
+
+  operation({
+    method: "post",
+    path: "/api/v1/admin/emails/{emailID}/retry",
+    operationId: "adminRetryEmail",
+    tag: "Admin",
+    summary: "Send a failed email again",
+    description:
+      "Puts it back in the queue with a fresh set of attempts; the sender takes it within seconds.",
+    auth: "admin",
+    request: { params: z.object({ emailID: Uuid }) },
+    success: {
+      status: 200,
+      description: "Email queued again",
+      schema: schemas.AdminEmailResponseSchema,
+    },
+    errors: {
+      400: "Invalid id (INVALID_EMAIL_ID)",
+      404: "No such email (EMAIL_NOT_FOUND)",
+      409: "It hasn't failed (EMAIL_NOT_FAILED)",
+    },
+  });
+
+  operation({
+    method: "get",
     path: "/api/v1/admin/customers",
     operationId: "adminListCustomers",
     tag: "Admin",

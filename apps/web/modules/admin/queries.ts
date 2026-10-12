@@ -3,11 +3,14 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { StatsRange } from "@repo/types";
 import {
+  adminGetCounts,
   adminGetCustomer,
   adminGetOrder,
   adminGetProduct,
   adminGetStats,
   adminListCustomers,
+  adminListEmails,
+  adminListInventory,
   adminListOrders,
   adminListProducts,
   adminListReviews,
@@ -18,9 +21,13 @@ import { adminKeys } from "./keys";
 import { adminProductsQuery, type AdminProductFilters } from "./lib/filters";
 import {
   adminCustomersQuery,
+  adminEmailsQuery,
+  adminInventoryQuery,
   adminOrdersQuery,
   adminReviewsQuery,
   type AdminCustomerFilters,
+  type AdminEmailFilters,
+  type AdminInventoryFilters,
   type AdminOrderFilters,
   type AdminReviewFilters,
 } from "./lib/order-filters";
@@ -170,5 +177,58 @@ export function useAdminCustomer(id: string) {
       });
       return data.data;
     },
+  });
+}
+
+/**
+ * What's waiting on the admin (nav badges, order tabs): refetched every
+ * minute and when the window regains focus.
+ */
+export function useAdminCounts() {
+  return useQuery({
+    queryKey: adminKeys.counts(),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminGetCounts({ signal, throwOnError: true });
+      return data.data;
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+/** One page of the inventory; the last page stays up while the next loads. */
+export function useAdminInventory(filters: AdminInventoryFilters) {
+  return useQuery({
+    queryKey: adminKeys.inventoryList(filters),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminListInventory({
+        query: adminInventoryQuery(filters),
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** One page of the email outbox; the last page stays up while the next loads. */
+export function useAdminEmails(filters: AdminEmailFilters) {
+  return useQuery({
+    queryKey: adminKeys.emailList(filters),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminListEmails({
+        query: adminEmailsQuery(filters),
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
+    placeholderData: keepPreviousData,
+    // While any shown email waits to be sent, watch it go out.
+    refetchInterval: (query) =>
+      query.state.data?.data.rows.some((r) => r.status === "pending")
+        ? 5_000
+        : false,
   });
 }

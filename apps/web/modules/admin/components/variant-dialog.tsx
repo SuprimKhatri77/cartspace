@@ -156,6 +156,8 @@ function VariantForm({
       adminKeys.variants(productId),
       adminKeys.products(),
       adminKeys.stats(),
+      adminKeys.inventory(),
+      adminKeys.counts(),
     ],
     onSuccess: () => {
       onBusyChange(false);

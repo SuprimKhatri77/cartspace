@@ -8,6 +8,7 @@ import {
   ArrowCounterClockwiseIcon,
   CheckCircleIcon,
   TruckIcon,
+  WarningIcon,
   XCircleIcon,
 } from "@phosphor-icons/react";
 import type { AdminOrderDetail, OrderStatus } from "@repo/types";
@@ -97,6 +98,8 @@ export function OrderDetailView({ number }: { number: number }) {
       adminKeys.stats(),
       adminKeys.products(),
       adminKeys.customers(),
+      adminKeys.inventory(),
+      adminKeys.counts(),
     ],
     onSuccess: (updated) => {
       queryClient.setQueryData(adminKeys.order(number), updated);
@@ -256,6 +259,12 @@ export function OrderDetailView({ number }: { number: number }) {
                   <p className="font-mono text-[0.625rem] text-muted-foreground">
                     {item.sku ?? "No SKU"}
                   </p>
+                  {item.stock_shortfall > 0 && (
+                    <p className="mt-1.5 inline-flex items-center gap-1 border border-destructive/40 px-1.5 py-0.5 font-mono text-[0.5625rem] tracking-[0.14em] text-destructive uppercase">
+                      <WarningIcon className="size-3" />
+                      {item.stock_shortfall} not in stock when paid
+                    </p>
+                  )}
                 </div>
                 <div className="shrink-0 text-right text-[0.8125rem] tabular-nums">
                   <p>{formatPrice(item.line_total)}</p>
