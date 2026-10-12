@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { StatsRange } from "@repo/types";
 import {
   adminGetCounts,
+  adminSearch,
   adminGetCustomer,
   adminGetOrder,
   adminGetProduct,
@@ -230,5 +231,23 @@ export function useAdminEmails(filters: AdminEmailFilters) {
       query.state.data?.data.rows.some((r) => r.status === "pending")
         ? 5_000
         : false,
+  });
+}
+
+/** The command palette's matches; idle until there's something to search. */
+export function useAdminSearch(q: string) {
+  return useQuery({
+    queryKey: adminKeys.search(q),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminSearch({
+        query: { q },
+        signal,
+        throwOnError: true,
+      });
+      return data.data;
+    },
+    enabled: q.length > 0,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
 }

@@ -82,6 +82,8 @@ func TestSetupRegistersAllRoutes(t *testing.T) {
 		"GET /api/v1/orders",
 		"GET /api/v1/orders/:number",
 		"GET /api/v1/admin/counts",
+		"GET /api/v1/admin/search",
+		"GET /api/v1/admin/orders/export.csv",
 		"GET /api/v1/admin/inventory",
 		"GET /api/v1/admin/emails",
 		"POST /api/v1/admin/emails/:emailID/retry",

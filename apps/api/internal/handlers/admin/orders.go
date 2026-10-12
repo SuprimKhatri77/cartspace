@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
@@ -28,16 +29,31 @@ var orderStatuses = map[string]bool{
 	"pending": true, "paid": true, "shipped": true, "delivered": true, "cancelled": true, "refunded": true,
 }
 
-// orderFilters reads status and q. q is an order number ("1042",
-// "CS-1042", "#1042") or else a piece of the customer's email.
-func orderFilters(c *gin.Context) (status, email pgtype.Text, num pgtype.Int8, customer pgtype.UUID, ok bool) {
+// orderFilter is the admin orders list's filters and order, shared by the
+// list, the CSV export and the command palette.
+type orderFilter struct {
+	status, email    pgtype.Text
+	number           pgtype.Int8
+	customer         pgtype.UUID
+	fromDate, toDate pgtype.Date
+	sort             httpx.Sort
+}
+
+// orderSorts are the sortable fields and their natural direction.
+var orderSorts = map[string]string{"created": "desc", "total": "desc"}
+
+// orderFilters reads status, q (an order number, "1042", "CS-1042" or
+// "#1042", or else a piece of the customer's email), customer (a user ID),
+// from and to (placed dates, YYYY-MM-DD in UTC, both included), sort and
+// dir. On failure it writes a 400.
+func orderFilters(c *gin.Context) (f orderFilter, ok bool) {
 	if s := c.Query("status"); s != "" {
 		if !orderStatuses[s] {
 			httpx.Fail(c, http.StatusBadRequest, constants.InvalidQueryParam,
 				"status must be pending, paid, shipped, delivered, cancelled or refunded")
 			return
 		}
-		status = pgtype.Text{String: s, Valid: true}
+		f.status = pgtype.Text{String: s, Valid: true}
 	}
 	q := strings.TrimSpace(c.Query("q"))
 	if utf8.RuneCountInString(q) > maxOrdersSearch {
@@ -45,18 +61,40 @@ func orderFilters(c *gin.Context) (status, email pgtype.Text, num pgtype.Int8, c
 		return
 	}
 	if n, isNumber := orderNumber(q); isNumber {
-		num = pgtype.Int8{Int64: n, Valid: true}
+		f.number = pgtype.Int8{Int64: n, Valid: true}
 	} else if q != "" {
-		email = pgtype.Text{String: utils.ContainsPattern(q), Valid: true}
+		f.email = pgtype.Text{String: utils.ContainsPattern(q), Valid: true}
 	}
 	if id := c.Query("customer"); id != "" {
 		var err error
-		if customer, err = utils.ConvertToUUID(id); err != nil {
+		if f.customer, err = utils.ConvertToUUID(id); err != nil {
 			httpx.Fail(c, http.StatusBadRequest, constants.InvalidQueryParam, "customer must be a user ID")
 			return
 		}
 	}
-	return status, email, num, customer, true
+	for _, d := range []struct {
+		param string
+		into  *pgtype.Date
+	}{{"from", &f.fromDate}, {"to", &f.toDate}} {
+		v := c.Query(d.param)
+		if v == "" {
+			continue
+		}
+		day, err := time.Parse(time.DateOnly, v)
+		if err != nil {
+			httpx.Fail(c, http.StatusBadRequest, constants.InvalidQueryParam, d.param+" must be a date (YYYY-MM-DD)")
+			return
+		}
+		*d.into = pgtype.Date{Time: day, Valid: true}
+	}
+	if f.fromDate.Valid && f.toDate.Valid && f.toDate.Time.Before(f.fromDate.Time) {
+		httpx.Fail(c, http.StatusBadRequest, constants.InvalidQueryParam, "to must not be before from")
+		return
+	}
+	if f.sort, ok = httpx.ParseSort(c, orderSorts, "created"); !ok {
+		return
+	}
+	return f, true
 }
 
 // orderNumber reads "1042", "CS-1042" or "#1042".
@@ -66,7 +104,8 @@ func orderNumber(q string) (int64, bool) {
 	return n, err == nil && n > 0
 }
 
-// ListOrders is every order, newest first, filtered by status and a search.
+// ListOrders is every order, newest first unless sorted otherwise, filtered
+// as orderFilters reads.
 func ListOrders(queries *db.Queries) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
@@ -74,12 +113,15 @@ func ListOrders(queries *db.Queries) gin.HandlerFunc {
 		if !ok {
 			return
 		}
-		status, email, number, customer, ok := orderFilters(c)
+		f, ok := orderFilters(c)
 		if !ok {
 			return
 		}
 
-		total, err := queries.CountAdminOrders(ctx, db.CountAdminOrdersParams{Status: status, Number: number, EmailPattern: email, UserID: customer})
+		total, err := queries.CountAdminOrders(ctx, db.CountAdminOrdersParams{
+			Status: f.status, Number: f.number, EmailPattern: f.email, UserID: f.customer,
+			FromDate: f.fromDate, ToDate: f.toDate,
+		})
 		if err != nil {
 			httpx.Internal(c, "failed to count orders", err)
 			return
@@ -90,7 +132,8 @@ func ListOrders(queries *db.Queries) gin.HandlerFunc {
 		orders := []db.AdminListOrdersRow{}
 		if total > 0 {
 			orders, err = queries.AdminListOrders(ctx, db.AdminListOrdersParams{
-				Status: status, Number: number, EmailPattern: email, UserID: customer,
+				Status: f.status, Number: f.number, EmailPattern: f.email, UserID: f.customer,
+				FromDate: f.fromDate, ToDate: f.toDate, Sort: f.sort.Field, Dir: f.sort.Dir,
 				PageLimit: int32(ordersPageSize), PageOffset: httpx.Offset(page, ordersPageSize),
 			})
 			if err != nil {

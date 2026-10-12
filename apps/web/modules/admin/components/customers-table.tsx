@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
+import type { CustomerSort, SortDir } from "@repo/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +26,7 @@ import {
 } from "../lib/order-filters";
 import { useAdminCustomers } from "../queries";
 import { PageNav } from "./page-nav";
+import { SortableHead } from "./sortable-head";
 
 const PATH = "/admin/customers";
 
@@ -51,6 +53,12 @@ export function CustomersTable({ initial }: { initial: AdminCustomerFilters }) {
     if (outOfRange && filters.page > 1) setFilters((f) => ({ ...f, page: 1 }));
   }, [outOfRange, filters.page]);
 
+  const sortProps = {
+    sort: filters.sort,
+    dir: filters.dir,
+    onSort: (sort: CustomerSort, dir: SortDir) =>
+      setFilters((f) => ({ ...f, sort, dir, page: 1 })),
+  };
   const rows = customers.data?.data ?? [];
   const meta = customers.data?.meta;
 
@@ -80,7 +88,7 @@ export function CustomersTable({ initial }: { initial: AdminCustomerFilters }) {
             type="button"
             onClick={() => {
               setSearch("");
-              setFilters({ page: 1, q: "" });
+              setFilters((f) => ({ ...f, page: 1, q: "" }));
             }}
             className="inline-flex items-center gap-1 hover:text-foreground"
           >
@@ -100,10 +108,26 @@ export function CustomersTable({ initial }: { initial: AdminCustomerFilters }) {
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead>Customer</TableHead>
-              <TableHead className="text-right">Orders</TableHead>
-              <TableHead className="text-right">Spent</TableHead>
+              <SortableHead
+                field="orders"
+                label="Orders"
+                {...sortProps}
+                className="text-right"
+              />
+              <SortableHead
+                field="spend"
+                label="Spent"
+                {...sortProps}
+                className="text-right"
+              />
               <TableHead className="hidden md:table-cell">Last order</TableHead>
-              <TableHead className="hidden lg:table-cell">Joined</TableHead>
+              <SortableHead
+                field="joined"
+                label="Joined"
+                isDefault
+                {...sortProps}
+                className="hidden lg:table-cell"
+              />
             </TableRow>
           </TableHeader>
           <TableBody>

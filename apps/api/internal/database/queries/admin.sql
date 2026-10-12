@@ -139,3 +139,13 @@ FROM product_variants v WHERE v.product_id = $1;
 -- Which of these image URLs past orders show (order items keep the URL, not
 -- a copy of the image), so a product delete leaves them in place.
 SELECT DISTINCT image::text FROM order_items WHERE image = ANY(@urls::text[]);
+
+-- name: AdminSearchProducts :many
+-- The command palette: products by a piece of the name or of a variant's
+-- SKU, hidden ones too.
+SELECT p.id, p.name, p.is_active, COALESCE(p.images[1], '')::text AS image
+FROM products p
+WHERE p.name ILIKE @pattern::text
+   OR EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = p.id AND v.sku ILIKE @pattern::text)
+ORDER BY p.is_active DESC, p.name, p.id
+LIMIT 5;

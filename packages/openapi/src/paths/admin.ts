@@ -43,6 +43,15 @@ export function registerAdminPaths() {
   });
 
   const page = z.int().min(1).max(100_000).optional();
+  const orderFilters = {
+    status: schemas.OrderStatusSchema.optional(),
+    q: z.string().max(100).optional(),
+    customer: Uuid.optional(),
+    from: z.iso.date().optional(),
+    to: z.iso.date().optional(),
+    sort: schemas.OrderSortSchema.optional(),
+    dir: schemas.SortDirSchema.optional(),
+  };
   const number = z.object({ number: z.int().positive() });
   const orderErrors = {
     400: "Invalid order number (INVALID_ORDER_NUMBER)",
@@ -56,16 +65,9 @@ export function registerAdminPaths() {
     tag: "Admin",
     summary: "All orders",
     description:
-      "Newest first, 20 per page. q is an order number (1042, CS-1042 or #1042) or a piece of the customer's email; customer is a user ID.",
+      "Newest first unless sorted, 20 per page. q is an order number (1042, CS-1042 or #1042) or a piece of the customer's email; customer is a user ID; from and to are placed dates (UTC, both included).",
     auth: "admin",
-    request: {
-      query: z.object({
-        page,
-        status: schemas.OrderStatusSchema.optional(),
-        q: z.string().max(100).optional(),
-        customer: Uuid.optional(),
-      }),
-    },
+    request: { query: z.object({ page, ...orderFilters }) },
     success: {
       status: 200,
       description: "Orders fetched",
@@ -166,6 +168,24 @@ export function registerAdminPaths() {
 
   operation({
     method: "get",
+    path: "/api/v1/admin/search",
+    operationId: "adminSearch",
+    tag: "Admin",
+    summary: "Search orders, products and customers",
+    description:
+      "For the command palette: orders by number or a piece of the email, products by name or SKU (hidden ones too), customers by name or email; up to 5 of each.",
+    auth: "admin",
+    request: { query: z.object({ q: z.string().min(1).max(100) }) },
+    success: {
+      status: 200,
+      description: "Search done",
+      schema: schemas.AdminSearchResponseSchema,
+    },
+    errors: { 400: "q missing or too long (INVALID_QUERY_PARAMETER)" },
+  });
+
+  operation({
+    method: "get",
     path: "/api/v1/admin/customers",
     operationId: "adminListCustomers",
     tag: "Admin",
@@ -174,7 +194,12 @@ export function registerAdminPaths() {
       "Newest first, 20 per page, with each one's placed orders, spend (paid, shipped and delivered) and last order. q is a piece of the name or email.",
     auth: "admin",
     request: {
-      query: z.object({ page, q: z.string().max(100).optional() }),
+      query: z.object({
+        page,
+        q: z.string().max(100).optional(),
+        sort: schemas.CustomerSortSchema.optional(),
+        dir: schemas.SortDirSchema.optional(),
+      }),
     },
     success: {
       status: 200,
@@ -205,6 +230,25 @@ export function registerAdminPaths() {
       400: "Invalid id (INVALID_USER_ID)",
       404: "No customer with that id (CUSTOMER_NOT_FOUND)",
     },
+  });
+
+  operation({
+    method: "get",
+    path: "/api/v1/admin/orders/export.csv",
+    operationId: "adminExportOrders",
+    tag: "Admin",
+    summary: "Orders as CSV",
+    description:
+      "The orders list's filters and order, every match up to 10,000 rows, amounts in major units. Text a spreadsheet would run as a formula starts with an apostrophe.",
+    auth: "admin",
+    request: { query: z.object(orderFilters) },
+    success: {
+      status: 200,
+      description: "A CSV file (attachment)",
+      schema: z.string(),
+      contentType: "text/csv",
+    },
+    errors: { 400: "Invalid filter (INVALID_QUERY_PARAMETER)" },
   });
 
   operation({

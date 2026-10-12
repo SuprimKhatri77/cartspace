@@ -10,7 +10,7 @@ import { DefaultTag } from "@/modules/checkout/components/default-tag";
 import { countryName } from "@/modules/checkout/lib/countries";
 import { formatOrderDate, orderLabel } from "@/modules/checkout/lib/orders";
 import { Stars } from "@/modules/reviews/components/stars";
-import { adminOrdersSearch } from "../lib/order-filters";
+import { adminOrdersSearch, EMPTY_ORDER_FILTERS } from "../lib/order-filters";
 import { useAdminCustomer, useAdminOrders } from "../queries";
 import { BackLink } from "./page-back";
 import { AdminPageHeader } from "./page-header";
@@ -120,7 +120,7 @@ const ORDERS_SHOWN = 8;
  * them), with a link to all of them in the orders table.
  */
 function CustomerOrders({ id, placed }: { id: string; placed: number }) {
-  const filters = { page: 1, q: "", status: "" as const, customer: id };
+  const filters = { ...EMPTY_ORDER_FILTERS, customer: id };
   const orders = useAdminOrders(filters);
   const rows = (orders.data?.data ?? []).slice(0, ORDERS_SHOWN);
   const total = orders.data?.meta.total ?? 0;

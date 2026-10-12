@@ -70,7 +70,18 @@ LEFT JOIN LATERAL (
 WHERE (sqlc.narg(name_pattern)::text IS NULL OR p.name ILIKE sqlc.narg(name_pattern)::text)
 AND (sqlc.narg(active)::bool IS NULL OR p.is_active = sqlc.narg(active)::bool)
 AND (sqlc.narg(category_slug)::text IS NULL OR p.category_id IN (SELECT id FROM subtree))
-ORDER BY p.created_at DESC, p.id DESC
+-- Sorted by sort (name, price, stock, updated or created) and dir.
+ORDER BY
+    CASE WHEN sqlc.arg(sort)::text = 'name' AND sqlc.arg(dir)::text = 'asc' THEN p.name END ASC,
+    CASE WHEN sqlc.arg(sort)::text = 'name' AND sqlc.arg(dir)::text = 'desc' THEN p.name END DESC,
+    CASE WHEN sqlc.arg(sort)::text = 'price' AND sqlc.arg(dir)::text = 'asc' THEN dv.selling_price END ASC NULLS LAST,
+    CASE WHEN sqlc.arg(sort)::text = 'price' AND sqlc.arg(dir)::text = 'desc' THEN dv.selling_price END DESC NULLS LAST,
+    CASE WHEN sqlc.arg(sort)::text = 'stock' AND sqlc.arg(dir)::text = 'asc' THEN COALESCE(vs.total_stock, 0) END ASC,
+    CASE WHEN sqlc.arg(sort)::text = 'stock' AND sqlc.arg(dir)::text = 'desc' THEN COALESCE(vs.total_stock, 0) END DESC,
+    CASE WHEN sqlc.arg(sort)::text = 'updated' AND sqlc.arg(dir)::text = 'asc' THEN p.updated_at END ASC,
+    CASE WHEN sqlc.arg(sort)::text = 'updated' AND sqlc.arg(dir)::text = 'desc' THEN p.updated_at END DESC,
+    CASE WHEN sqlc.arg(sort)::text = 'created' AND sqlc.arg(dir)::text = 'asc' THEN p.created_at END ASC,
+    p.created_at DESC, p.id DESC
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 
 -- Storefront listings. The four queries below share one scope (an optional

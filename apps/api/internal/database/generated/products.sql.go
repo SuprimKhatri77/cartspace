@@ -35,14 +35,26 @@ LEFT JOIN LATERAL (
 WHERE ($1::text IS NULL OR p.name ILIKE $1::text)
 AND ($2::bool IS NULL OR p.is_active = $2::bool)
 AND ($3::text IS NULL OR p.category_id IN (SELECT id FROM subtree))
-ORDER BY p.created_at DESC, p.id DESC
-LIMIT $5 OFFSET $4
+ORDER BY
+    CASE WHEN $4::text = 'name' AND $5::text = 'asc' THEN p.name END ASC,
+    CASE WHEN $4::text = 'name' AND $5::text = 'desc' THEN p.name END DESC,
+    CASE WHEN $4::text = 'price' AND $5::text = 'asc' THEN dv.selling_price END ASC NULLS LAST,
+    CASE WHEN $4::text = 'price' AND $5::text = 'desc' THEN dv.selling_price END DESC NULLS LAST,
+    CASE WHEN $4::text = 'stock' AND $5::text = 'asc' THEN COALESCE(vs.total_stock, 0) END ASC,
+    CASE WHEN $4::text = 'stock' AND $5::text = 'desc' THEN COALESCE(vs.total_stock, 0) END DESC,
+    CASE WHEN $4::text = 'updated' AND $5::text = 'asc' THEN p.updated_at END ASC,
+    CASE WHEN $4::text = 'updated' AND $5::text = 'desc' THEN p.updated_at END DESC,
+    CASE WHEN $4::text = 'created' AND $5::text = 'asc' THEN p.created_at END ASC,
+    p.created_at DESC, p.id DESC
+LIMIT $7 OFFSET $6
 `
 
 type AdminProductsListParams struct {
 	NamePattern  pgtype.Text `json:"name_pattern"`
 	Active       pgtype.Bool `json:"active"`
 	CategorySlug pgtype.Text `json:"category_slug"`
+	Sort         string      `json:"sort"`
+	Dir          string      `json:"dir"`
 	PageOffset   int32       `json:"page_offset"`
 	PageLimit    int32       `json:"page_limit"`
 }
@@ -68,11 +80,14 @@ type AdminProductsListRow struct {
 	VariantCount   int32              `json:"variant_count"`
 }
 
+// Sorted by sort (name, price, stock, updated or created) and dir.
 func (q *Queries) AdminProductsList(ctx context.Context, arg AdminProductsListParams) ([]AdminProductsListRow, error) {
 	rows, err := q.db.Query(ctx, adminProductsList,
 		arg.NamePattern,
 		arg.Active,
 		arg.CategorySlug,
+		arg.Sort,
+		arg.Dir,
 		arg.PageOffset,
 		arg.PageLimit,
 	)

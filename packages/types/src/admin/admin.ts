@@ -436,3 +436,42 @@ export const AdminEmailListResponseSchema = MessageResponseSchema.extend({
 export const AdminEmailResponseSchema = successResponse(AdminEmailSchema).meta({
   id: "AdminEmailResponse",
 });
+
+/** Sort direction for the admin tables. */
+export const SortDirSchema = z.enum(["asc", "desc"]).meta({ id: "SortDir" });
+export type SortDir = z.infer<typeof SortDirSchema>;
+
+export const OrderSortSchema = z
+  .enum(["created", "total"])
+  .meta({ id: "OrderSort", description: "created by default" });
+export type OrderSort = z.infer<typeof OrderSortSchema>;
+
+export const ProductSortSchema = z
+  .enum(["created", "updated", "name", "price", "stock"])
+  .meta({ id: "ProductSort", description: "created by default" });
+export type ProductSort = z.infer<typeof ProductSortSchema>;
+
+export const CustomerSortSchema = z
+  .enum(["joined", "orders", "spend"])
+  .meta({ id: "CustomerSort", description: "joined by default" });
+export type CustomerSort = z.infer<typeof CustomerSortSchema>;
+
+export const AdminSearchSchema = z
+  .object({
+    orders: z.array(AdminOrderRowSchema),
+    products: z.array(
+      z.object({
+        id: Uuid,
+        name: z.string(),
+        is_active: z.boolean(),
+        image: z.string(),
+      }),
+    ),
+    customers: z.array(AdminCustomerRowSchema),
+  })
+  .meta({ id: "AdminSearch", description: "Up to 5 of each" });
+export type AdminSearch = z.infer<typeof AdminSearchSchema>;
+
+export const AdminSearchResponseSchema = successResponse(
+  AdminSearchSchema,
+).meta({ id: "AdminSearchResponse" });

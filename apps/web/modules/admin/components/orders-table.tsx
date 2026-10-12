@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
-import type { OrderStatus } from "@repo/types";
+import { useMutation } from "@tanstack/react-query";
+import {
+  DownloadSimpleIcon,
+  MagnifyingGlassIcon,
+  XIcon,
+} from "@phosphor-icons/react";
+import { toast } from "sonner";
+import type { OrderSort, OrderStatus, SortDir } from "@repo/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,19 +22,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { adminExportOrders } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
 import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { formatOrderDate, orderLabel } from "@/modules/checkout/lib/orders";
 import {
+  adminOrdersExportQuery,
   adminOrdersSearch,
+  EMPTY_ORDER_FILTERS,
   type AdminOrderFilters,
 } from "../lib/order-filters";
 import { useAdminCounts, useAdminOrders } from "../queries";
 import { PageNav } from "./page-nav";
+import { SortableHead } from "./sortable-head";
 import { OrderStatusBadge } from "./status-badge";
 
 const PATH = "/admin/orders";
+/** The API's cap on one CSV export. */
+const MAX_EXPORT_ROWS = 10_000;
 
 /** The status tabs; "To ship" is the paid orders waiting for the warehouse. */
 const tabs: { label: string; status: OrderStatus | "" }[] = [
@@ -67,9 +79,51 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
     if (outOfRange && filters.page > 1) setFilters((f) => ({ ...f, page: 1 }));
   }, [outOfRange, filters.page]);
 
+  // The CSV comes through the API client (it refreshes an expired session),
+  // then downloads from memory.
+  const exporting = useMutation({
+    mutationFn: async () => {
+      const { data } = await adminExportOrders({
+        query: adminOrdersExportQuery(filters),
+        throwOnError: true,
+      });
+      return data as string;
+    },
+    onSuccess: (csv) => {
+      const url = URL.createObjectURL(
+        new Blob([csv], { type: "text/csv;charset=utf-8" }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      if (meta && meta.total > MAX_EXPORT_ROWS) {
+        toast(`Exported the first ${MAX_EXPORT_ROWS.toLocaleString()} orders`, {
+          description: "Narrow the dates to export the rest.",
+        });
+      }
+    },
+    onError: (error) => {
+      toast.error(getApiError(error)?.message ?? "Couldn't export the orders.");
+    },
+  });
+
+  const sortProps = {
+    sort: filters.sort,
+    dir: filters.dir,
+    onSort: (sort: OrderSort, dir: SortDir) =>
+      setFilters((f) => ({ ...f, sort, dir, page: 1 })),
+  };
   const rows = orders.data?.data ?? [];
   const meta = orders.data?.meta;
-  const filtered = Boolean(filters.q || filters.status || filters.customer);
+  const filtered = Boolean(
+    filters.q ||
+    filters.status ||
+    filters.customer ||
+    filters.from ||
+    filters.to,
+  );
 
   return (
     <div className="space-y-5">
@@ -100,17 +154,51 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
         ))}
       </div>
 
-      <div className="relative">
-        <MagnifyingGlassIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Order number (CS-1042) or email"
-          aria-label="Search orders"
-          className="h-10 pl-9"
-          maxLength={100}
-        />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="relative flex-1">
+          <MagnifyingGlassIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Order number (CS-1042) or email"
+            aria-label="Search orders"
+            className="h-10 pl-9"
+            maxLength={100}
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            type="date"
+            value={filters.from}
+            max={filters.to || undefined}
+            onChange={(e) =>
+              setFilters((f) => ({ ...f, from: e.target.value, page: 1 }))
+            }
+            aria-label="Placed from"
+            className="h-10 w-[9.5rem]"
+          />
+          <span className="text-xs text-muted-foreground">to</span>
+          <Input
+            type="date"
+            value={filters.to}
+            min={filters.from || undefined}
+            onChange={(e) =>
+              setFilters((f) => ({ ...f, to: e.target.value, page: 1 }))
+            }
+            aria-label="Placed to"
+            className="h-10 w-[9.5rem]"
+          />
+          <Button
+            variant="outline"
+            className="h-10"
+            disabled={exporting.isPending || meta?.total === 0}
+            onClick={() => exporting.mutate()}
+          >
+            <DownloadSimpleIcon data-icon="inline-start" />
+            {exporting.isPending ? "Exporting…" : "Export CSV"}
+          </Button>
+        </div>
       </div>
 
       {filters.customer && (
@@ -146,7 +234,11 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
             type="button"
             onClick={() => {
               setSearch("");
-              setFilters({ page: 1, q: "", status: "", customer: "" });
+              setFilters((f) => ({
+                ...EMPTY_ORDER_FILTERS,
+                sort: f.sort,
+                dir: f.dir,
+              }));
             }}
             className="inline-flex items-center gap-1 hover:text-foreground"
           >
@@ -168,8 +260,19 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
               <TableHead>Order</TableHead>
               <TableHead className="hidden sm:table-cell">Customer</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="hidden md:table-cell">Placed</TableHead>
-              <TableHead className="text-right">Total</TableHead>
+              <SortableHead
+                field="created"
+                label="Placed"
+                isDefault
+                {...sortProps}
+                className="hidden md:table-cell"
+              />
+              <SortableHead
+                field="total"
+                label="Total"
+                {...sortProps}
+                className="text-right"
+              />
             </TableRow>
           </TableHeader>
           <TableBody>

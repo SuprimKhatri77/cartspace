@@ -30,7 +30,14 @@ WHERE u.role = 'customer'
   AND (sqlc.narg(pattern)::text IS NULL
        OR u.name ILIKE sqlc.narg(pattern)::text
        OR u.email ILIKE sqlc.narg(pattern)::text)
-ORDER BY u.created_at DESC, u.id DESC
+-- Sorted by sort (joined, orders or spend) and dir.
+ORDER BY
+    CASE WHEN @sort::text = 'orders' AND @dir::text = 'asc' THEN s.orders END ASC,
+    CASE WHEN @sort::text = 'orders' AND @dir::text = 'desc' THEN s.orders END DESC,
+    CASE WHEN @sort::text = 'spend' AND @dir::text = 'asc' THEN s.spend END ASC,
+    CASE WHEN @sort::text = 'spend' AND @dir::text = 'desc' THEN s.spend END DESC,
+    CASE WHEN @sort::text = 'joined' AND @dir::text = 'asc' THEN u.created_at END ASC,
+    u.created_at DESC, u.id DESC
 LIMIT @page_limit OFFSET @page_offset;
 
 -- name: AdminGetCustomer :one

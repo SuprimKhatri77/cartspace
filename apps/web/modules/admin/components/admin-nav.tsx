@@ -30,7 +30,7 @@ type NavLink = {
   badge?: (counts: AdminCounts) => Badge;
 };
 
-const groups: { label: string; links: NavLink[] }[] = [
+export const groups: { label: string; links: NavLink[] }[] = [
   {
     label: "Overview",
     links: [{ label: "Dashboard", href: "/admin", icon: SquaresFourIcon }],
