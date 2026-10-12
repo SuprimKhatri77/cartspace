@@ -11,6 +11,43 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const adminAttention = `-- name: AdminAttention :one
+SELECT
+    (SELECT COUNT(*) FROM orders WHERE status = 'paid')::bigint AS to_ship,
+    (
+        SELECT COUNT(DISTINCT o.id) FROM orders o
+        JOIN order_items oi ON oi.order_id = o.id
+        WHERE o.status = 'paid' AND oi.stock_shortfall > 0
+    )::bigint AS oversold,
+    (SELECT COUNT(*) FROM email_outbox WHERE status = 'failed')::bigint AS failed_emails,
+    (
+        SELECT COUNT(*) FROM product_variants pv
+        JOIN products p ON p.id = pv.product_id
+        WHERE pv.is_active AND p.is_active AND pv.stock = 0
+    )::bigint AS out_of_stock
+`
+
+type AdminAttentionRow struct {
+	ToShip       int64 `json:"to_ship"`
+	Oversold     int64 `json:"oversold"`
+	FailedEmails int64 `json:"failed_emails"`
+	OutOfStock   int64 `json:"out_of_stock"`
+}
+
+// What needs the admin: paid orders to ship (and those short of stock),
+// emails given up on, and active variants that are sold out.
+func (q *Queries) AdminAttention(ctx context.Context) (AdminAttentionRow, error) {
+	row := q.db.QueryRow(ctx, adminAttention)
+	var i AdminAttentionRow
+	err := row.Scan(
+		&i.ToShip,
+		&i.Oversold,
+		&i.FailedEmails,
+		&i.OutOfStock,
+	)
+	return i, err
+}
+
 const adminCustomerCount = `-- name: AdminCustomerCount :one
 SELECT COUNT(*) FROM users WHERE role = 'customer'
 `
@@ -146,6 +183,87 @@ func (q *Queries) AdminLowStock(ctx context.Context, threshold int32) ([]AdminLo
 	return items, nil
 }
 
+const adminNewCustomers = `-- name: AdminNewCustomers :one
+SELECT COUNT(*) FROM users
+WHERE role = 'customer'
+  AND created_at >= $1::timestamptz AND created_at < $2::timestamptz
+`
+
+type AdminNewCustomersParams struct {
+	FromTime pgtype.Timestamptz `json:"from_time"`
+	ToTime   pgtype.Timestamptz `json:"to_time"`
+}
+
+// Customer accounts created in [from, to).
+func (q *Queries) AdminNewCustomers(ctx context.Context, arg AdminNewCustomersParams) (int64, error) {
+	row := q.db.QueryRow(ctx, adminNewCustomers, arg.FromTime, arg.ToTime)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const adminOrdersByStatus = `-- name: AdminOrdersByStatus :many
+SELECT status, COUNT(*)::bigint AS count
+FROM orders
+GROUP BY status
+`
+
+type AdminOrdersByStatusRow struct {
+	Status string `json:"status"`
+	Count  int64  `json:"count"`
+}
+
+// Every order by status, as the admin order tabs filter them.
+func (q *Queries) AdminOrdersByStatus(ctx context.Context) ([]AdminOrdersByStatusRow, error) {
+	rows, err := q.db.Query(ctx, adminOrdersByStatus)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AdminOrdersByStatusRow{}
+	for rows.Next() {
+		var i AdminOrdersByStatusRow
+		if err := rows.Scan(&i.Status, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const adminPeriodTotals = `-- name: AdminPeriodTotals :one
+
+SELECT
+    COALESCE(SUM(total), 0)::bigint AS revenue,
+    COUNT(*)::bigint AS orders
+FROM orders
+WHERE status IN ('paid', 'shipped', 'delivered')
+  AND paid_at >= $1::timestamptz AND paid_at < $2::timestamptz
+`
+
+type AdminPeriodTotalsParams struct {
+	FromTime pgtype.Timestamptz `json:"from_time"`
+	ToTime   pgtype.Timestamptz `json:"to_time"`
+}
+
+type AdminPeriodTotalsRow struct {
+	Revenue int64 `json:"revenue"`
+	Orders  int64 `json:"orders"`
+}
+
+// Admin dashboard. "Sales" are orders that were paid (paid, shipped or
+// delivered); abandoned checkouts and cancellations don't count.
+// Sales paid in [from, to).
+func (q *Queries) AdminPeriodTotals(ctx context.Context, arg AdminPeriodTotalsParams) (AdminPeriodTotalsRow, error) {
+	row := q.db.QueryRow(ctx, adminPeriodTotals, arg.FromTime, arg.ToTime)
+	var i AdminPeriodTotalsRow
+	err := row.Scan(&i.Revenue, &i.Orders)
+	return i, err
+}
+
 const adminRecentOrders = `-- name: AdminRecentOrders :many
 SELECT id, number, status, total, currency, email, created_at, paid_at
 FROM orders
@@ -194,13 +312,63 @@ func (q *Queries) AdminRecentOrders(ctx context.Context) ([]AdminRecentOrdersRow
 	return items, nil
 }
 
+const adminRecentReviews = `-- name: AdminRecentReviews :many
+SELECT r.id, r.rating, r.title, r.status, r.created_at,
+    p.id AS product_id, p.name AS product_name, u.name AS author_name
+FROM reviews r
+JOIN products p ON p.id = r.product_id
+JOIN users u ON u.id = r.user_id
+ORDER BY r.created_at DESC, r.id DESC
+LIMIT 5
+`
+
+type AdminRecentReviewsRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	Rating      int16              `json:"rating"`
+	Title       string             `json:"title"`
+	Status      string             `json:"status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ProductID   pgtype.UUID        `json:"product_id"`
+	ProductName string             `json:"product_name"`
+	AuthorName  string             `json:"author_name"`
+}
+
+func (q *Queries) AdminRecentReviews(ctx context.Context) ([]AdminRecentReviewsRow, error) {
+	rows, err := q.db.Query(ctx, adminRecentReviews)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AdminRecentReviewsRow{}
+	for rows.Next() {
+		var i AdminRecentReviewsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Rating,
+			&i.Title,
+			&i.Status,
+			&i.CreatedAt,
+			&i.ProductID,
+			&i.ProductName,
+			&i.AuthorName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const adminSalesByDay = `-- name: AdminSalesByDay :many
 SELECT
     d.day::date AS day,
     COALESCE(SUM(o.total), 0)::bigint AS revenue,
     COUNT(o.id)::int AS orders
 FROM generate_series(
-    (now() AT TIME ZONE 'UTC')::date - 29,
+    (now() AT TIME ZONE 'UTC')::date - ($1::int - 1),
     (now() AT TIME ZONE 'UTC')::date,
     interval '1 day'
 ) AS d(day)
@@ -217,9 +385,9 @@ type AdminSalesByDayRow struct {
 	Orders  int32       `json:"orders"`
 }
 
-// The last 30 days (UTC), every day present, oldest first.
-func (q *Queries) AdminSalesByDay(ctx context.Context) ([]AdminSalesByDayRow, error) {
-	rows, err := q.db.Query(ctx, adminSalesByDay)
+// The last @days days (UTC), every day present, oldest first.
+func (q *Queries) AdminSalesByDay(ctx context.Context, days int32) ([]AdminSalesByDayRow, error) {
+	rows, err := q.db.Query(ctx, adminSalesByDay, days)
 	if err != nil {
 		return nil, err
 	}
@@ -238,27 +406,61 @@ func (q *Queries) AdminSalesByDay(ctx context.Context) ([]AdminSalesByDayRow, er
 	return items, nil
 }
 
-const adminSalesTotals = `-- name: AdminSalesTotals :one
-
+const adminTopProducts = `-- name: AdminTopProducts :many
 SELECT
-    COALESCE(SUM(total), 0)::bigint AS revenue,
-    COUNT(*)::bigint AS orders
-FROM orders
-WHERE status IN ('paid', 'shipped', 'delivered')
+    p.id AS product_id,
+    p.name AS product_name,
+    COALESCE(p.images[1], MAX(oi.image), '')::text AS image,
+    SUM(oi.quantity)::bigint AS units,
+    SUM(oi.line_total)::bigint AS revenue
+FROM order_items oi
+JOIN orders o ON o.id = oi.order_id
+JOIN products p ON p.id = oi.product_id
+WHERE o.status IN ('paid', 'shipped', 'delivered')
+  AND o.paid_at >= $1::timestamptz AND o.paid_at < $2::timestamptz
+GROUP BY p.id
+ORDER BY revenue DESC, units DESC, p.name
+LIMIT 5
 `
 
-type AdminSalesTotalsRow struct {
-	Revenue int64 `json:"revenue"`
-	Orders  int64 `json:"orders"`
+type AdminTopProductsParams struct {
+	FromTime pgtype.Timestamptz `json:"from_time"`
+	ToTime   pgtype.Timestamptz `json:"to_time"`
 }
 
-// Admin dashboard. "Sales" are orders that were paid (paid, shipped or
-// delivered); abandoned checkouts and cancellations don't count.
-func (q *Queries) AdminSalesTotals(ctx context.Context) (AdminSalesTotalsRow, error) {
-	row := q.db.QueryRow(ctx, adminSalesTotals)
-	var i AdminSalesTotalsRow
-	err := row.Scan(&i.Revenue, &i.Orders)
-	return i, err
+type AdminTopProductsRow struct {
+	ProductID   pgtype.UUID `json:"product_id"`
+	ProductName string      `json:"product_name"`
+	Image       string      `json:"image"`
+	Units       int64       `json:"units"`
+	Revenue     int64       `json:"revenue"`
+}
+
+// Best sellers by revenue among sales paid in [from, to).
+func (q *Queries) AdminTopProducts(ctx context.Context, arg AdminTopProductsParams) ([]AdminTopProductsRow, error) {
+	rows, err := q.db.Query(ctx, adminTopProducts, arg.FromTime, arg.ToTime)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AdminTopProductsRow{}
+	for rows.Next() {
+		var i AdminTopProductsRow
+		if err := rows.Scan(
+			&i.ProductID,
+			&i.ProductName,
+			&i.Image,
+			&i.Units,
+			&i.Revenue,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listProductImages = `-- name: ListProductImages :many

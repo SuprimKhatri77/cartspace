@@ -1,3 +1,4 @@
+import type { StatsRange } from "@repo/types";
 import type { AdminProductFilters } from "./lib/filters";
 import type {
   AdminOrderFilters,
@@ -7,7 +8,10 @@ import type {
 // Admin data is the same for every admin, so the keys carry no user id.
 export const adminKeys = {
   all: ["admin"] as const,
-  stats: () => [...adminKeys.all, "stats"] as const,
+  stats: (range?: StatsRange) =>
+    range
+      ? ([...adminKeys.all, "stats", range] as const)
+      : ([...adminKeys.all, "stats"] as const),
   products: () => [...adminKeys.all, "products"] as const,
   productLists: () => [...adminKeys.products(), "list"] as const,
   productList: (filters: AdminProductFilters) =>

@@ -12,24 +12,76 @@ import {
   OrderStatusSchema,
 } from "../order/order";
 
-export const AdminStatsSchema = z
+export const ReviewStatusSchema = z
+  .enum(["published", "hidden"])
+  .meta({ id: "ReviewStatus" });
+export type ReviewStatus = z.infer<typeof ReviewStatusSchema>;
+
+export const StatsRangeSchema = z
+  .enum(["7d", "30d", "90d"])
+  .meta({ id: "StatsRange", description: "Days ending today (UTC)" });
+export type StatsRange = z.infer<typeof StatsRangeSchema>;
+
+const PeriodTotalsSchema = z
   .object({
-    revenue: z
-      .int()
-      .nonnegative()
-      .describe("Cents, over paid, shipped and delivered orders"),
+    revenue: Cents.describe("Paid, shipped and delivered orders"),
     orders: z.int().nonnegative(),
     average_order_value: Cents,
-    customers: z.int().nonnegative(),
-    sales_by_day: z
+    new_customers: z.int().nonnegative(),
+  })
+  .meta({
+    id: "PeriodTotals",
+    description: "Sales by payment date, and sign-ups",
+  });
+
+export const AdminStatsSchema = z
+  .object({
+    range: StatsRangeSchema,
+    current: PeriodTotalsSchema.describe("The range"),
+    previous: PeriodTotalsSchema.describe("The same number of days before it"),
+    customers: z.int().nonnegative().describe("Customer accounts, all time"),
+    series: z
       .array(
         z.object({
           day: z.iso.date(),
-          revenue: z.int().nonnegative(),
+          revenue: Cents,
           orders: z.int().nonnegative(),
         }),
       )
-      .describe("The last 30 days (UTC), oldest first, every day present"),
+      .describe("Every day of the range (UTC), oldest first"),
+    orders_by_status: z
+      .object({
+        pending: z.int().nonnegative(),
+        paid: z.int().nonnegative(),
+        shipped: z.int().nonnegative(),
+        delivered: z.int().nonnegative(),
+        cancelled: z.int().nonnegative(),
+        refunded: z.int().nonnegative(),
+      })
+      .describe("Every order by status, all time"),
+    top_products: z
+      .array(
+        z.object({
+          product_id: Uuid,
+          product_name: z.string(),
+          image: z.string().describe("Empty when the product has none"),
+          units: z.int().positive(),
+          revenue: Cents,
+        }),
+      )
+      .describe("Best sellers by revenue in the range (5 at most)"),
+    needs_attention: z.object({
+      to_ship: z.int().nonnegative().describe("Paid orders"),
+      oversold: z
+        .int()
+        .nonnegative()
+        .describe("Paid orders with an item short of stock"),
+      failed_emails: z.int().nonnegative().describe("Emails given up on"),
+      out_of_stock: z
+        .int()
+        .nonnegative()
+        .describe("Active variants with none left"),
+    }),
     low_stock: z
       .array(
         z.object({
@@ -55,6 +107,20 @@ export const AdminStatsSchema = z
         paid_at: Timestamp.nullable(),
       }),
     ),
+    recent_reviews: z
+      .array(
+        z.object({
+          id: Uuid,
+          rating: z.int().min(1).max(5),
+          title: z.string(),
+          status: ReviewStatusSchema,
+          created_at: Timestamp,
+          product_id: Uuid,
+          product_name: z.string(),
+          author_name: z.string(),
+        }),
+      )
+      .describe("The 5 latest, hidden ones too"),
   })
   .meta({ id: "AdminStats" });
 export type AdminStats = z.infer<typeof AdminStatsSchema>;
@@ -154,11 +220,6 @@ export const RefundOrderBodySchema = z
   })
   .meta({ id: "RefundOrderBody" });
 export type RefundOrderBody = z.infer<typeof RefundOrderBodySchema>;
-
-export const ReviewStatusSchema = z
-  .enum(["published", "hidden"])
-  .meta({ id: "ReviewStatus" });
-export type ReviewStatus = z.infer<typeof ReviewStatusSchema>;
 
 export const ReviewStatusBodySchema = z
   .object({ status: ReviewStatusSchema })
