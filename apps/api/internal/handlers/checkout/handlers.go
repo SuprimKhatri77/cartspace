@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/suprimkhatri77/cartspace/backend/internal/checkout"
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
@@ -234,7 +235,8 @@ func respondOrder(c *gin.Context, queries *db.Queries, order db.Order) {
 	})
 }
 
-// ListAddresses is the user's address book, newest first (at most 10).
+// ListAddresses is the user's address book, the default first, then the
+// newest (at most 10).
 func ListAddresses(queries *db.Queries) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, ok := httpx.UserID(c)
@@ -271,5 +273,52 @@ func DeleteAddress(queries *db.Queries) gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, types.APIResponse{Success: true, Message: "Address deleted"})
+	}
+}
+
+// SetDefaultAddress makes one address the default (checkout picks it first)
+// and unmarks the old one. Setting the current default again is a no-op.
+func SetDefaultAddress(pool *pgxpool.Pool, queries *db.Queries) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, ok := httpx.UserID(c)
+		if !ok {
+			return
+		}
+		id, ok := httpx.PathUUID(c, "addressID", constants.InvalidAddressID, "address ID")
+		if !ok {
+			return
+		}
+		ctx := c.Request.Context()
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			httpx.Internal(c, "set default address: begin", err)
+			return
+		}
+		defer func() { _ = tx.Rollback(ctx) }()
+		qtx := queries.WithTx(tx)
+
+		// Locked so two of these at once can't both leave a default.
+		if err := qtx.LockAddresses(ctx, userID); err != nil {
+			httpx.Internal(c, "set default address: lock", err)
+			return
+		}
+		if err := qtx.ClearDefaultAddress(ctx, userID); err != nil {
+			httpx.Internal(c, "set default address: clear", err)
+			return
+		}
+		address, err := qtx.SetDefaultAddress(ctx, db.SetDefaultAddressParams{ID: id, UserID: userID})
+		if errors.Is(err, pgx.ErrNoRows) {
+			httpx.Fail(c, http.StatusNotFound, constants.AddressNotFound, "Address not found")
+			return
+		}
+		if err != nil {
+			httpx.Internal(c, "set default address", err, "address_id", utils.UUIDToString(id))
+			return
+		}
+		if err := tx.Commit(ctx); err != nil {
+			httpx.Internal(c, "set default address: commit", err)
+			return
+		}
+		c.JSON(http.StatusOK, types.APIResponse{Success: true, Message: "Default address updated", Data: address})
 	}
 }

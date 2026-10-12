@@ -32,6 +32,7 @@ func serve(svc *checkoutsvc.Service, method, path, body string) *httptest.Respon
 	r.POST("/checkout", checkout.StartCheckout(svc))
 	r.POST("/webhooks/stripe", checkout.StripeWebhook(svc, fakeProvider{}))
 	r.GET("/checkout/sessions/:sessionID", checkout.SessionOrder(svc, nil))
+	r.PUT("/addresses/:addressID/default", checkout.SetDefaultAddress(nil, nil))
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, httptest.NewRequest(method, path, strings.NewReader(body)))
 	return w
@@ -65,6 +66,7 @@ func TestCheckoutRefusedBeforeAnyWork(t *testing.T) {
 		{"bad address id", http.MethodPost, "/checkout", `{"address_id":"nope"}`, constants.ValidationFailed, 400},
 		{"unsigned webhook", http.MethodPost, "/webhooks/stripe", `{}`, constants.InvalidWebhookSignature, 400},
 		{"not a session id", http.MethodGet, "/checkout/sessions/pi_123", ``, constants.InvalidSessionID, 400},
+		{"default: bad address id", http.MethodPut, "/addresses/nope/default", ``, constants.InvalidAddressID, 400},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

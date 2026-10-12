@@ -11,6 +11,15 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const clearDefaultAddress = `-- name: ClearDefaultAddress :exec
+UPDATE addresses SET is_default = false WHERE user_id = $1 AND is_default
+`
+
+func (q *Queries) ClearDefaultAddress(ctx context.Context, userID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, clearDefaultAddress, userID)
+	return err
+}
+
 const countAddresses = `-- name: CountAddresses :one
 SELECT COUNT(*) FROM addresses WHERE user_id = $1
 `
@@ -25,7 +34,7 @@ func (q *Queries) CountAddresses(ctx context.Context, userID pgtype.UUID) (int64
 const createAddress = `-- name: CreateAddress :one
 INSERT INTO addresses (user_id, full_name, phone, line1, line2, city, region, postal_code, country)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, user_id, full_name, phone, line1, line2, city, region, postal_code, country, created_at
+RETURNING id, user_id, full_name, phone, line1, line2, city, region, postal_code, country, created_at, is_default
 `
 
 type CreateAddressParams struct {
@@ -65,6 +74,7 @@ func (q *Queries) CreateAddress(ctx context.Context, arg CreateAddressParams) (A
 		&i.PostalCode,
 		&i.Country,
 		&i.CreatedAt,
+		&i.IsDefault,
 	)
 	return i, err
 }
@@ -87,7 +97,7 @@ func (q *Queries) DeleteAddress(ctx context.Context, arg DeleteAddressParams) (i
 }
 
 const getAddress = `-- name: GetAddress :one
-SELECT id, user_id, full_name, phone, line1, line2, city, region, postal_code, country, created_at FROM addresses WHERE id = $1 AND user_id = $2
+SELECT id, user_id, full_name, phone, line1, line2, city, region, postal_code, country, created_at, is_default FROM addresses WHERE id = $1 AND user_id = $2
 `
 
 type GetAddressParams struct {
@@ -110,16 +120,18 @@ func (q *Queries) GetAddress(ctx context.Context, arg GetAddressParams) (Address
 		&i.PostalCode,
 		&i.Country,
 		&i.CreatedAt,
+		&i.IsDefault,
 	)
 	return i, err
 }
 
 const listAddresses = `-- name: ListAddresses :many
-SELECT id, user_id, full_name, phone, line1, line2, city, region, postal_code, country, created_at FROM addresses
+SELECT id, user_id, full_name, phone, line1, line2, city, region, postal_code, country, created_at, is_default FROM addresses
 WHERE user_id = $1
-ORDER BY created_at DESC, id DESC
+ORDER BY is_default DESC, created_at DESC, id DESC
 `
 
+// The default first, then the newest.
 func (q *Queries) ListAddresses(ctx context.Context, userID pgtype.UUID) ([]Address, error) {
 	rows, err := q.db.Query(ctx, listAddresses, userID)
 	if err != nil {
@@ -141,6 +153,7 @@ func (q *Queries) ListAddresses(ctx context.Context, userID pgtype.UUID) ([]Addr
 			&i.PostalCode,
 			&i.Country,
 			&i.CreatedAt,
+			&i.IsDefault,
 		); err != nil {
 			return nil, err
 		}
@@ -150,4 +163,48 @@ func (q *Queries) ListAddresses(ctx context.Context, userID pgtype.UUID) ([]Addr
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockAddresses = `-- name: LockAddresses :exec
+
+SELECT id FROM addresses WHERE user_id = $1 ORDER BY id FOR UPDATE
+`
+
+// Setting the default: lock the book, clear the old default, set the new
+// one, in one transaction. Two statements, not one flip: the unique index is
+// checked row by row, so a single UPDATE could see two defaults midway.
+// In id order: two of these locking in different orders would deadlock.
+func (q *Queries) LockAddresses(ctx context.Context, userID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, lockAddresses, userID)
+	return err
+}
+
+const setDefaultAddress = `-- name: SetDefaultAddress :one
+UPDATE addresses SET is_default = true WHERE id = $1 AND user_id = $2
+RETURNING id, user_id, full_name, phone, line1, line2, city, region, postal_code, country, created_at, is_default
+`
+
+type SetDefaultAddressParams struct {
+	ID     pgtype.UUID `json:"id"`
+	UserID pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) SetDefaultAddress(ctx context.Context, arg SetDefaultAddressParams) (Address, error) {
+	row := q.db.QueryRow(ctx, setDefaultAddress, arg.ID, arg.UserID)
+	var i Address
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FullName,
+		&i.Phone,
+		&i.Line1,
+		&i.Line2,
+		&i.City,
+		&i.Region,
+		&i.PostalCode,
+		&i.Country,
+		&i.CreatedAt,
+		&i.IsDefault,
+	)
+	return i, err
 }

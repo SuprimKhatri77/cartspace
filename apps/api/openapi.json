@@ -2466,7 +2466,7 @@
             "items": {
               "$ref": "#/components/schemas/Address"
             },
-            "description": "Newest first, at most 10"
+            "description": "The default first, then newest; at most 10"
           }
         },
         "required": [
@@ -2516,6 +2516,10 @@
           "country": {
             "$ref": "#/components/schemas/Country"
           },
+          "is_default": {
+            "type": "boolean",
+            "description": "Checkout picks it first; at most one per customer"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -2532,9 +2536,32 @@
           "region",
           "postal_code",
           "country",
+          "is_default",
           "created_at"
         ],
         "description": "A saved shipping address."
+      },
+      "AddressResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Address"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
       },
       "WishlistResponse": {
         "type": "object",
@@ -6877,7 +6904,7 @@
           "Orders"
         ],
         "summary": "My saved addresses",
-        "description": "Saved at checkout with save_address; at most 10.",
+        "description": "Saved at checkout with save_address; at most 10. The default comes first, then the newest.",
         "security": [
           {
             "accessTokenCookie": []
@@ -6948,6 +6975,84 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id (INVALID_ADDRESS_ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such address of yours (ADDRESS_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/addresses/{addressID}/default": {
+      "put": {
+        "operationId": "setDefaultAddress",
+        "tags": [
+          "Orders"
+        ],
+        "summary": "Make a saved address the default",
+        "description": "Checkout picks the default first. The previous default is unmarked; setting the current one again changes nothing.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "addressID",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default address updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressResponse"
                 }
               }
             }

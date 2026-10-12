@@ -22,6 +22,7 @@ type Address struct {
 	PostalCode string             `json:"postal_code"`
 	Country    string             `json:"country"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	IsDefault  bool               `json:"is_default"`
 }
 
 type Cart struct {
