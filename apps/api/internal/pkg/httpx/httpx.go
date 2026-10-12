@@ -4,7 +4,9 @@ package httpx
 
 import (
 	"net/http"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -86,4 +88,30 @@ func Offset(page int, limit int64) int32 {
 
 func failPage(c *gin.Context) {
 	Fail(c, http.StatusBadRequest, constants.InvalidPageParam, "Invalid page parameter")
+}
+
+// Sort is a list's order: one of its sortable fields and a direction.
+type Sort struct{ Field, Dir string }
+
+// ParseSort reads the optional sort and dir query parameters. sort must be
+// one of fields (fallback when absent); dir is asc or desc, defaulting to
+// the field's natural direction in fields. On failure it writes a 400.
+func ParseSort(c *gin.Context, fields map[string]string, fallback string) (Sort, bool) {
+	field := c.DefaultQuery("sort", fallback)
+	natural, known := fields[field]
+	if !known {
+		names := make([]string, 0, len(fields))
+		for f := range fields {
+			names = append(names, f)
+		}
+		slices.Sort(names)
+		Fail(c, http.StatusBadRequest, constants.InvalidQueryParam, "sort must be one of "+strings.Join(names, ", "))
+		return Sort{}, false
+	}
+	dir := c.DefaultQuery("dir", natural)
+	if dir != "asc" && dir != "desc" {
+		Fail(c, http.StatusBadRequest, constants.InvalidQueryParam, "dir must be asc or desc")
+		return Sort{}, false
+	}
+	return Sort{Field: field, Dir: dir}, true
 }

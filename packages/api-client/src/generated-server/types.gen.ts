@@ -397,6 +397,11 @@ export type AdminProduct = {
     variant_count: number;
 };
 
+/**
+ * created by default
+ */
+export type ProductSort = 'created' | 'updated' | 'name' | 'price' | 'stock';
+
 export type AdminVariantListResponse = {
     success: true;
     message: string;
@@ -1170,6 +1175,13 @@ export type AdminOrderRow = {
     paid_at: string | null;
 };
 
+/**
+ * created by default
+ */
+export type OrderSort = 'created' | 'total';
+
+export type SortDir = 'asc' | 'desc';
+
 export type AdminCountsResponse = {
     success: true;
     message: string;
@@ -1295,11 +1307,24 @@ export type AdminEmailResponse = {
     data: AdminEmail;
 };
 
-export type AdminCustomerListResponse = {
+export type AdminSearchResponse = {
     success: true;
     message: string;
-    data: Array<AdminCustomerRow>;
-    meta: PaginationMeta;
+    data: AdminSearch;
+};
+
+/**
+ * Up to 5 of each
+ */
+export type AdminSearch = {
+    orders: Array<AdminOrderRow>;
+    products: Array<{
+        id: string;
+        name: string;
+        is_active: boolean;
+        image: string;
+    }>;
+    customers: Array<AdminCustomerRow>;
 };
 
 export type AdminCustomerRow = {
@@ -1314,6 +1339,18 @@ export type AdminCustomerRow = {
      */
     last_order_at: string | null;
 };
+
+export type AdminCustomerListResponse = {
+    success: true;
+    message: string;
+    data: Array<AdminCustomerRow>;
+    meta: PaginationMeta;
+};
+
+/**
+ * joined by default
+ */
+export type CustomerSort = 'joined' | 'orders' | 'spend';
 
 export type AdminCustomerResponse = {
     success: true;
@@ -2173,6 +2210,14 @@ export type AdminListProductsData = {
          * Category slug; includes its subcategories
          */
         category?: string;
+        /**
+         * created by default
+         */
+        sort?: ProductSort;
+        /**
+         * Defaults to the field's natural direction
+         */
+        dir?: 'asc' | 'desc';
     };
     url: '/api/v1/admin/products';
 };
@@ -3540,6 +3585,13 @@ export type AdminListOrdersData = {
         status?: OrderStatus;
         q?: string;
         customer?: string;
+        from?: string;
+        to?: string;
+        /**
+         * created by default
+         */
+        sort?: OrderSort;
+        dir?: SortDir;
     };
     url: '/api/v1/admin/orders';
 };
@@ -3743,12 +3795,56 @@ export type AdminRetryEmailResponses = {
 
 export type AdminRetryEmailResponse = AdminRetryEmailResponses[keyof AdminRetryEmailResponses];
 
+export type AdminSearchData = {
+    body?: never;
+    path?: never;
+    query: {
+        q: string;
+    };
+    url: '/api/v1/admin/search';
+};
+
+export type AdminSearchErrors = {
+    /**
+     * q missing or too long (INVALID_QUERY_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminSearchError = AdminSearchErrors[keyof AdminSearchErrors];
+
+export type AdminSearchResponses = {
+    /**
+     * Search done
+     */
+    200: AdminSearchResponse;
+};
+
+export type AdminSearchResponse2 = AdminSearchResponses[keyof AdminSearchResponses];
+
 export type AdminListCustomersData = {
     body?: never;
     path?: never;
     query?: {
         page?: number;
         q?: string;
+        /**
+         * joined by default
+         */
+        sort?: CustomerSort;
+        dir?: SortDir;
     };
     url: '/api/v1/admin/customers';
 };
@@ -3825,6 +3921,54 @@ export type AdminGetCustomerResponses = {
 };
 
 export type AdminGetCustomerResponse = AdminGetCustomerResponses[keyof AdminGetCustomerResponses];
+
+export type AdminExportOrdersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        status?: OrderStatus;
+        q?: string;
+        customer?: string;
+        from?: string;
+        to?: string;
+        /**
+         * created by default
+         */
+        sort?: OrderSort;
+        dir?: SortDir;
+    };
+    url: '/api/v1/admin/orders/export.csv';
+};
+
+export type AdminExportOrdersErrors = {
+    /**
+     * Invalid filter (INVALID_QUERY_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminExportOrdersError = AdminExportOrdersErrors[keyof AdminExportOrdersErrors];
+
+export type AdminExportOrdersResponses = {
+    /**
+     * A CSV file (attachment)
+     */
+    200: string;
+};
+
+export type AdminExportOrdersResponse = AdminExportOrdersResponses[keyof AdminExportOrdersResponses];
 
 export type AdminGetOrderData = {
     body?: never;

@@ -12,6 +12,107 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const adminExportOrders = `-- name: AdminExportOrders :many
+SELECT
+    o.number, o.status, o.created_at, o.paid_at, o.shipped_at,
+    u.name AS customer_name, o.email,
+    (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.order_id = o.id)::int AS item_count,
+    o.subtotal, o.shipping, o.total, o.currency, o.tracking_number,
+    COALESCE(o.shipping_address->>'city', '')::text AS ship_city,
+    COALESCE(o.shipping_address->>'country', '')::text AS ship_country
+FROM orders o
+JOIN users u ON u.id = o.user_id
+WHERE ($1::text IS NULL OR o.status = $1::text)
+  AND ($2::bigint IS NULL OR o.number = $2::bigint)
+  AND ($3::text IS NULL OR o.email ILIKE $3::text)
+  AND ($4::uuid IS NULL OR o.user_id = $4::uuid)
+  AND ($5::date IS NULL OR o.created_at >= $5::date)
+  AND ($6::date IS NULL OR o.created_at < $6::date + 1)
+ORDER BY
+    CASE WHEN $7::text = 'total' AND $8::text = 'asc' THEN o.total END ASC,
+    CASE WHEN $7::text = 'total' AND $8::text = 'desc' THEN o.total END DESC,
+    CASE WHEN $7::text = 'created' AND $8::text = 'asc' THEN o.created_at END ASC,
+    o.created_at DESC, o.id DESC
+LIMIT $9
+`
+
+type AdminExportOrdersParams struct {
+	Status       pgtype.Text `json:"status"`
+	Number       pgtype.Int8 `json:"number"`
+	EmailPattern pgtype.Text `json:"email_pattern"`
+	UserID       pgtype.UUID `json:"user_id"`
+	FromDate     pgtype.Date `json:"from_date"`
+	ToDate       pgtype.Date `json:"to_date"`
+	Sort         string      `json:"sort"`
+	Dir          string      `json:"dir"`
+	MaxRows      int32       `json:"max_rows"`
+}
+
+type AdminExportOrdersRow struct {
+	Number         int64              `json:"number"`
+	Status         string             `json:"status"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	PaidAt         pgtype.Timestamptz `json:"paid_at"`
+	ShippedAt      pgtype.Timestamptz `json:"shipped_at"`
+	CustomerName   string             `json:"customer_name"`
+	Email          string             `json:"email"`
+	ItemCount      int32              `json:"item_count"`
+	Subtotal       int32              `json:"subtotal"`
+	Shipping       int32              `json:"shipping"`
+	Total          int32              `json:"total"`
+	Currency       string             `json:"currency"`
+	TrackingNumber pgtype.Text        `json:"tracking_number"`
+	ShipCity       string             `json:"ship_city"`
+	ShipCountry    string             `json:"ship_country"`
+}
+
+// The CSV export: the list's filters and order, up to @max_rows.
+func (q *Queries) AdminExportOrders(ctx context.Context, arg AdminExportOrdersParams) ([]AdminExportOrdersRow, error) {
+	rows, err := q.db.Query(ctx, adminExportOrders,
+		arg.Status,
+		arg.Number,
+		arg.EmailPattern,
+		arg.UserID,
+		arg.FromDate,
+		arg.ToDate,
+		arg.Sort,
+		arg.Dir,
+		arg.MaxRows,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AdminExportOrdersRow{}
+	for rows.Next() {
+		var i AdminExportOrdersRow
+		if err := rows.Scan(
+			&i.Number,
+			&i.Status,
+			&i.CreatedAt,
+			&i.PaidAt,
+			&i.ShippedAt,
+			&i.CustomerName,
+			&i.Email,
+			&i.ItemCount,
+			&i.Subtotal,
+			&i.Shipping,
+			&i.Total,
+			&i.Currency,
+			&i.TrackingNumber,
+			&i.ShipCity,
+			&i.ShipCountry,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const adminGetOrder = `-- name: AdminGetOrder :one
 SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number FROM orders WHERE number = $1
 `
@@ -88,8 +189,14 @@ WHERE ($1::text IS NULL OR o.status = $1::text)
   AND ($2::bigint IS NULL OR o.number = $2::bigint)
   AND ($3::text IS NULL OR o.email ILIKE $3::text)
   AND ($4::uuid IS NULL OR o.user_id = $4::uuid)
-ORDER BY o.created_at DESC, o.id DESC
-LIMIT $6 OFFSET $5
+  AND ($5::date IS NULL OR o.created_at >= $5::date)
+  AND ($6::date IS NULL OR o.created_at < $6::date + 1)
+ORDER BY
+    CASE WHEN $7::text = 'total' AND $8::text = 'asc' THEN o.total END ASC,
+    CASE WHEN $7::text = 'total' AND $8::text = 'desc' THEN o.total END DESC,
+    CASE WHEN $7::text = 'created' AND $8::text = 'asc' THEN o.created_at END ASC,
+    o.created_at DESC, o.id DESC
+LIMIT $10 OFFSET $9
 `
 
 type AdminListOrdersParams struct {
@@ -97,6 +204,10 @@ type AdminListOrdersParams struct {
 	Number       pgtype.Int8 `json:"number"`
 	EmailPattern pgtype.Text `json:"email_pattern"`
 	UserID       pgtype.UUID `json:"user_id"`
+	FromDate     pgtype.Date `json:"from_date"`
+	ToDate       pgtype.Date `json:"to_date"`
+	Sort         string      `json:"sort"`
+	Dir          string      `json:"dir"`
 	PageOffset   int32       `json:"page_offset"`
 	PageLimit    int32       `json:"page_limit"`
 }
@@ -120,6 +231,10 @@ func (q *Queries) AdminListOrders(ctx context.Context, arg AdminListOrdersParams
 		arg.Number,
 		arg.EmailPattern,
 		arg.UserID,
+		arg.FromDate,
+		arg.ToDate,
+		arg.Sort,
+		arg.Dir,
 		arg.PageOffset,
 		arg.PageLimit,
 	)
@@ -174,6 +289,8 @@ WHERE ($1::text IS NULL OR o.status = $1::text)
   AND ($2::bigint IS NULL OR o.number = $2::bigint)
   AND ($3::text IS NULL OR o.email ILIKE $3::text)
   AND ($4::uuid IS NULL OR o.user_id = $4::uuid)
+  AND ($5::date IS NULL OR o.created_at >= $5::date)
+  AND ($6::date IS NULL OR o.created_at < $6::date + 1)
 `
 
 type CountAdminOrdersParams struct {
@@ -181,16 +298,21 @@ type CountAdminOrdersParams struct {
 	Number       pgtype.Int8 `json:"number"`
 	EmailPattern pgtype.Text `json:"email_pattern"`
 	UserID       pgtype.UUID `json:"user_id"`
+	FromDate     pgtype.Date `json:"from_date"`
+	ToDate       pgtype.Date `json:"to_date"`
 }
 
 // Admin: every order, filtered by status, either an order number or a
-// piece of the email, and a customer (all optional).
+// piece of the email, a customer, and placed dates (UTC days, both ends
+// included); all optional. Sorted by sort (created or total) and dir.
 func (q *Queries) CountAdminOrders(ctx context.Context, arg CountAdminOrdersParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countAdminOrders,
 		arg.Status,
 		arg.Number,
 		arg.EmailPattern,
 		arg.UserID,
+		arg.FromDate,
+		arg.ToDate,
 	)
 	var count int64
 	err := row.Scan(&count)

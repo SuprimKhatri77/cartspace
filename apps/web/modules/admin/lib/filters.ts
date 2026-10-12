@@ -1,4 +1,5 @@
 import type { AdminListProductsData } from "@repo/api-client";
+import type { ProductSort, SortDir } from "@repo/types";
 
 export type ProductStatus = "active" | "inactive";
 
@@ -8,13 +9,26 @@ export type AdminProductFilters = {
   q: string;
   status: ProductStatus | "";
   category: string;
+  /** "" is the default order (newest first). */
+  sort: ProductSort | "";
+  dir: SortDir;
 };
+
+const PRODUCT_SORTS: ProductSort[] = [
+  "created",
+  "updated",
+  "name",
+  "price",
+  "stock",
+];
 
 export const EMPTY_FILTERS: AdminProductFilters = {
   page: 1,
   q: "",
   status: "",
   category: "",
+  sort: "",
+  dir: "desc",
 };
 
 type Params = Record<string, string | string[] | undefined>;
@@ -27,11 +41,15 @@ function first(value: string | string[] | undefined): string {
 export function parseAdminProductFilters(params: Params): AdminProductFilters {
   const page = Number(first(params.page));
   const status = first(params.status);
+  const sort = first(params.sort) as ProductSort;
   return {
     page: Number.isInteger(page) && page > 0 ? page : 1,
     q: first(params.q).slice(0, 100),
     status: status === "active" || status === "inactive" ? status : "",
     category: first(params.category),
+    ...(PRODUCT_SORTS.includes(sort)
+      ? { sort, dir: first(params.dir) === "asc" ? "asc" : "desc" }
+      : { sort: "", dir: "desc" }),
   };
 }
 
@@ -44,6 +62,7 @@ export function adminProductsQuery(
     ...(f.q && { q: f.q }),
     ...(f.status && { status: f.status }),
     ...(f.category && { category: f.category }),
+    ...(f.sort && { sort: f.sort, dir: f.dir }),
   };
 }
 
@@ -53,6 +72,10 @@ export function adminProductsSearch(f: AdminProductFilters): string {
   if (f.q) params.set("q", f.q);
   if (f.status) params.set("status", f.status);
   if (f.category) params.set("category", f.category);
+  if (f.sort) {
+    params.set("sort", f.sort);
+    params.set("dir", f.dir);
+  }
   if (f.page > 1) params.set("page", String(f.page));
   const search = params.toString();
   return search ? `?${search}` : "";

@@ -23,8 +23,12 @@ const (
 	maxCustomersSearch int   = 100
 )
 
-// ListCustomers is every customer account, newest first, searched by a
-// piece of the name or email, with their order count, spend and last order.
+// customerSorts are the sortable fields and their natural direction.
+var customerSorts = map[string]string{"joined": "desc", "orders": "desc", "spend": "desc"}
+
+// ListCustomers is every customer account, newest first unless sorted
+// otherwise, searched by a piece of the name or email, with their order
+// count, spend and last order.
 func ListCustomers(queries *db.Queries) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
@@ -41,6 +45,10 @@ func ListCustomers(queries *db.Queries) gin.HandlerFunc {
 		if q != "" {
 			pattern = pgtype.Text{String: utils.ContainsPattern(q), Valid: true}
 		}
+		sort, ok := httpx.ParseSort(c, customerSorts, "joined")
+		if !ok {
+			return
+		}
 
 		total, err := queries.CountAdminCustomers(ctx, pattern)
 		if err != nil {
@@ -53,7 +61,7 @@ func ListCustomers(queries *db.Queries) gin.HandlerFunc {
 		customers := []db.AdminListCustomersRow{}
 		if total > 0 {
 			customers, err = queries.AdminListCustomers(ctx, db.AdminListCustomersParams{
-				Pattern:   pattern,
+				Pattern: pattern, Sort: sort.Field, Dir: sort.Dir,
 				PageLimit: int32(customersPageSize), PageOffset: httpx.Offset(page, customersPageSize),
 			})
 			if err != nil {

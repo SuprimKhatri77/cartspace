@@ -406,6 +406,49 @@ func (q *Queries) AdminSalesByDay(ctx context.Context, days int32) ([]AdminSales
 	return items, nil
 }
 
+const adminSearchProducts = `-- name: AdminSearchProducts :many
+SELECT p.id, p.name, p.is_active, COALESCE(p.images[1], '')::text AS image
+FROM products p
+WHERE p.name ILIKE $1::text
+   OR EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = p.id AND v.sku ILIKE $1::text)
+ORDER BY p.is_active DESC, p.name, p.id
+LIMIT 5
+`
+
+type AdminSearchProductsRow struct {
+	ID       pgtype.UUID `json:"id"`
+	Name     string      `json:"name"`
+	IsActive bool        `json:"is_active"`
+	Image    string      `json:"image"`
+}
+
+// The command palette: products by a piece of the name or of a variant's
+// SKU, hidden ones too.
+func (q *Queries) AdminSearchProducts(ctx context.Context, pattern string) ([]AdminSearchProductsRow, error) {
+	rows, err := q.db.Query(ctx, adminSearchProducts, pattern)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AdminSearchProductsRow{}
+	for rows.Next() {
+		var i AdminSearchProductsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.IsActive,
+			&i.Image,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const adminTopProducts = `-- name: AdminTopProducts :many
 SELECT
     p.id AS product_id,

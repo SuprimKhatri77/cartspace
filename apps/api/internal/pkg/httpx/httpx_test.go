@@ -104,3 +104,30 @@ func TestUserIDMissingIsServerError(t *testing.T) {
 		t.Fatalf("got %d %s, want a generic 500", w.Code, w.Body)
 	}
 }
+
+func TestParseSort(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	fields := map[string]string{"created": "desc", "name": "asc"}
+	for _, tt := range []struct {
+		query string
+		want  Sort
+		ok    bool
+	}{
+		{"", Sort{"created", "desc"}, true},
+		{"?sort=name", Sort{"name", "asc"}, true},
+		{"?sort=name&dir=desc", Sort{"name", "desc"}, true},
+		{"?sort=price", Sort{}, false},
+		{"?sort=name&dir=up", Sort{}, false},
+	} {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodGet, "/"+tt.query, nil)
+		got, ok := ParseSort(c, fields, "created")
+		if ok != tt.ok || got != tt.want {
+			t.Errorf("%q: got %+v %v, want %+v %v", tt.query, got, ok, tt.want, tt.ok)
+		}
+		if !ok && w.Code != http.StatusBadRequest {
+			t.Errorf("%q: status %d, want 400", tt.query, w.Code)
+		}
+	}
+}

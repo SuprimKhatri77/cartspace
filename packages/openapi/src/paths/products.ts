@@ -56,7 +56,7 @@ export function registerProductPaths() {
     tag,
     summary: "List all products",
     description:
-      "Every product, active or not, 20 per page, newest first, optionally filtered.",
+      "Every product, active or not, 20 per page, newest first unless sorted (sort and dir), optionally filtered.",
     auth: "admin",
     request: {
       query: pageQuery.extend({
@@ -66,12 +66,13 @@ export function registerProductPaths() {
           .optional()
           .openapi({ description: "Name contains (case-insensitive)" }),
         status: z.enum(["active", "inactive"]).optional(),
-        category: z
-          .string()
-          .optional()
-          .openapi({
-            description: "Category slug; includes its subcategories",
-          }),
+        category: z.string().optional().openapi({
+          description: "Category slug; includes its subcategories",
+        }),
+        sort: schemas.ProductSortSchema.optional(),
+        dir: schemas.SortDirSchema.optional().openapi({
+          description: "Defaults to the field's natural direction",
+        }),
       }),
     },
     success: {

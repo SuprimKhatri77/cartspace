@@ -94,5 +94,16 @@ func parseAdminFilters(c *gin.Context) (db.AdminProductsListParams, bool) {
 	if slug := c.Query("category"); slug != "" {
 		f.CategorySlug = pgtype.Text{String: slug, Valid: true}
 	}
+
+	sort, ok := httpx.ParseSort(c, productSorts, "created")
+	if !ok {
+		return f, false
+	}
+	f.Sort, f.Dir = sort.Field, sort.Dir
 	return f, true
+}
+
+// productSorts are the sortable fields and their natural direction.
+var productSorts = map[string]string{
+	"created": "desc", "updated": "desc", "name": "asc", "price": "asc", "stock": "asc",
 }

@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddCartItemData, AddCartItemErrors, AddCartItemResponses, AddToWishlistData, AddToWishlistErrors, AddToWishlistResponses, AdminCancelOrderData, AdminCancelOrderErrors, AdminCancelOrderResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminDeliverOrderData, AdminDeliverOrderErrors, AdminDeliverOrderResponses, AdminGetCountsData, AdminGetCountsErrors, AdminGetCountsResponses, AdminGetCustomerData, AdminGetCustomerErrors, AdminGetCustomerResponses, AdminGetOrderData, AdminGetOrderErrors, AdminGetOrderResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetStatsData, AdminGetStatsErrors, AdminGetStatsResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListCustomersData, AdminListCustomersErrors, AdminListCustomersResponses, AdminListEmailsData, AdminListEmailsErrors, AdminListEmailsResponses, AdminListInventoryData, AdminListInventoryErrors, AdminListInventoryResponses, AdminListOrdersData, AdminListOrdersErrors, AdminListOrdersResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminListReviewsData, AdminListReviewsErrors, AdminListReviewsResponses, AdminListVariantsData, AdminListVariantsErrors, AdminListVariantsResponses, AdminRefundOrderData, AdminRefundOrderErrors, AdminRefundOrderResponses, AdminRetryEmailData, AdminRetryEmailErrors, AdminRetryEmailResponses, AdminSetReviewStatusData, AdminSetReviewStatusErrors, AdminSetReviewStatusResponses, AdminSetStoreThemeData, AdminSetStoreThemeErrors, AdminSetStoreThemeResponses, AdminSetVariantStockData, AdminSetVariantStockErrors, AdminSetVariantStockResponses, AdminShipOrderData, AdminShipOrderErrors, AdminShipOrderResponses, AdminSignUploadData, AdminSignUploadErrors, AdminSignUploadResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ChangePasswordData, ChangePasswordErrors, ChangePasswordResponses, ClearCartData, ClearCartErrors, ClearCartResponses, DeleteAddressData, DeleteAddressErrors, DeleteAddressResponses, DeleteReviewData, DeleteReviewErrors, DeleteReviewResponses, ForgotPasswordData, ForgotPasswordErrors, ForgotPasswordResponses, GetCartData, GetCartErrors, GetCartResponses, GetCheckoutSessionData, GetCheckoutSessionErrors, GetCheckoutSessionResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetMyReviewData, GetMyReviewErrors, GetMyReviewResponses, GetOrderData, GetOrderErrors, GetOrderResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, GetStoreSettingsData, GetStoreSettingsErrors, GetStoreSettingsResponses, ListAddressesData, ListAddressesErrors, ListAddressesResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListOrdersData, ListOrdersErrors, ListOrdersResponses, ListProductsData, ListProductsErrors, ListProductsResponses, ListReviewsData, ListReviewsErrors, ListReviewsResponses, ListWishlistData, ListWishlistErrors, ListWishlistIdsData, ListWishlistIdsErrors, ListWishlistIdsResponses, ListWishlistResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveCartItemData, RemoveCartItemErrors, RemoveCartItemResponses, RemoveFromWishlistData, RemoveFromWishlistErrors, RemoveFromWishlistResponses, ResetPasswordData, ResetPasswordErrors, ResetPasswordResponses, SetDefaultAddressData, SetDefaultAddressErrors, SetDefaultAddressResponses, StartCheckoutData, StartCheckoutErrors, StartCheckoutResponses, StripeWebhookData, StripeWebhookErrors, StripeWebhookResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses, UpdateProfileData, UpdateProfileErrors, UpdateProfileResponses, WriteReviewData, WriteReviewErrors, WriteReviewResponses } from './types.gen';
+import type { AddCartItemData, AddCartItemErrors, AddCartItemResponses, AddToWishlistData, AddToWishlistErrors, AddToWishlistResponses, AdminCancelOrderData, AdminCancelOrderErrors, AdminCancelOrderResponses, AdminCreateCategoryData, AdminCreateCategoryErrors, AdminCreateCategoryResponses, AdminCreateProductData, AdminCreateProductErrors, AdminCreateProductResponses, AdminCreateVariantData, AdminCreateVariantErrors, AdminCreateVariantResponses, AdminDeleteCategoryData, AdminDeleteCategoryErrors, AdminDeleteCategoryResponses, AdminDeleteProductData, AdminDeleteProductErrors, AdminDeleteProductResponses, AdminDeleteVariantData, AdminDeleteVariantErrors, AdminDeleteVariantResponses, AdminDeliverOrderData, AdminDeliverOrderErrors, AdminDeliverOrderResponses, AdminExportOrdersData, AdminExportOrdersErrors, AdminExportOrdersResponses, AdminGetCountsData, AdminGetCountsErrors, AdminGetCountsResponses, AdminGetCustomerData, AdminGetCustomerErrors, AdminGetCustomerResponses, AdminGetOrderData, AdminGetOrderErrors, AdminGetOrderResponses, AdminGetProductData, AdminGetProductErrors, AdminGetProductResponses, AdminGetStatsData, AdminGetStatsErrors, AdminGetStatsResponses, AdminGetVariantData, AdminGetVariantErrors, AdminGetVariantResponses, AdminListCategoriesData, AdminListCategoriesErrors, AdminListCategoriesResponses, AdminListCustomersData, AdminListCustomersErrors, AdminListCustomersResponses, AdminListEmailsData, AdminListEmailsErrors, AdminListEmailsResponses, AdminListInventoryData, AdminListInventoryErrors, AdminListInventoryResponses, AdminListOrdersData, AdminListOrdersErrors, AdminListOrdersResponses, AdminListProductsData, AdminListProductsErrors, AdminListProductsResponses, AdminListReviewsData, AdminListReviewsErrors, AdminListReviewsResponses, AdminListVariantsData, AdminListVariantsErrors, AdminListVariantsResponses, AdminRefundOrderData, AdminRefundOrderErrors, AdminRefundOrderResponses, AdminRetryEmailData, AdminRetryEmailErrors, AdminRetryEmailResponses, AdminSearchData, AdminSearchErrors, AdminSearchResponses, AdminSetReviewStatusData, AdminSetReviewStatusErrors, AdminSetReviewStatusResponses, AdminSetStoreThemeData, AdminSetStoreThemeErrors, AdminSetStoreThemeResponses, AdminSetVariantStockData, AdminSetVariantStockErrors, AdminSetVariantStockResponses, AdminShipOrderData, AdminShipOrderErrors, AdminShipOrderResponses, AdminSignUploadData, AdminSignUploadErrors, AdminSignUploadResponses, AdminUpdateCategoryData, AdminUpdateCategoryErrors, AdminUpdateCategoryResponses, AdminUpdateProductData, AdminUpdateProductErrors, AdminUpdateProductResponses, AdminUpdateVariantData, AdminUpdateVariantErrors, AdminUpdateVariantResponses, ChangePasswordData, ChangePasswordErrors, ChangePasswordResponses, ClearCartData, ClearCartErrors, ClearCartResponses, DeleteAddressData, DeleteAddressErrors, DeleteAddressResponses, DeleteReviewData, DeleteReviewErrors, DeleteReviewResponses, ForgotPasswordData, ForgotPasswordErrors, ForgotPasswordResponses, GetCartData, GetCartErrors, GetCartResponses, GetCheckoutSessionData, GetCheckoutSessionErrors, GetCheckoutSessionResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetMeData, GetMeErrors, GetMeResponses, GetMyReviewData, GetMyReviewErrors, GetMyReviewResponses, GetOrderData, GetOrderErrors, GetOrderResponses, GetProductBySlugData, GetProductBySlugErrors, GetProductBySlugResponses, GetStoreSettingsData, GetStoreSettingsErrors, GetStoreSettingsResponses, ListAddressesData, ListAddressesErrors, ListAddressesResponses, ListCategoriesData, ListCategoriesErrors, ListCategoriesResponses, ListCategoryProductsData, ListCategoryProductsErrors, ListCategoryProductsResponses, ListOrdersData, ListOrdersErrors, ListOrdersResponses, ListProductsData, ListProductsErrors, ListProductsResponses, ListReviewsData, ListReviewsErrors, ListReviewsResponses, ListWishlistData, ListWishlistErrors, ListWishlistIdsData, ListWishlistIdsErrors, ListWishlistIdsResponses, ListWishlistResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, RefreshSessionData, RefreshSessionErrors, RefreshSessionResponses, RegisterData, RegisterErrors, RegisterResponses, RemoveCartItemData, RemoveCartItemErrors, RemoveCartItemResponses, RemoveFromWishlistData, RemoveFromWishlistErrors, RemoveFromWishlistResponses, ResetPasswordData, ResetPasswordErrors, ResetPasswordResponses, SetDefaultAddressData, SetDefaultAddressErrors, SetDefaultAddressResponses, StartCheckoutData, StartCheckoutErrors, StartCheckoutResponses, StripeWebhookData, StripeWebhookErrors, StripeWebhookResponses, UpdateCartItemData, UpdateCartItemErrors, UpdateCartItemResponses, UpdateProfileData, UpdateProfileErrors, UpdateProfileResponses, WriteReviewData, WriteReviewErrors, WriteReviewResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -261,7 +261,7 @@ export const getProductBySlug = <ThrowOnError extends boolean = false>(options: 
 /**
  * List all products
  *
- * Every product, active or not, 20 per page, newest first, optionally filtered.
+ * Every product, active or not, 20 per page, newest first unless sorted (sort and dir), optionally filtered.
  */
 export const adminListProducts = <ThrowOnError extends boolean = false>(options?: Options<AdminListProductsData, ThrowOnError>): RequestResult<AdminListProductsResponses, AdminListProductsErrors, ThrowOnError> => (options?.client ?? client).get<AdminListProductsResponses, AdminListProductsErrors, ThrowOnError>({
     security: [{
@@ -786,7 +786,7 @@ export const adminSignUpload = <ThrowOnError extends boolean = false>(options?: 
 /**
  * All orders
  *
- * Newest first, 20 per page. q is an order number (1042, CS-1042 or #1042) or a piece of the customer's email; customer is a user ID.
+ * Newest first unless sorted, 20 per page. q is an order number (1042, CS-1042 or #1042) or a piece of the customer's email; customer is a user ID; from and to are placed dates (UTC, both included).
  */
 export const adminListOrders = <ThrowOnError extends boolean = false>(options?: Options<AdminListOrdersData, ThrowOnError>): RequestResult<AdminListOrdersResponses, AdminListOrdersErrors, ThrowOnError> => (options?.client ?? client).get<AdminListOrdersResponses, AdminListOrdersErrors, ThrowOnError>({
     security: [{
@@ -859,6 +859,21 @@ export const adminRetryEmail = <ThrowOnError extends boolean = false>(options: O
 });
 
 /**
+ * Search orders, products and customers
+ *
+ * For the command palette: orders by number or a piece of the email, products by name or SKU (hidden ones too), customers by name or email; up to 5 of each.
+ */
+export const adminSearch = <ThrowOnError extends boolean = false>(options: Options<AdminSearchData, ThrowOnError>): RequestResult<AdminSearchResponses, AdminSearchErrors, ThrowOnError> => (options.client ?? client).get<AdminSearchResponses, AdminSearchErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/search',
+    ...options
+});
+
+/**
  * Customer accounts
  *
  * Newest first, 20 per page, with each one's placed orders, spend (paid, shipped and delivered) and last order. q is a piece of the name or email.
@@ -885,6 +900,21 @@ export const adminGetCustomer = <ThrowOnError extends boolean = false>(options: 
             type: 'apiKey'
         }],
     url: '/api/v1/admin/customers/{userID}',
+    ...options
+});
+
+/**
+ * Orders as CSV
+ *
+ * The orders list's filters and order, every match up to 10,000 rows, amounts in major units. Text a spreadsheet would run as a formula starts with an apostrophe.
+ */
+export const adminExportOrders = <ThrowOnError extends boolean = false>(options?: Options<AdminExportOrdersData, ThrowOnError>): RequestResult<AdminExportOrdersResponses, AdminExportOrdersErrors, ThrowOnError> => (options?.client ?? client).get<AdminExportOrdersResponses, AdminExportOrdersErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/admin/orders/export.csv',
     ...options
 });
 

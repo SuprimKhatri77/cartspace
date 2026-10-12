@@ -135,12 +135,20 @@ WHERE u.role = 'customer'
   AND ($1::text IS NULL
        OR u.name ILIKE $1::text
        OR u.email ILIKE $1::text)
-ORDER BY u.created_at DESC, u.id DESC
-LIMIT $3 OFFSET $2
+ORDER BY
+    CASE WHEN $2::text = 'orders' AND $3::text = 'asc' THEN s.orders END ASC,
+    CASE WHEN $2::text = 'orders' AND $3::text = 'desc' THEN s.orders END DESC,
+    CASE WHEN $2::text = 'spend' AND $3::text = 'asc' THEN s.spend END ASC,
+    CASE WHEN $2::text = 'spend' AND $3::text = 'desc' THEN s.spend END DESC,
+    CASE WHEN $2::text = 'joined' AND $3::text = 'asc' THEN u.created_at END ASC,
+    u.created_at DESC, u.id DESC
+LIMIT $5 OFFSET $4
 `
 
 type AdminListCustomersParams struct {
 	Pattern    pgtype.Text `json:"pattern"`
+	Sort       string      `json:"sort"`
+	Dir        string      `json:"dir"`
 	PageOffset int32       `json:"page_offset"`
 	PageLimit  int32       `json:"page_limit"`
 }
@@ -155,8 +163,15 @@ type AdminListCustomersRow struct {
 	LastOrderAt pgtype.Timestamptz `json:"last_order_at"`
 }
 
+// Sorted by sort (joined, orders or spend) and dir.
 func (q *Queries) AdminListCustomers(ctx context.Context, arg AdminListCustomersParams) ([]AdminListCustomersRow, error) {
-	rows, err := q.db.Query(ctx, adminListCustomers, arg.Pattern, arg.PageOffset, arg.PageLimit)
+	rows, err := q.db.Query(ctx, adminListCustomers,
+		arg.Pattern,
+		arg.Sort,
+		arg.Dir,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
 	if err != nil {
 		return nil, err
 	}

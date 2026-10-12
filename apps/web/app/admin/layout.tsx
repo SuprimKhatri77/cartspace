@@ -5,6 +5,7 @@ import { site } from "@/lib/site";
 import { AdminMobileNav } from "@/modules/admin/components/admin-mobile-nav";
 import { AdminAccount, AdminNav } from "@/modules/admin/components/admin-nav";
 import { LogoMark } from "@/components/brand/logo-mark";
+import { CommandPalette } from "@/modules/admin/components/command-palette";
 
 export const metadata: Metadata = {
   title: { template: `%s · Admin · ${site.name}`, default: "Admin" },
@@ -45,7 +46,8 @@ export default function AdminLayout({
               {site.name}
             </Link>
           </div>
-          <div className="-mr-3 flex items-center gap-1">
+          <div className="-mr-3 flex items-center gap-2">
+            <CommandPalette />
             <Link
               href="/"
               target="_blank"

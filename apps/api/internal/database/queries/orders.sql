@@ -141,14 +141,17 @@ ORDER BY o.created_at DESC, o.id DESC
 LIMIT $2 OFFSET $3;
 
 -- Admin: every order, filtered by status, either an order number or a
--- piece of the email, and a customer (all optional).
+-- piece of the email, a customer, and placed dates (UTC days, both ends
+-- included); all optional. Sorted by sort (created or total) and dir.
 
 -- name: CountAdminOrders :one
 SELECT COUNT(*) FROM orders o
 WHERE (sqlc.narg(status)::text IS NULL OR o.status = sqlc.narg(status)::text)
   AND (sqlc.narg(number)::bigint IS NULL OR o.number = sqlc.narg(number)::bigint)
   AND (sqlc.narg(email_pattern)::text IS NULL OR o.email ILIKE sqlc.narg(email_pattern)::text)
-  AND (sqlc.narg(user_id)::uuid IS NULL OR o.user_id = sqlc.narg(user_id)::uuid);
+  AND (sqlc.narg(user_id)::uuid IS NULL OR o.user_id = sqlc.narg(user_id)::uuid)
+  AND (sqlc.narg(from_date)::date IS NULL OR o.created_at >= sqlc.narg(from_date)::date)
+  AND (sqlc.narg(to_date)::date IS NULL OR o.created_at < sqlc.narg(to_date)::date + 1);
 
 -- name: AdminListOrders :many
 SELECT
@@ -161,8 +164,38 @@ WHERE (sqlc.narg(status)::text IS NULL OR o.status = sqlc.narg(status)::text)
   AND (sqlc.narg(number)::bigint IS NULL OR o.number = sqlc.narg(number)::bigint)
   AND (sqlc.narg(email_pattern)::text IS NULL OR o.email ILIKE sqlc.narg(email_pattern)::text)
   AND (sqlc.narg(user_id)::uuid IS NULL OR o.user_id = sqlc.narg(user_id)::uuid)
-ORDER BY o.created_at DESC, o.id DESC
+  AND (sqlc.narg(from_date)::date IS NULL OR o.created_at >= sqlc.narg(from_date)::date)
+  AND (sqlc.narg(to_date)::date IS NULL OR o.created_at < sqlc.narg(to_date)::date + 1)
+ORDER BY
+    CASE WHEN @sort::text = 'total' AND @dir::text = 'asc' THEN o.total END ASC,
+    CASE WHEN @sort::text = 'total' AND @dir::text = 'desc' THEN o.total END DESC,
+    CASE WHEN @sort::text = 'created' AND @dir::text = 'asc' THEN o.created_at END ASC,
+    o.created_at DESC, o.id DESC
 LIMIT @page_limit OFFSET @page_offset;
+
+-- name: AdminExportOrders :many
+-- The CSV export: the list's filters and order, up to @max_rows.
+SELECT
+    o.number, o.status, o.created_at, o.paid_at, o.shipped_at,
+    u.name AS customer_name, o.email,
+    (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.order_id = o.id)::int AS item_count,
+    o.subtotal, o.shipping, o.total, o.currency, o.tracking_number,
+    COALESCE(o.shipping_address->>'city', '')::text AS ship_city,
+    COALESCE(o.shipping_address->>'country', '')::text AS ship_country
+FROM orders o
+JOIN users u ON u.id = o.user_id
+WHERE (sqlc.narg(status)::text IS NULL OR o.status = sqlc.narg(status)::text)
+  AND (sqlc.narg(number)::bigint IS NULL OR o.number = sqlc.narg(number)::bigint)
+  AND (sqlc.narg(email_pattern)::text IS NULL OR o.email ILIKE sqlc.narg(email_pattern)::text)
+  AND (sqlc.narg(user_id)::uuid IS NULL OR o.user_id = sqlc.narg(user_id)::uuid)
+  AND (sqlc.narg(from_date)::date IS NULL OR o.created_at >= sqlc.narg(from_date)::date)
+  AND (sqlc.narg(to_date)::date IS NULL OR o.created_at < sqlc.narg(to_date)::date + 1)
+ORDER BY
+    CASE WHEN @sort::text = 'total' AND @dir::text = 'asc' THEN o.total END ASC,
+    CASE WHEN @sort::text = 'total' AND @dir::text = 'desc' THEN o.total END DESC,
+    CASE WHEN @sort::text = 'created' AND @dir::text = 'asc' THEN o.created_at END ASC,
+    o.created_at DESC, o.id DESC
+LIMIT @max_rows;
 
 -- name: AdminGetOrder :one
 SELECT * FROM orders WHERE number = $1;

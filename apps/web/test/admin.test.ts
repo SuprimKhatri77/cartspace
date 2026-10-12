@@ -22,6 +22,8 @@ import {
   adminReviewsQuery,
   adminReviewsSearch,
   adminEmailsSearch,
+  adminOrdersExportQuery,
+  EMPTY_ORDER_FILTERS,
   adminInventoryQuery,
   adminInventorySearch,
   parseAdminCustomerFilters,
@@ -42,7 +44,13 @@ describe("admin product filters", () => {
         status: "inactive",
         category: "tops",
       }),
-    ).toEqual({ page: 3, q: "linen", status: "inactive", category: "tops" });
+    ).toEqual({
+      ...EMPTY_FILTERS,
+      page: 3,
+      q: "linen",
+      status: "inactive",
+      category: "tops",
+    });
     expect(parseAdminProductFilters({ page: "-1", status: "deleted" })).toEqual(
       EMPTY_FILTERS,
     );
@@ -54,10 +62,10 @@ describe("admin product filters", () => {
     expect(adminProductsQuery(EMPTY_FILTERS)).toEqual({ page: 1 });
     expect(adminProductsSearch(EMPTY_FILTERS)).toBe("");
     const f = {
+      ...EMPTY_FILTERS,
       page: 2,
       q: "wool coat",
       status: "active" as const,
-      category: "",
     };
     expect(adminProductsQuery(f)).toEqual({
       page: 2,
@@ -65,6 +73,17 @@ describe("admin product filters", () => {
       status: "active",
     });
     expect(adminProductsSearch(f)).toBe("?q=wool+coat&status=active&page=2");
+    const sorted = { ...f, sort: "price" as const, dir: "asc" as const };
+    expect(adminProductsQuery(sorted)).toMatchObject({
+      sort: "price",
+      dir: "asc",
+    });
+    expect(
+      parseAdminProductFilters(
+        Object.fromEntries(new URLSearchParams(adminProductsSearch(sorted))),
+      ),
+    ).toEqual(sorted);
+    expect(parseAdminProductFilters({ sort: "colour" }).sort).toBe("");
     // a round trip gives the same filters
     const params = Object.fromEntries(
       new URLSearchParams(adminProductsSearch(f)),
@@ -162,18 +181,18 @@ describe("admin helpers", () => {
 
 describe("admin order and review filters", () => {
   test("orders: parse, query and URL", () => {
-    expect(parseAdminOrderFilters({})).toEqual({
-      page: 1,
-      q: "",
-      status: "",
-      customer: "",
-    });
+    expect(parseAdminOrderFilters({})).toEqual(EMPTY_ORDER_FILTERS);
     const f = parseAdminOrderFilters({
       status: "paid",
       q: " CS-1042 ",
       page: "2",
     });
-    expect(f).toEqual({ page: 2, q: "CS-1042", status: "paid", customer: "" });
+    expect(f).toEqual({
+      ...EMPTY_ORDER_FILTERS,
+      page: 2,
+      q: "CS-1042",
+      status: "paid",
+    });
     expect(adminOrdersQuery(f)).toEqual({
       page: 2,
       q: "CS-1042",
@@ -182,6 +201,32 @@ describe("admin order and review filters", () => {
     expect(adminOrdersSearch(f)).toBe("?status=paid&q=CS-1042&page=2");
     expect(parseAdminOrderFilters({ status: "lost" }).status).toBe("");
     expect(adminOrdersSearch(parseAdminOrderFilters({}))).toBe("");
+  });
+
+  test("orders: dates and sort", () => {
+    const f = parseAdminOrderFilters({
+      from: "2026-10-01",
+      to: "2026-10-12",
+      sort: "total",
+      dir: "asc",
+    });
+    expect(adminOrdersQuery(f)).toEqual({
+      page: 1,
+      from: "2026-10-01",
+      to: "2026-10-12",
+      sort: "total",
+      dir: "asc",
+    });
+    expect(adminOrdersExportQuery(f)).not.toHaveProperty("page");
+    expect(adminOrdersSearch(f)).toBe(
+      "?from=2026-10-01&to=2026-10-12&sort=total&dir=asc",
+    );
+    const junk = parseAdminOrderFilters({
+      from: "12/10/2026",
+      sort: "email",
+      dir: "up",
+    });
+    expect([junk.from, junk.sort, junk.dir]).toEqual(["", "", "desc"]);
   });
 
   test("orders: one customer's, by user ID only", () => {
@@ -240,7 +285,7 @@ describe("admin order and review filters", () => {
 
   test("customers: parse, query and URL", () => {
     const f = parseAdminCustomerFilters({ q: " ada ", page: "3" });
-    expect(f).toEqual({ page: 3, q: "ada" });
+    expect(f).toEqual({ page: 3, q: "ada", sort: "", dir: "desc" });
     expect(adminCustomersQuery(f)).toEqual({ page: 3, q: "ada" });
     expect(adminCustomersSearch(f)).toBe("?q=ada&page=3");
     expect(adminCustomersSearch(parseAdminCustomerFilters({}))).toBe("");

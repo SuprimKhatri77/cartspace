@@ -12,7 +12,7 @@ import {
   TrashIcon,
   XIcon,
 } from "@phosphor-icons/react";
-import type { AdminProduct } from "@repo/types";
+import type { AdminProduct, ProductSort, SortDir } from "@repo/types";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -53,6 +53,7 @@ import {
 import { useAdminProducts, useCategoryTree } from "../queries";
 import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { PageNav } from "./page-nav";
+import { SortableHead } from "./sortable-head";
 import { ActiveBadge } from "./status-badge";
 
 const ALL = "all";
@@ -118,6 +119,12 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
   });
 
   const filtered = Boolean(filters.q || filters.status || filters.category);
+  const sortProps = {
+    sort: filters.sort,
+    dir: filters.dir,
+    onSort: (sort: ProductSort, dir: SortDir) =>
+      setFilters((f) => ({ ...f, sort, dir, page: 1 })),
+  };
   const rows = products.data?.data ?? [];
   const meta = products.data?.meta;
 
@@ -200,7 +207,11 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
             type="button"
             onClick={() => {
               setSearch("");
-              setFilters(EMPTY_FILTERS);
+              setFilters((f) => ({
+                ...EMPTY_FILTERS,
+                sort: f.sort,
+                dir: f.dir,
+              }));
             }}
             className="inline-flex items-center gap-1 hover:text-foreground"
           >
@@ -219,12 +230,28 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
         <Table className="md:min-w-[48rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[45%]">Product</TableHead>
+              <SortableHead
+                field="name"
+                label="Product"
+                natural="asc"
+                {...sortProps}
+                className="w-[45%]"
+              />
               <TableHead className="hidden md:table-cell">Category</TableHead>
-              <TableHead className="hidden text-right sm:table-cell">
-                Price
-              </TableHead>
-              <TableHead className="text-right">Stock</TableHead>
+              <SortableHead
+                field="price"
+                label="Price"
+                natural="asc"
+                {...sortProps}
+                className="hidden text-right sm:table-cell"
+              />
+              <SortableHead
+                field="stock"
+                label="Stock"
+                natural="asc"
+                {...sortProps}
+                className="text-right"
+              />
               <TableHead className="hidden sm:table-cell">Status</TableHead>
               <TableHead className="w-12">
                 <span className="sr-only">Actions</span>

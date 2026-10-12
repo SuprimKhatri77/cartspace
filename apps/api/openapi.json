@@ -1214,6 +1214,17 @@
         ],
         "description": "A row of the admin products table."
       },
+      "ProductSort": {
+        "type": "string",
+        "enum": [
+          "created",
+          "updated",
+          "name",
+          "price",
+          "stock"
+        ],
+        "description": "created by default"
+      },
       "AdminVariantListResponse": {
         "type": "object",
         "properties": {
@@ -3596,6 +3607,21 @@
         ],
         "description": "A row of the admin orders table."
       },
+      "OrderSort": {
+        "type": "string",
+        "enum": [
+          "created",
+          "total"
+        ],
+        "description": "created by default"
+      },
+      "SortDir": {
+        "type": "string",
+        "enum": [
+          "asc",
+          "desc"
+        ]
+      },
       "AdminCountsResponse": {
         "type": "object",
         "properties": {
@@ -3990,7 +4016,7 @@
           "data"
         ]
       },
-      "AdminCustomerListResponse": {
+      "AdminSearchResponse": {
         "type": "object",
         "properties": {
           "success": {
@@ -4003,21 +4029,64 @@
             "type": "string"
           },
           "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AdminCustomerRow"
-            }
-          },
-          "meta": {
-            "$ref": "#/components/schemas/PaginationMeta"
+            "$ref": "#/components/schemas/AdminSearch"
           }
         },
         "required": [
           "success",
           "message",
-          "data",
-          "meta"
+          "data"
         ]
+      },
+      "AdminSearch": {
+        "type": "object",
+        "properties": {
+          "orders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminOrderRow"
+            }
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "is_active": {
+                  "type": "boolean"
+                },
+                "image": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "is_active",
+                "image"
+              ]
+            }
+          },
+          "customers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCustomerRow"
+            }
+          }
+        },
+        "required": [
+          "orders",
+          "products",
+          "customers"
+        ],
+        "description": "Up to 5 of each"
       },
       "AdminCustomerRow": {
         "type": "object",
@@ -4062,6 +4131,44 @@
           "spend",
           "last_order_at"
         ]
+      },
+      "AdminCustomerListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCustomerRow"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "meta"
+        ]
+      },
+      "CustomerSort": {
+        "type": "string",
+        "enum": [
+          "joined",
+          "orders",
+          "spend"
+        ],
+        "description": "joined by default"
       },
       "AdminCustomerResponse": {
         "type": "object",
@@ -5997,7 +6104,7 @@
           "Products"
         ],
         "summary": "List all products",
-        "description": "Every product, active or not, 20 per page, newest first, optionally filtered.",
+        "description": "Every product, active or not, 20 per page, newest first unless sorted (sort and dir), optionally filtered.",
         "security": [
           {
             "accessTokenCookie": []
@@ -6047,6 +6154,29 @@
             "required": false,
             "description": "Category slug; includes its subcategories",
             "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/ProductSort"
+            },
+            "required": false,
+            "description": "created by default",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "Defaults to the field's natural direction"
+            },
+            "required": false,
+            "description": "Defaults to the field's natural direction",
+            "name": "dir",
             "in": "query"
           }
         ],
@@ -8771,7 +8901,7 @@
           "Admin"
         ],
         "summary": "All orders",
-        "description": "Newest first, 20 per page. q is an order number (1042, CS-1042 or #1042) or a piece of the customer's email; customer is a user ID.",
+        "description": "Newest first unless sorted, 20 per page. q is an order number (1042, CS-1042 or #1042) or a piece of the customer's email; customer is a user ID; from and to are placed dates (UTC, both included).",
         "security": [
           {
             "accessTokenCookie": []
@@ -8812,6 +8942,41 @@
             },
             "required": false,
             "name": "customer",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/OrderSort"
+            },
+            "required": false,
+            "description": "created by default",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/SortDir"
+            },
+            "required": false,
+            "name": "dir",
             "in": "query"
           }
         ],
@@ -9226,6 +9391,85 @@
         }
       }
     },
+    "/api/v1/admin/search": {
+      "get": {
+        "operationId": "adminSearch",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Search orders, products and customers",
+        "description": "For the command palette: orders by number or a piece of the email, products by name or SKU (hidden ones too), customers by name or email; up to 5 of each.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "required": true,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "q missing or too long (INVALID_QUERY_PARAMETER)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/customers": {
       "get": {
         "operationId": "adminListCustomers",
@@ -9257,6 +9501,23 @@
             },
             "required": false,
             "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/CustomerSort"
+            },
+            "required": false,
+            "description": "joined by default",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/SortDir"
+            },
+            "required": false,
+            "name": "dir",
             "in": "query"
           }
         ],
@@ -9381,6 +9642,136 @@
           },
           "404": {
             "description": "No customer with that id (CUSTOMER_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/orders/export.csv": {
+      "get": {
+        "operationId": "adminExportOrders",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Orders as CSV",
+        "description": "The orders list's filters and order, every match up to 10,000 rows, amounts in major units. Text a spreadsheet would run as a formula starts with an apostrophe.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/OrderStatus"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "customer",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/OrderSort"
+            },
+            "required": false,
+            "description": "created by default",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/SortDir"
+            },
+            "required": false,
+            "name": "dir",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A CSV file (attachment)",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filter (INVALID_QUERY_PARAMETER)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
             "content": {
               "application/json": {
                 "schema": {

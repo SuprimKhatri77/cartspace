@@ -17,7 +17,13 @@ type Operation = {
   description?: string;
   auth?: Auth;
   request?: RouteConfig["request"];
-  success: { status: 200 | 201 | 202; description: string; schema: ZodType };
+  success: {
+    status: 200 | 201 | 202;
+    description: string;
+    schema: ZodType;
+    /** application/json unless set (e.g. text/csv). */
+    contentType?: string;
+  };
   /** Endpoint-specific errors; auth and 500 errors are added from `auth`. */
   errors?: Partial<Record<400 | 401 | 403 | 404 | 409 | 502 | 503, string>>;
 };
@@ -52,7 +58,14 @@ export function operation(op: Operation) {
   errors[500] = "Unexpected server error (INTERNAL_SERVER_ERROR)";
 
   const responses: RouteConfig["responses"] = {
-    [op.success.status]: json(op.success.schema, op.success.description),
+    [op.success.status]: {
+      description: op.success.description,
+      content: {
+        [op.success.contentType ?? "application/json"]: {
+          schema: op.success.schema,
+        },
+      },
+    },
   };
   for (const [status, description] of Object.entries(errors)) {
     responses[status] = json(schemas.ApiErrorSchema, description);

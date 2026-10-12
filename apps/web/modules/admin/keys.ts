@@ -28,6 +28,7 @@ export const adminKeys = {
     [...adminKeys.orders(), "list", filters] as const,
   order: (number: number) => [...adminKeys.orders(), "detail", number] as const,
   counts: () => [...adminKeys.all, "counts"] as const,
+  search: (q: string) => [...adminKeys.all, "search", q] as const,
   inventory: () => [...adminKeys.all, "inventory"] as const,
   inventoryList: (filters: AdminInventoryFilters) =>
     [...adminKeys.inventory(), filters] as const,
