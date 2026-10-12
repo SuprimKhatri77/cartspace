@@ -226,6 +226,7 @@ export function OrderView({ number }: { number: number }) {
   const step = timelineStep(order.status);
   // Paid (or later) orders make their buyer a verified reviewer.
   const reviewable = step >= 0;
+  const reviewed = new Set(order.reviewed_product_ids);
   const a = order.shipping_address;
 
   return (
@@ -314,14 +315,33 @@ export function OrderView({ number }: { number: number }) {
                 <p className="mt-1 text-xs text-muted-foreground tabular-nums">
                   {item.quantity} × {formatPrice(item.unit_price)}
                 </p>
-                {reviewable && item.product_id && (
-                  <Link
-                    href={`/products/${item.product_slug}?review=1#reviews`}
-                    className="link-underline mt-2 inline-block text-xs"
-                  >
-                    Write a review
-                  </Link>
-                )}
+                {reviewable &&
+                  item.product_id &&
+                  (reviewed.has(item.product_id) ? (
+                    <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <CheckIcon weight="bold" className="size-3" />
+                      Reviewed
+                      <span aria-hidden>·</span>
+                      <Link
+                        href={`/products/${item.product_slug}?review=1#reviews`}
+                        className="link-underline text-foreground"
+                      >
+                        Edit
+                        <span className="sr-only">
+                          {" "}
+                          your review of {item.product_name}
+                        </span>
+                      </Link>
+                    </p>
+                  ) : (
+                    <Link
+                      href={`/products/${item.product_slug}?review=1#reviews`}
+                      className="link-underline mt-2 inline-block text-xs"
+                    >
+                      Write a review
+                      <span className="sr-only"> of {item.product_name}</span>
+                    </Link>
+                  ))}
               </div>
               <p className="text-sm tabular-nums">
                 {formatPrice(item.line_total)}

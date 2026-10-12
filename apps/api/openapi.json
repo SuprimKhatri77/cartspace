@@ -2211,6 +2211,14 @@
             "items": {
               "$ref": "#/components/schemas/OrderItem"
             }
+          },
+          "reviewed_product_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Products of this order you've reviewed"
           }
         },
         "required": [
@@ -2234,7 +2242,8 @@
           "delivered_at",
           "refunded_at",
           "tracking_number",
-          "items"
+          "items",
+          "reviewed_product_ids"
         ]
       },
       "OrderStatus": {

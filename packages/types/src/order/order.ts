@@ -175,6 +175,9 @@ export type OrderItem = z.infer<typeof OrderItemSchema>;
 
 export const OrderDetailSchema = OrderSchema.extend({
   items: z.array(OrderItemSchema),
+  reviewed_product_ids: z
+    .array(Uuid)
+    .describe("Products of this order you've reviewed"),
 }).meta({ id: "OrderDetail" });
 export type OrderDetail = z.infer<typeof OrderDetailSchema>;
 

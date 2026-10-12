@@ -247,6 +247,40 @@ func (q *Queries) ListPublishedReviews(ctx context.Context, arg ListPublishedRev
 	return items, nil
 }
 
+const listReviewedProductIDs = `-- name: ListReviewedProductIDs :many
+SELECT DISTINCT r.product_id
+FROM reviews r
+JOIN order_items oi ON oi.product_id = r.product_id
+WHERE oi.order_id = $1 AND r.user_id = $2
+`
+
+type ListReviewedProductIDsParams struct {
+	OrderID pgtype.UUID `json:"order_id"`
+	UserID  pgtype.UUID `json:"user_id"`
+}
+
+// Products of the order the user has reviewed (a hidden review counts too:
+// writing again would edit it).
+func (q *Queries) ListReviewedProductIDs(ctx context.Context, arg ListReviewedProductIDsParams) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listReviewedProductIDs, arg.OrderID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var product_id pgtype.UUID
+		if err := rows.Scan(&product_id); err != nil {
+			return nil, err
+		}
+		items = append(items, product_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const reviewDistribution = `-- name: ReviewDistribution :many
 SELECT rating, COUNT(*)::int AS count
 FROM reviews

@@ -1,6 +1,10 @@
 package types
 
-import db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+import (
+	"github.com/jackc/pgx/v5/pgtype"
+
+	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
+)
 
 // ShippingCountries are the ISO codes checkout ships to (the oneof below).
 var ShippingCountries = []string{"US", "CA", "GB", "IE", "DE", "FR", "NL", "AU", "NZ", "NP", "IN", "JP"}
@@ -29,8 +33,10 @@ type CheckoutResponse struct {
 	CheckoutURL string `json:"checkout_url"`
 }
 
-// OrderDetail is an order with what was bought.
+// OrderDetail is an order with what was bought, and which of its products
+// the customer has reviewed (never null).
 type OrderDetail struct {
 	db.Order
-	Items []db.OrderItem `json:"items"`
+	Items              []db.OrderItem `json:"items"`
+	ReviewedProductIDs []pgtype.UUID  `json:"reviewed_product_ids"`
 }
