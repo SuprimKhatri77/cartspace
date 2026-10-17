@@ -6,9 +6,9 @@ const IMG = "https://res.cloudinary.com/demo/image/upload";
 
 export const site = {
   name: "cartspace",
-  tagline: "Make room for nice things",
+  tagline: "Made for the way you live",
   description:
-    "Considered clothing, accessories and homewares, made to last and chosen with care.",
+    "Timeless, versatile pieces for everyday life: clothing, accessories and homewares, made to last and chosen with care.",
   announcement: [
     "Free shipping on orders over $150",
     "30-day returns, no questions asked",
@@ -16,7 +16,7 @@ export const site = {
   ],
   hero: {
     eyebrow: "Autumn / Winter collection",
-    title: ["Make room for", "nice things."],
+    title: ["Made for the way", "you live."],
     body: "Considered goods in natural materials, made to last and chosen with care. Fewer, better things.",
     image: `${IMG}/c_fill,g_auto,ar_4:5/samples/two-ladies.jpg`,
     imageAlt: "Two friends laughing in ribbed turtlenecks",
