@@ -506,6 +506,30 @@ func (q *Queries) AdminTopProducts(ctx context.Context, arg AdminTopProductsPara
 	return items, nil
 }
 
+const deleteProducts = `-- name: DeleteProducts :many
+DELETE FROM products WHERE id = ANY($1::uuid[]) RETURNING id
+`
+
+func (q *Queries) DeleteProducts(ctx context.Context, ids []pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, deleteProducts, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProductImages = `-- name: ListProductImages :many
 SELECT unnest(p.images)::text AS url, unnest(p.image_public_ids)::text AS public_id
 FROM products p WHERE p.id = $1
@@ -541,6 +565,40 @@ func (q *Queries) ListProductImages(ctx context.Context, id pgtype.UUID) ([]List
 	return items, nil
 }
 
+const listProductsImages = `-- name: ListProductsImages :many
+SELECT unnest(p.images)::text AS url, unnest(p.image_public_ids)::text AS public_id
+FROM products p WHERE p.id = ANY($1::uuid[])
+UNION ALL
+SELECT unnest(v.images)::text, unnest(v.image_public_ids)::text
+FROM product_variants v WHERE v.product_id = ANY($1::uuid[])
+`
+
+type ListProductsImagesRow struct {
+	Url      string `json:"url"`
+	PublicID string `json:"public_id"`
+}
+
+// ListProductImages for several products.
+func (q *Queries) ListProductsImages(ctx context.Context, ids []pgtype.UUID) ([]ListProductsImagesRow, error) {
+	rows, err := q.db.Query(ctx, listProductsImages, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListProductsImagesRow{}
+	for rows.Next() {
+		var i ListProductsImagesRow
+		if err := rows.Scan(&i.Url, &i.PublicID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const orderedImages = `-- name: OrderedImages :many
 SELECT DISTINCT image::text FROM order_items WHERE image = ANY($1::text[])
 `
@@ -560,6 +618,40 @@ func (q *Queries) OrderedImages(ctx context.Context, urls []string) ([]string, e
 			return nil, err
 		}
 		items = append(items, image)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setProductsActive = `-- name: SetProductsActive :many
+
+UPDATE products SET is_active = $1
+WHERE id = ANY($2::uuid[]) AND is_active <> $1
+RETURNING id
+`
+
+type SetProductsActiveParams struct {
+	IsActive bool          `json:"is_active"`
+	Ids      []pgtype.UUID `json:"ids"`
+}
+
+// Bulk actions on the products table.
+// Hides or shows products; only those that change are returned.
+func (q *Queries) SetProductsActive(ctx context.Context, arg SetProductsActiveParams) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, setProductsActive, arg.IsActive, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

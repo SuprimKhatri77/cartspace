@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
+	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
 )
 
 // Bad input is refused before any query runs (the handlers get no DB).
@@ -28,6 +29,21 @@ func TestCustomerInputRefused(t *testing.T) {
 		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, tt.path, nil))
 		if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), tt.code) {
 			t.Errorf("%s: %d %s, want 400 %s", tt.path, w.Code, w.Body.String(), tt.code)
+		}
+	}
+}
+
+func TestShipOrdersRefused(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	validator.Init()
+	r := gin.New()
+	r.POST("/orders/ship", ShipOrders(nil))
+	many := strings.TrimSuffix(strings.Repeat("1001,", 51), ",")
+	for _, body := range []string{`{"numbers":[]}`, `{}`, `{"numbers":[0]}`, `{"numbers":["CS-1001"]}`, `{"numbers":[` + many + `]}`} {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/orders/ship", strings.NewReader(body)))
+		if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), constants.ValidationFailed) {
+			t.Errorf("%s: %d %s", body, w.Code, w.Body.String())
 		}
 	}
 }

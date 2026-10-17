@@ -6,11 +6,14 @@ import { useMutation } from "@tanstack/react-query";
 import {
   DownloadSimpleIcon,
   MagnifyingGlassIcon,
+  TruckIcon,
   XIcon,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import type { OrderSort, OrderStatus, SortDir } from "@repo/types";
+import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -22,7 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { adminExportOrders } from "@/lib/api/client";
+import { adminExportOrders, adminShipOrders } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
 import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -33,7 +36,10 @@ import {
   EMPTY_ORDER_FILTERS,
   type AdminOrderFilters,
 } from "../lib/order-filters";
+import { useAdminMutation } from "../hooks/use-admin-mutation";
+import { pageState, useSelection } from "../hooks/use-selection";
 import { useAdminCounts, useAdminOrders } from "../queries";
+import { BulkBar, BulkButton } from "./bulk-bar";
 import { PageNav } from "./page-nav";
 import { SortableHead } from "./sortable-head";
 import { OrderStatusBadge } from "./status-badge";
@@ -61,6 +67,31 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
   // Store-wide counts, so only shown while nothing narrows the list.
   const allCounts = useAdminCounts().data?.orders_by_status;
   const counts = filters.q || filters.customer ? undefined : allCounts;
+  // Orders are picked for shipping, so only on the "To ship" tab.
+  const shippable = filters.status === "paid";
+  const picked = useSelection<number>(adminOrdersSearch(filters));
+  const [confirmShip, setConfirmShip] = useState(false);
+  const ship = useAdminMutation({
+    mutationFn: async (numbers: number[]) => {
+      const { data } = await adminShipOrders({
+        body: { numbers },
+        throwOnError: true,
+      });
+      return data.data;
+    },
+    success: ({ shipped, results }) => {
+      const skipped = results.length - shipped;
+      const what = shipped === 1 ? "1 order" : `${shipped} orders`;
+      return skipped > 0
+        ? `Shipped ${what} · ${skipped} skipped (no longer paid)`
+        : `Shipped ${what}`;
+    },
+    failure: "Couldn't ship the orders.",
+    onSuccess: () => {
+      picked.clear();
+      setConfirmShip(false);
+    },
+  });
 
   useEffect(() => {
     setFilters((f) =>
@@ -117,6 +148,9 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
   };
   const rows = orders.data?.data ?? [];
   const meta = orders.data?.meta;
+  const pageNumbers = rows.map((o) => o.number);
+  const all = pageState(pageNumbers, picked.has);
+  const columns = shippable ? 6 : 5;
   const filtered = Boolean(
     filters.q ||
     filters.status ||
@@ -257,6 +291,17 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
         <Table className="md:min-w-[44rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
+              {shippable && (
+                <TableHead className="w-10 pr-0">
+                  <Checkbox
+                    aria-label="Select every order on this page"
+                    checked={all.checked}
+                    indeterminate={all.indeterminate}
+                    disabled={rows.length === 0}
+                    onCheckedChange={(on) => picked.setAll(pageNumbers, on)}
+                  />
+                </TableHead>
+              )}
               <TableHead>Order</TableHead>
               <TableHead className="hidden sm:table-cell">Customer</TableHead>
               <TableHead>Status</TableHead>
@@ -279,14 +324,14 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
             {orders.isPending ? (
               Array.from({ length: 6 }, (_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={5}>
+                  <TableCell colSpan={columns}>
                     <Skeleton className="h-10" />
                   </TableCell>
                 </TableRow>
               ))
             ) : orders.isError && !outOfRange ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={5} className="py-16 text-center">
+                <TableCell colSpan={columns} className="py-16 text-center">
                   <p className="mb-4 text-sm text-muted-foreground">
                     The orders couldn&apos;t load.
                   </p>
@@ -297,7 +342,7 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={5} className="py-16 text-center">
+                <TableCell colSpan={columns} className="py-16 text-center">
                   <p className="font-serif text-2xl">
                     {filtered ? "No orders match." : "No orders yet."}
                   </p>
@@ -313,7 +358,20 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
                 <TableRow
                   key={order.id}
                   className="group relative cursor-pointer"
+                  data-state={picked.has(order.number) ? "selected" : undefined}
                 >
+                  {shippable && (
+                    // Above the row's link, which covers the whole row.
+                    <TableCell className="relative z-10 w-10 pr-0">
+                      <Checkbox
+                        aria-label={`Select ${orderLabel(order.number)}`}
+                        checked={picked.has(order.number)}
+                        onCheckedChange={(on) =>
+                          picked.toggle(order.number, on)
+                        }
+                      />
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Link
                       href={`${PATH}/${order.number}`}
@@ -351,6 +409,35 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
           </TableBody>
         </Table>
       </div>
+
+      {shippable && (
+        <BulkBar
+          count={picked.count}
+          noun={["order", "orders"]}
+          onClear={picked.clear}
+        >
+          <BulkButton
+            disabled={ship.isPending}
+            onClick={() => setConfirmShip(true)}
+          >
+            <TruckIcon />
+            Mark shipped
+          </BulkButton>
+        </BulkBar>
+      )}
+      <ConfirmDialog
+        open={confirmShip}
+        onOpenChange={(open) => !open && setConfirmShip(false)}
+        tone="default"
+        title={`Ship ${picked.count === 1 ? "this order" : `${picked.count} orders`}?`}
+        description="Each customer gets a shipped email. There are no tracking numbers this way; to add one, ship the order from its own page."
+        confirmLabel={
+          picked.count === 1 ? "Mark shipped" : `Mark ${picked.count} shipped`
+        }
+        pendingLabel="Shipping…"
+        pending={ship.isPending}
+        onConfirm={() => ship.mutate(picked.ids)}
+      />
 
       {meta && (
         <PageNav

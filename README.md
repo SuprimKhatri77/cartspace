@@ -37,9 +37,9 @@ a full-stack e-commerce store: a go/gin api and a next.js storefront with an adm
 **admin** (`/admin`, admin role only)
 
 - dashboard: revenue chart, order counts, average order value, low stock, recent orders
-- products: table with search and filters, an editor with direct-to-cloudinary image uploads (drop files in, reorder, remove), variants, stock and offers
+- products: table with search and filters, an editor with direct-to-cloudinary image uploads (drop files in, reorder, remove), variants, stock and offers; pick rows to hide, show or delete them together
 - categories: a tree editor (add, rename, move under another parent, delete)
-- orders: status tabs and search; ship (with tracking), deliver, cancel and refund through stripe, with optional restock
+- orders: status tabs and search; ship (with tracking), deliver, cancel and refund through stripe, with optional restock; on the to-ship tab, pick orders to ship them together
 - reviews: publish or hide, which updates the product's rating
 - discounts: codes with a minimum spend, start and end dates, a use limit and once-per-customer; uses are counted from orders, so an abandoned checkout gives its use back, and two shoppers can't both take the last one
 - settings: the store's theme, with a live preview of each

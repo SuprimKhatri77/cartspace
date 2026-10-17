@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ErrorCodeSchema } from "../api/error-codes";
 import {
   Cents,
   MessageResponseSchema,
@@ -220,6 +221,46 @@ export const ShipOrderBodySchema = z
   })
   .meta({ id: "ShipOrderBody" });
 export type ShipOrderBody = z.infer<typeof ShipOrderBodySchema>;
+
+export const BulkProductsBodySchema = z
+  .object({
+    action: z.enum(["hide", "show", "delete"]),
+    ids: z.array(Uuid).min(1).max(100),
+  })
+  .meta({ id: "BulkProductsBody" });
+export type BulkProductsBody = z.infer<typeof BulkProductsBodySchema>;
+
+export const BulkProductsResponseSchema = successResponse(
+  z.object({
+    affected: z
+      .int()
+      .nonnegative()
+      .describe(
+        "Products that changed: already hidden or gone ones don't count",
+      ),
+  }),
+).meta({ id: "BulkProductsResponse" });
+
+export const BulkShipBodySchema = z
+  .object({ numbers: z.array(z.int().positive()).min(1).max(50) })
+  .meta({ id: "BulkShipBody" });
+export type BulkShipBody = z.infer<typeof BulkShipBodySchema>;
+
+export const ShipResultSchema = z
+  .object({
+    number: z.int().positive(),
+    shipped: z.boolean(),
+    code: ErrorCodeSchema.optional().describe("Why it didn't ship"),
+    message: z.string().optional(),
+  })
+  .meta({ id: "ShipResult" });
+
+export const BulkShipResponseSchema = successResponse(
+  z.object({
+    shipped: z.int().nonnegative(),
+    results: z.array(ShipResultSchema),
+  }),
+).meta({ id: "BulkShipResponse" });
 
 export const RefundOrderBodySchema = z
   .object({

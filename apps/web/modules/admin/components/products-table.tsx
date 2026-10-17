@@ -6,6 +6,8 @@ import Link from "next/link";
 import {
   ArrowSquareOutIcon,
   DotsThreeIcon,
+  EyeIcon,
+  EyeSlashIcon,
   MagnifyingGlassIcon,
   PencilSimpleIcon,
   PlusIcon,
@@ -14,6 +16,7 @@ import {
 } from "@phosphor-icons/react";
 import type { AdminProduct, ProductSort, SortDir } from "@repo/types";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,12 +41,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { adminDeleteProduct } from "@/lib/api/client";
+import { adminBulkProducts, adminDeleteProduct } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
 import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useAdminMutation } from "../hooks/use-admin-mutation";
+import { pageState, useSelection } from "../hooks/use-selection";
 import { orderTree } from "../lib/categories";
 import {
   adminProductsSearch,
@@ -52,6 +56,7 @@ import {
 } from "../lib/filters";
 import { useAdminProducts, useCategoryTree } from "../queries";
 import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
+import { BulkBar, BulkButton } from "./bulk-bar";
 import { PageNav } from "./page-nav";
 import { SortableHead } from "./sortable-head";
 import { ActiveBadge } from "./status-badge";
@@ -70,6 +75,9 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
   const [search, setSearch] = useState(initial.q);
   const debounced = useDebouncedValue(search.trim(), 300);
   const [deleting, setDeleting] = useState<AdminProduct | null>(null);
+  const [deletingPicked, setDeletingPicked] = useState(false);
+  // Picks belong to this page and these filters.
+  const picked = useSelection<string>(adminProductsSearch(filters));
 
   const products = useAdminProducts(filters);
   const tree = useCategoryTree();
@@ -115,7 +123,38 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
     },
     success: (_, product) => `${product.name} was deleted`,
     failure: "Couldn't delete the product.",
-    onSuccess: () => setDeleting(null),
+    onSuccess: (_, product) => {
+      setDeleting(null);
+      picked.toggle(product.id, false);
+    },
+  });
+
+  const bulk = useAdminMutation({
+    mutationFn: async ({
+      action,
+      ids,
+    }: {
+      action: "hide" | "show" | "delete";
+      ids: string[];
+    }) => {
+      const { data } = await adminBulkProducts({
+        body: { action, ids },
+        throwOnError: true,
+      });
+      return data.data.affected;
+    },
+    success: (affected, { action }) => {
+      const what = affected === 1 ? "1 product" : `${affected} products`;
+      if (action === "delete") return `${what} deleted`;
+      if (affected === 0)
+        return `Nothing to change: already ${action === "hide" ? "hidden" : "shown"}`;
+      return `${what} ${action === "hide" ? "hidden" : "shown"}`;
+    },
+    failure: "Couldn't update the products.",
+    onSuccess: () => {
+      picked.clear();
+      setDeletingPicked(false);
+    },
   });
 
   const filtered = Boolean(filters.q || filters.status || filters.category);
@@ -127,6 +166,8 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
   };
   const rows = products.data?.data ?? [];
   const meta = products.data?.meta;
+  const pageIds = rows.map((p) => p.id);
+  const all = pageState(pageIds, picked.has);
 
   return (
     <div className="space-y-5">
@@ -230,6 +271,15 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
         <Table className="md:min-w-[48rem]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
+              <TableHead className="w-10 pr-0">
+                <Checkbox
+                  aria-label="Select every product on this page"
+                  checked={all.checked}
+                  indeterminate={all.indeterminate}
+                  disabled={rows.length === 0}
+                  onCheckedChange={(on) => picked.setAll(pageIds, on)}
+                />
+              </TableHead>
               <SortableHead
                 field="name"
                 label="Product"
@@ -262,14 +312,14 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
             {products.isPending ? (
               Array.from({ length: 6 }, (_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={6}>
+                  <TableCell colSpan={7}>
                     <Skeleton className="h-12" />
                   </TableCell>
                 </TableRow>
               ))
             ) : products.isError && !outOfRange ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={6} className="py-16 text-center">
+                <TableCell colSpan={7} className="py-16 text-center">
                   <p className="mb-4 text-sm text-muted-foreground">
                     The products couldn&apos;t load.
                   </p>
@@ -280,7 +330,7 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={6} className="py-16 text-center">
+                <TableCell colSpan={7} className="py-16 text-center">
                   <p className="font-serif text-2xl">
                     {filtered ? "Nothing matches." : "No products yet."}
                   </p>
@@ -296,6 +346,8 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
                 <ProductRow
                   key={product.id}
                   product={product}
+                  picked={picked.has(product.id)}
+                  onPick={(on) => picked.toggle(product.id, on)}
                   onDelete={() => setDeleting(product)}
                 />
               ))
@@ -303,6 +355,35 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
           </TableBody>
         </Table>
       </div>
+
+      <BulkBar
+        count={picked.count}
+        noun={["product", "products"]}
+        onClear={picked.clear}
+      >
+        <BulkButton
+          disabled={bulk.isPending}
+          onClick={() => bulk.mutate({ action: "hide", ids: picked.ids })}
+        >
+          <EyeSlashIcon />
+          Hide
+        </BulkButton>
+        <BulkButton
+          disabled={bulk.isPending}
+          onClick={() => bulk.mutate({ action: "show", ids: picked.ids })}
+        >
+          <EyeIcon />
+          Show
+        </BulkButton>
+        <BulkButton
+          destructive
+          disabled={bulk.isPending}
+          onClick={() => setDeletingPicked(true)}
+        >
+          <TrashIcon />
+          Delete
+        </BulkButton>
+      </BulkBar>
 
       {meta && (
         <PageNav
@@ -315,6 +396,20 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={deletingPicked}
+        onOpenChange={(open) => !open && setDeletingPicked(false)}
+        title={`Delete ${picked.count === 1 ? "this product" : `${picked.count} products`}?`}
+        description="They and their variants will be removed for good, with their images and reviews. Orders keep their own copy. To take products off the store for now, hide them instead."
+        confirmLabel={
+          picked.count === 1
+            ? "Delete product"
+            : `Delete ${picked.count} products`
+        }
+        pending={bulk.isPending}
+        onConfirm={() => bulk.mutate({ action: "delete", ids: picked.ids })}
+      />
 
       <ConfirmDialog
         open={deleting !== null}
@@ -340,15 +435,26 @@ export function ProductsTable({ initial }: { initial: AdminProductFilters }) {
 
 function ProductRow({
   product,
+  picked,
+  onPick,
   onDelete,
 }: {
   product: AdminProduct;
+  picked: boolean;
+  onPick: (on: boolean) => void;
   onDelete: () => void;
 }) {
   const href = `/admin/products/${product.id}`;
   const [image] = product.images;
   return (
-    <TableRow className="group">
+    <TableRow className="group" data-state={picked ? "selected" : undefined}>
+      <TableCell className="w-10 pr-0">
+        <Checkbox
+          aria-label={`Select ${product.name}`}
+          checked={picked}
+          onCheckedChange={(on) => onPick(on)}
+        />
+      </TableCell>
       <TableCell>
         <Link href={href} className="flex items-center gap-3">
           <span className="relative h-14 w-11 shrink-0 overflow-hidden rounded-media bg-surface">
