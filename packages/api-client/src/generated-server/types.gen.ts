@@ -1405,17 +1405,17 @@ export type AdminCustomerRow = {
     last_order_at: string | null;
 };
 
+/**
+ * joined by default
+ */
+export type CustomerSort = 'joined' | 'orders' | 'spend';
+
 export type AdminCustomerListResponse = {
     success: true;
     message: string;
     data: Array<AdminCustomerRow>;
     meta: PaginationMeta;
 };
-
-/**
- * joined by default
- */
-export type CustomerSort = 'joined' | 'orders' | 'spend';
 
 export type AdminCustomerResponse = {
     success: true;
@@ -4078,6 +4078,50 @@ export type AdminSearchResponses = {
 };
 
 export type AdminSearchResponse2 = AdminSearchResponses[keyof AdminSearchResponses];
+
+export type AdminExportCustomersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        q?: string;
+        /**
+         * joined by default
+         */
+        sort?: CustomerSort;
+        dir?: SortDir;
+    };
+    url: '/api/v1/admin/customers/export.csv';
+};
+
+export type AdminExportCustomersErrors = {
+    /**
+     * Invalid search or sort (INVALID_QUERY_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminExportCustomersError = AdminExportCustomersErrors[keyof AdminExportCustomersErrors];
+
+export type AdminExportCustomersResponses = {
+    /**
+     * A CSV file (attachment)
+     */
+    200: string;
+};
+
+export type AdminExportCustomersResponse = AdminExportCustomersResponses[keyof AdminExportCustomersResponses];
 
 export type AdminListCustomersData = {
     body?: never;

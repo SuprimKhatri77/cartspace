@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -84,5 +85,34 @@ func TestExportRecordMatchesHeader(t *testing.T) {
 	}
 	if col("discount") != "6.20" || col("discount_code") != "'=WELCOME10" || col("total") != "63.80" {
 		t.Errorf("discount %q code %q total %q", col("discount"), col("discount_code"), col("total"))
+	}
+}
+
+func TestCustomerRecord(t *testing.T) {
+	joined := time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC)
+	rec := customerRecord(db.AdminListCustomersRow{
+		Name: "@Ada", Email: "ada@example.com", CreatedAt: pgtype.Timestamptz{Time: joined, Valid: true},
+		Orders: 3, Spend: 12345,
+	})
+	want := []string{"'@Ada", "ada@example.com", "2026-10-01T09:00:00Z", "3", "123.45", ""}
+	if strings.Join(rec, "|") != strings.Join(want, "|") || len(rec) != len(customerExportHeader) {
+		t.Errorf("record = %q", rec)
+	}
+}
+
+func TestCustomerExportRefused(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.GET("/customers/export.csv", ExportCustomers(nil))
+	for _, path := range []string{
+		"/customers/export.csv?q=" + strings.Repeat("a", 101),
+		"/customers/export.csv?sort=name",
+		"/customers/export.csv?sort=spend&dir=up",
+	} {
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+		if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), constants.InvalidQueryParam) {
+			t.Errorf("%s: %d %s", path, w.Code, w.Body.String())
+		}
 	}
 }

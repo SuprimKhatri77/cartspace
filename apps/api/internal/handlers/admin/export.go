@@ -42,22 +42,67 @@ func ExportOrders(queries *db.Queries) gin.HandlerFunc {
 			return
 		}
 
-		name := fmt.Sprintf("orders-%s.csv", time.Now().UTC().Format(time.DateOnly))
-		c.Header("Content-Type", "text/csv; charset=utf-8")
-		c.Header("Content-Disposition", `attachment; filename="`+name+`"`)
-		c.Header("Cache-Control", "no-store")
-		c.Status(http.StatusOK)
+		records := make([][]string, len(rows))
+		for i, r := range rows {
+			records[i] = exportRecord(r)
+		}
+		writeCSV(c, "orders", exportHeader, records)
+	}
+}
 
-		w := csv.NewWriter(c.Writer)
-		_ = w.Write(exportHeader)
-		for _, r := range rows {
-			_ = w.Write(exportRecord(r))
+var customerExportHeader = []string{"name", "email", "joined_at", "orders", "spend", "last_order_at"}
+
+// ExportCustomers is the customers list as CSV: the same search and order
+// as ListCustomers, up to maxExportRows, spend in major units.
+func ExportCustomers(queries *db.Queries) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		pattern, sort, ok := customerFilters(c)
+		if !ok {
+			return
 		}
-		w.Flush()
-		if err := w.Error(); err != nil {
-			// The status is sent; the client gets a cut-off file.
-			rlog.Error(c, "export orders: write", err)
+		rows, err := queries.AdminListCustomers(c.Request.Context(), db.AdminListCustomersParams{
+			Pattern: pattern, Sort: sort.Field, Dir: sort.Dir, PageLimit: maxExportRows, PageOffset: 0,
+		})
+		if err != nil {
+			httpx.Internal(c, "failed to export customers", err)
+			return
 		}
+		records := make([][]string, len(rows))
+		for i, r := range rows {
+			records[i] = customerRecord(r)
+		}
+		writeCSV(c, "customers", customerExportHeader, records)
+	}
+}
+
+func customerRecord(r db.AdminListCustomersRow) []string {
+	return []string{
+		safeCell(r.Name),
+		safeCell(r.Email),
+		timestamp(r.CreatedAt),
+		strconv.FormatInt(r.Orders, 10),
+		money(r.Spend),
+		timestamp(r.LastOrderAt),
+	}
+}
+
+// writeCSV sends records as a CSV download named "<what>-<today>.csv".
+func writeCSV(c *gin.Context, what string, header []string, records [][]string) {
+	name := fmt.Sprintf("%s-%s.csv", what, time.Now().UTC().Format(time.DateOnly))
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", `attachment; filename="`+name+`"`)
+	c.Header("Cache-Control", "no-store")
+	c.Status(http.StatusOK)
+
+	w := csv.NewWriter(c.Writer)
+	_ = w.Write(header)
+	for _, r := range records {
+		_ = w.Write(r)
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
+		// The status is sent; the client gets a cut-off file.
+		rlog.Error(c, "export "+what+": write", err)
 	}
 }
 

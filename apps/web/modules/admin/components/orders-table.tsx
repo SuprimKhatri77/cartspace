@@ -2,14 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useMutation } from "@tanstack/react-query";
 import {
   DownloadSimpleIcon,
   MagnifyingGlassIcon,
   TruckIcon,
   XIcon,
 } from "@phosphor-icons/react";
-import { toast } from "sonner";
 import type { OrderSort, OrderStatus, SortDir } from "@repo/types";
 import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -37,6 +35,7 @@ import {
   type AdminOrderFilters,
 } from "../lib/order-filters";
 import { useAdminMutation } from "../hooks/use-admin-mutation";
+import { useCsvExport } from "../hooks/use-csv-export";
 import { pageState, useSelection } from "../hooks/use-selection";
 import { useAdminCounts, useAdminOrders } from "../queries";
 import { BulkBar, BulkButton } from "./bulk-bar";
@@ -46,7 +45,6 @@ import { OrderStatusBadge } from "./status-badge";
 
 const PATH = "/admin/orders";
 /** The API's cap on one CSV export. */
-const MAX_EXPORT_ROWS = 10_000;
 
 /** The status tabs; "To ship" is the paid orders waiting for the warehouse. */
 const tabs: { label: string; status: OrderStatus | "" }[] = [
@@ -110,36 +108,6 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
     if (outOfRange && filters.page > 1) setFilters((f) => ({ ...f, page: 1 }));
   }, [outOfRange, filters.page]);
 
-  // The CSV comes through the API client (it refreshes an expired session),
-  // then downloads from memory.
-  const exporting = useMutation({
-    mutationFn: async () => {
-      const { data } = await adminExportOrders({
-        query: adminOrdersExportQuery(filters),
-        throwOnError: true,
-      });
-      return data as string;
-    },
-    onSuccess: (csv) => {
-      const url = URL.createObjectURL(
-        new Blob([csv], { type: "text/csv;charset=utf-8" }),
-      );
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
-      if (meta && meta.total > MAX_EXPORT_ROWS) {
-        toast(`Exported the first ${MAX_EXPORT_ROWS.toLocaleString()} orders`, {
-          description: "Narrow the dates to export the rest.",
-        });
-      }
-    },
-    onError: (error) => {
-      toast.error(getApiError(error)?.message ?? "Couldn't export the orders.");
-    },
-  });
-
   const sortProps = {
     sort: filters.sort,
     dir: filters.dir,
@@ -148,6 +116,18 @@ export function OrdersTable({ initial }: { initial: AdminOrderFilters }) {
   };
   const rows = orders.data?.data ?? [];
   const meta = orders.data?.meta;
+  const exporting = useCsvExport({
+    what: "orders",
+    fetchCsv: async () => {
+      const { data } = await adminExportOrders({
+        query: adminOrdersExportQuery(filters),
+        throwOnError: true,
+      });
+      return data as string;
+    },
+    total: meta?.total,
+    narrowHint: "Narrow the dates to export the rest.",
+  });
   const pageNumbers = rows.map((o) => o.number);
   const all = pageState(pageNumbers, picked.has);
   const columns = shippable ? 6 : 5;

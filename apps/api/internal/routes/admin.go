@@ -31,6 +31,7 @@ func setupAdminRoutes(router *gin.RouterGroup, cfg config.Config) {
 
 	customers := group.Group("/customers")
 	customers.GET("", admin.ListCustomers(cfg.Queries))
+	customers.GET("/export.csv", admin.ExportCustomers(cfg.Queries))
 	customers.GET("/:userID", admin.GetCustomer(cfg.Queries))
 
 	group.GET("/reviews", admin.ListReviews(cfg.Queries))
