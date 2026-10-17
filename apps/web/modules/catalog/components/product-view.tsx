@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, m } from "motion/react";
 import {
   ArrowCounterClockwiseIcon,
@@ -222,7 +223,13 @@ export function ProductView({
             </AccordionTrigger>
             <AccordionContent>
               <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">
-                {site.shippingCopy}
+                {site.shippingCopy}{" "}
+                <Link
+                  href="/shipping-returns"
+                  className="text-foreground underline underline-offset-4"
+                >
+                  Shipping &amp; returns policy
+                </Link>
               </p>
             </AccordionContent>
           </AccordionItem>

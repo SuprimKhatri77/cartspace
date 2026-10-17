@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/auth/session";
 import { site } from "@/lib/site";
 import { getCollections } from "@/modules/catalog/api";
+import { LEGAL_PAGES } from "@/modules/legal/lib/pages";
 
 const signedOutLinks = [
   { label: "Sign in", href: "/auth/login" },
@@ -31,12 +32,13 @@ export async function SiteFooter() {
       ],
     },
     { title: "Account", links: user ? signedInLinks : signedOutLinks },
+    { title: "Help", links: LEGAL_PAGES },
   ];
 
   return (
     <footer className="mt-24 border-t border-border bg-secondary/40">
-      <div className="container-page grid gap-12 py-16 md:grid-cols-[1.4fr_1fr_1fr]">
-        <div className="max-w-sm space-y-4">
+      <div className="container-page grid gap-12 py-16 sm:grid-cols-3 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div className="max-w-sm space-y-4 sm:col-span-3 md:col-span-1">
           <p className="display text-3xl">{site.tagline}.</p>
           <p className="text-sm text-muted-foreground">{site.description}</p>
         </div>
