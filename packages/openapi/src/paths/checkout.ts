@@ -23,10 +23,32 @@ export function registerCheckoutPaths() {
     },
     errors: {
       400: "Invalid body, or not exactly one of address_id and address (VALIDATION_FAILED)",
-      404: "No such saved address (ADDRESS_NOT_FOUND)",
-      409: "The cart is empty, or a line is off sale or short (CART_EMPTY, CART_HAS_ISSUES)",
+      404: "No such saved address, or the discount code isn't valid (ADDRESS_NOT_FOUND, DISCOUNT_NOT_FOUND)",
+      409: "The cart is empty, a line is off sale or short, or the discount code doesn't apply (CART_EMPTY, CART_HAS_ISSUES, DISCOUNT_NOT_STARTED, DISCOUNT_EXPIRED, DISCOUNT_USED_UP, DISCOUNT_ALREADY_USED, DISCOUNT_MIN_SUBTOTAL)",
       502: "Stripe could not be reached; the reservation was released (PAYMENT_PROVIDER_ERROR)",
       503: unavailable,
+    },
+  });
+
+  operation({
+    method: "post",
+    path: "/api/v1/checkout/discount",
+    operationId: "previewDiscount",
+    tag: "Checkout",
+    summary: "Check a discount code",
+    description:
+      "What the code takes off the bag as it is now, and the shipping and total after it. It reserves nothing: checkout checks the code again.",
+    auth: "user",
+    request: body(schemas.DiscountPreviewBodySchema),
+    success: {
+      status: 200,
+      description: "Discount code applies",
+      schema: schemas.DiscountPreviewResponseSchema,
+    },
+    errors: {
+      400: "Invalid body (VALIDATION_FAILED)",
+      404: "The code isn't valid (DISCOUNT_NOT_FOUND)",
+      409: "The bag is empty or the code doesn't apply (CART_EMPTY, DISCOUNT_NOT_STARTED, DISCOUNT_EXPIRED, DISCOUNT_USED_UP, DISCOUNT_ALREADY_USED, DISCOUNT_MIN_SUBTOTAL)",
     },
   });
 

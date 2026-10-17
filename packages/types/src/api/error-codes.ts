@@ -78,6 +78,11 @@ export const ErrorCodeSchema = z
     "DISCOUNT_NOT_FOUND",
     "DISCOUNT_CODE_TAKEN",
     "DISCOUNT_IN_USE",
+    "DISCOUNT_NOT_STARTED",
+    "DISCOUNT_EXPIRED",
+    "DISCOUNT_USED_UP",
+    "DISCOUNT_ALREADY_USED",
+    "DISCOUNT_MIN_SUBTOTAL",
   ])
   .meta({ id: "ErrorCode", description: "Machine-readable failure code." });
 

@@ -28,6 +28,24 @@ type CheckoutRequest struct {
 	SaveAddress bool `json:"save_address"`
 	// MakeDefault, with SaveAddress, makes the new address the default.
 	MakeDefault bool `json:"make_default"`
+	// DiscountCode, in any case; empty for none.
+	DiscountCode string `json:"discount_code" label:"Discount code" binding:"max=32"`
+}
+
+// DiscountPreviewRequest checks a code against the bag before paying.
+type DiscountPreviewRequest struct {
+	Code string `json:"code" binding:"required,not_blank,max=32"`
+}
+
+// DiscountPreview is what a code does to the bag as it is now (cents).
+type DiscountPreview struct {
+	Code     string `json:"code"`
+	Kind     string `json:"kind"`
+	Value    int32  `json:"value"`
+	Subtotal int64  `json:"subtotal"`
+	Discount int64  `json:"discount"`
+	Shipping int64  `json:"shipping"`
+	Total    int64  `json:"total"`
 }
 
 type CheckoutResponse struct {

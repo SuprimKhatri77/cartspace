@@ -17,7 +17,7 @@ SELECT
     o.number, o.status, o.created_at, o.paid_at, o.shipped_at,
     u.name AS customer_name, o.email,
     (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.order_id = o.id)::int AS item_count,
-    o.subtotal, o.shipping, o.total, o.currency, o.tracking_number,
+    o.subtotal, o.discount, o.discount_code, o.shipping, o.total, o.currency, o.tracking_number,
     COALESCE(o.shipping_address->>'city', '')::text AS ship_city,
     COALESCE(o.shipping_address->>'country', '')::text AS ship_country
 FROM orders o
@@ -58,6 +58,8 @@ type AdminExportOrdersRow struct {
 	Email          string             `json:"email"`
 	ItemCount      int32              `json:"item_count"`
 	Subtotal       int32              `json:"subtotal"`
+	Discount       int32              `json:"discount"`
+	DiscountCode   pgtype.Text        `json:"discount_code"`
 	Shipping       int32              `json:"shipping"`
 	Total          int32              `json:"total"`
 	Currency       string             `json:"currency"`
@@ -96,6 +98,8 @@ func (q *Queries) AdminExportOrders(ctx context.Context, arg AdminExportOrdersPa
 			&i.Email,
 			&i.ItemCount,
 			&i.Subtotal,
+			&i.Discount,
+			&i.DiscountCode,
 			&i.Shipping,
 			&i.Total,
 			&i.Currency,
@@ -339,14 +343,23 @@ func (q *Queries) CountOrders(ctx context.Context, userID pgtype.UUID) (int64, e
 }
 
 const createOrder = `-- name: CreateOrder :one
-INSERT INTO orders (user_id, subtotal, shipping, total, currency, email, shipping_address, expires_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO orders (
+    user_id, subtotal, discount, discount_code, discount_code_id, shipping,
+    total, currency, email, shipping_address, expires_at
+)
+VALUES (
+    $1, $2, $3, $4, $5, $6,
+    $7, $8, $9, $10, $11
+)
 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, discount_code, discount_code_id
 `
 
 type CreateOrderParams struct {
 	UserID          pgtype.UUID        `json:"user_id"`
 	Subtotal        int32              `json:"subtotal"`
+	Discount        int32              `json:"discount"`
+	DiscountCode    pgtype.Text        `json:"discount_code"`
+	DiscountCodeID  pgtype.UUID        `json:"-"`
 	Shipping        int32              `json:"shipping"`
 	Total           int32              `json:"total"`
 	Currency        string             `json:"currency"`
@@ -359,6 +372,9 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 	row := q.db.QueryRow(ctx, createOrder,
 		arg.UserID,
 		arg.Subtotal,
+		arg.Discount,
+		arg.DiscountCode,
+		arg.DiscountCodeID,
 		arg.Shipping,
 		arg.Total,
 		arg.Currency,

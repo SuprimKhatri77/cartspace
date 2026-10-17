@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID' | 'INVALID_DISCOUNT_ID' | 'DISCOUNT_NOT_FOUND' | 'DISCOUNT_CODE_TAKEN' | 'DISCOUNT_IN_USE';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID' | 'INVALID_DISCOUNT_ID' | 'DISCOUNT_NOT_FOUND' | 'DISCOUNT_CODE_TAKEN' | 'DISCOUNT_IN_USE' | 'DISCOUNT_NOT_STARTED' | 'DISCOUNT_EXPIRED' | 'DISCOUNT_USED_UP' | 'DISCOUNT_ALREADY_USED' | 'DISCOUNT_MIN_SUBTOTAL';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -698,12 +698,50 @@ export type CheckoutBody = {
      * With save_address: make the new address the default
      */
     make_default?: boolean;
+    /**
+     * A discount code, in any case
+     */
+    discount_code?: string;
 };
 
 /**
  * A country checkout ships to (ISO 3166-1 alpha-2)
  */
 export type Country = 'US' | 'CA' | 'GB' | 'IE' | 'DE' | 'FR' | 'NL' | 'AU' | 'NZ' | 'NP' | 'IN' | 'JP';
+
+export type DiscountPreviewResponse = {
+    success: true;
+    message: string;
+    data: DiscountPreview;
+};
+
+/**
+ * What a code does to the bag as it is now.
+ */
+export type DiscountPreview = {
+    /**
+     * Upper-case
+     */
+    code: string;
+    kind: DiscountKind;
+    value: number;
+    subtotal: number;
+    discount: number;
+    /**
+     * Free shipping goes by the discounted items
+     */
+    shipping: number;
+    total: number;
+};
+
+/**
+ * percent: value is % off the items; fixed: value is cents off
+ */
+export type DiscountKind = 'percent' | 'fixed';
+
+export type DiscountPreviewBody = {
+    code: string;
+};
 
 export type OrderDetailResponse = {
     success: true;
@@ -1584,11 +1622,6 @@ export type DiscountCode = {
     uses: number;
     state: DiscountState;
 };
-
-/**
- * percent: value is % off the items; fixed: value is cents off
- */
-export type DiscountKind = 'percent' | 'fixed';
 
 /**
  * active: open to shoppers; scheduled: not started; ended: past its end or used up; off: switched off
@@ -2985,11 +3018,11 @@ export type StartCheckoutErrors = {
      */
     401: ApiError;
     /**
-     * No such saved address (ADDRESS_NOT_FOUND)
+     * No such saved address, or the discount code isn't valid (ADDRESS_NOT_FOUND, DISCOUNT_NOT_FOUND)
      */
     404: ApiError;
     /**
-     * The cart is empty, or a line is off sale or short (CART_EMPTY, CART_HAS_ISSUES)
+     * The cart is empty, a line is off sale or short, or the discount code doesn't apply (CART_EMPTY, CART_HAS_ISSUES, DISCOUNT_NOT_STARTED, DISCOUNT_EXPIRED, DISCOUNT_USED_UP, DISCOUNT_ALREADY_USED, DISCOUNT_MIN_SUBTOTAL)
      */
     409: ApiError;
     /**
@@ -3016,6 +3049,47 @@ export type StartCheckoutResponses = {
 };
 
 export type StartCheckoutResponse = StartCheckoutResponses[keyof StartCheckoutResponses];
+
+export type PreviewDiscountData = {
+    body: DiscountPreviewBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/checkout/discount';
+};
+
+export type PreviewDiscountErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * The code isn't valid (DISCOUNT_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * The bag is empty or the code doesn't apply (CART_EMPTY, DISCOUNT_NOT_STARTED, DISCOUNT_EXPIRED, DISCOUNT_USED_UP, DISCOUNT_ALREADY_USED, DISCOUNT_MIN_SUBTOTAL)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type PreviewDiscountError = PreviewDiscountErrors[keyof PreviewDiscountErrors];
+
+export type PreviewDiscountResponses = {
+    /**
+     * Discount code applies
+     */
+    200: DiscountPreviewResponse;
+};
+
+export type PreviewDiscountResponse = PreviewDiscountResponses[keyof PreviewDiscountResponses];
 
 export type GetCheckoutSessionData = {
     body?: never;

@@ -67,10 +67,13 @@ type Order struct {
 	ShopURL   string
 	Items     []Item
 	Subtotal  string
-	Shipping  string
-	Total     string
-	Tracking  string
-	Address   []string // the shipping address, one line each
+	// Discount is "-$6.20 (WELCOME10)"-style parts; empty without one.
+	Discount     string
+	DiscountCode string
+	Shipping     string
+	Total        string
+	Tracking     string
+	Address      []string // the shipping address, one line each
 }
 
 type Item struct {
@@ -116,6 +119,10 @@ func Render(kind string, order db.Order, customerName string, items []db.OrderIt
 	}
 	if order.Shipping == 0 {
 		view.Shipping = "Free"
+	}
+	if order.Discount > 0 {
+		view.Discount = FormatMoney(-int64(order.Discount), order.Currency)
+		view.DiscountCode = order.DiscountCode.String
 	}
 	if kind == OrderShipped && order.TrackingNumber.Valid {
 		view.Tracking = order.TrackingNumber.String

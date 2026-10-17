@@ -26,6 +26,7 @@ a full-stack e-commerce store: a go/gin api and a next.js storefront with an adm
 - product pages with a gallery, colour swatches and size pills (sold-out variants struck through, `?variant=` links), offers with expiry
 - a bag drawer and `/cart` with live prices and quantities capped to stock
 - stripe hosted checkout with saved addresses, stock reserved while you pay, flat-rate shipping that's free over a threshold
+- discount codes at checkout (percent or fixed off the items, checked live, applied to the stripe page as a one-off coupon); free shipping goes by the discounted items
 - order history with a status timeline, tracking number and refund date
 - order emails: confirmed, shipped (with tracking) and refunded, html with a plain-text part
 - wishlist, and reviews from verified buyers (a rating summary with a distribution, one review per product)
@@ -40,6 +41,7 @@ a full-stack e-commerce store: a go/gin api and a next.js storefront with an adm
 - categories: a tree editor (add, rename, move under another parent, delete)
 - orders: status tabs and search; ship (with tracking), deliver, cancel and refund through stripe, with optional restock
 - reviews: publish or hide, which updates the product's rating
+- discounts: codes with a minimum spend, start and end dates, a use limit and once-per-customer; uses are counted from orders, so an abandoned checkout gives its use back, and two shoppers can't both take the last one
 - settings: the store's theme, with a live preview of each
 
 ## stack

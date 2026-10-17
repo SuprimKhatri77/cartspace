@@ -34,9 +34,13 @@ type SessionRequest struct {
 	Currency    string
 	Items       []LineItem
 	Shipping    int64 // cents; 0 shows as free shipping
-	SuccessURL  string
-	CancelURL   string
-	ExpiresAt   time.Time
+	// Discount comes off the items (not the shipping), named DiscountName
+	// on the page; 0 for none.
+	Discount     int64
+	DiscountName string
+	SuccessURL   string
+	CancelURL    string
+	ExpiresAt    time.Time
 }
 
 // Session is what checkout needs to know about a hosted checkout page.

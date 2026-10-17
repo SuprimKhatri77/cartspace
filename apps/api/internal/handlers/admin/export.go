@@ -20,7 +20,7 @@ const maxExportRows = 10_000
 
 var exportHeader = []string{
 	"order", "status", "placed_at", "paid_at", "shipped_at", "customer", "email",
-	"items", "subtotal", "shipping", "total", "currency", "tracking_number", "ship_city", "ship_country",
+	"items", "subtotal", "discount", "discount_code", "shipping", "total", "currency", "tracking_number", "ship_city", "ship_country",
 }
 
 // ExportOrders is the orders list as CSV: the same filters and order as
@@ -72,6 +72,8 @@ func exportRecord(r db.AdminExportOrdersRow) []string {
 		safeCell(r.Email),
 		strconv.Itoa(int(r.ItemCount)),
 		money(int64(r.Subtotal)),
+		money(int64(r.Discount)),
+		safeCell(r.DiscountCode.String),
 		money(int64(r.Shipping)),
 		money(int64(r.Total)),
 		r.Currency,

@@ -81,6 +81,7 @@ func TestSetupRegistersAllRoutes(t *testing.T) {
 		"DELETE /api/v1/cart/items/:variantID",
 
 		"POST /api/v1/checkout",
+		"POST /api/v1/checkout/discount",
 		"GET /api/v1/checkout/sessions/:sessionID",
 		"POST /api/v1/webhooks/stripe",
 		"GET /api/v1/orders",

@@ -35,3 +35,26 @@ WHERE id = @id;
 
 -- name: DeleteDiscount :execrows
 DELETE FROM discount_codes WHERE id = $1;
+
+-- Checkout: the code a shopper typed (stored upper-case).
+
+-- name: GetDiscountByCode :one
+SELECT * FROM discount_codes WHERE code = $1;
+
+-- Locked for the rest of the checkout's transaction, so two checkouts
+-- can't both take a code's last use. Checkout takes it last, after the cart
+-- and the variants.
+-- name: LockDiscountByCode :one
+SELECT * FROM discount_codes WHERE code = $1 FOR UPDATE;
+
+-- A code's uses so far, and the user's own: orders that weren't cancelled.
+-- The user's own unpaid checkouts don't count: a new checkout replaces them
+-- (inside checkout they are already cancelled by now).
+-- name: CountDiscountUses :one
+SELECT
+    COUNT(*)::int AS uses,
+    (COUNT(*) FILTER (WHERE user_id = @user_id))::int AS by_user
+FROM orders
+WHERE discount_code_id = @discount_code_id
+  AND status <> 'cancelled'
+  AND NOT (user_id = @user_id AND status = 'pending');

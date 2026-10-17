@@ -1,6 +1,10 @@
 import type { Cart } from "@repo/types";
 import { formatPrice } from "@/lib/money";
-import { FREE_SHIPPING_FROM, shippingFor } from "@/lib/shipping";
+import {
+  FREE_SHIPPING_FROM,
+  shippingAfterDiscount,
+  shippingFor,
+} from "@/lib/shipping";
 import { cn } from "@/lib/utils";
 
 /** How far the bag is from free shipping, as a sentence and a bar. */
@@ -35,15 +39,38 @@ export function FreeShippingProgress({ subtotal }: { subtotal: number }) {
   );
 }
 
-/** Subtotal, shipping and the estimated total. */
-export function CartTotals({ cart }: { cart: Cart }) {
-  const shipping = shippingFor(cart.subtotal);
+/**
+ * Subtotal, shipping and the estimated total; with a discount (checkout),
+ * its row, and shipping as it stands after it.
+ */
+export function CartTotals({
+  cart,
+  discount,
+}: {
+  cart: Cart;
+  discount?: { code: string; amount: number };
+}) {
+  const off = discount?.amount ?? 0;
+  const shipping = discount
+    ? shippingAfterDiscount(cart.subtotal, off)
+    : shippingFor(cart.subtotal);
   return (
     <dl className="space-y-2.5 text-sm">
       <div className="flex justify-between">
         <dt className="text-muted-foreground">Subtotal</dt>
         <dd className="tabular-nums">{formatPrice(cart.subtotal)}</dd>
       </div>
+      {discount && (
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">
+            Discount{" "}
+            <span className="font-mono text-[0.6875rem] tracking-wider">
+              {discount.code}
+            </span>
+          </dt>
+          <dd className="text-success tabular-nums">−{formatPrice(off)}</dd>
+        </div>
+      )}
       <div className="flex justify-between">
         <dt className="text-muted-foreground">Shipping</dt>
         <dd className="tabular-nums">
@@ -57,7 +84,7 @@ export function CartTotals({ cart }: { cart: Cart }) {
       <div className="flex justify-between border-t border-border pt-3 text-base">
         <dt>Total</dt>
         <dd className="tabular-nums">
-          {formatPrice(cart.subtotal + shipping)}
+          {formatPrice(cart.subtotal - off + shipping)}
         </dd>
       </div>
     </dl>

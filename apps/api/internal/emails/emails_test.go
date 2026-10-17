@@ -69,6 +69,28 @@ func TestRender(t *testing.T) {
 	}
 }
 
+func TestRenderDiscount(t *testing.T) {
+	order := testOrder()
+	order.Discount = 12345
+	order.DiscountCode = pgtype.Text{String: "WELCOME10", Valid: true}
+	order.Total = order.Subtotal - order.Discount + order.Shipping
+	r, err := Render(OrderConfirmed, order, "Ada Lovelace", testItems(), "http://localhost:3000")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(r.Text, "Discount  -$123.45 (WELCOME10)") || !strings.Contains(r.Text, "Total     $1,119.05") {
+		t.Errorf("text:\n%s", r.Text)
+	}
+	if !strings.Contains(r.HTML, "Discount (WELCOME10)") || !strings.Contains(r.HTML, "-$123.45") {
+		t.Error("html lacks the discount row")
+	}
+	// Without a discount there's no row at all.
+	plain, _ := Render(OrderConfirmed, testOrder(), "Ada Lovelace", testItems(), "http://localhost:3000")
+	if strings.Contains(plain.Text, "Discount") || strings.Contains(plain.HTML, "Discount") {
+		t.Error("an order without a discount shows a discount row")
+	}
+}
+
 func TestRenderKinds(t *testing.T) {
 	order := testOrder()
 	order.Shipping = 0

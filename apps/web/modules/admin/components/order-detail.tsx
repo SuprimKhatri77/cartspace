@@ -280,6 +280,22 @@ export function OrderDetailView({ number }: { number: number }) {
               <dt className="text-muted-foreground">Subtotal</dt>
               <dd className="tabular-nums">{formatPrice(o.subtotal)}</dd>
             </div>
+            {o.discount > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">
+                  Discount{" "}
+                  {o.discount_code && (
+                    <Link
+                      href={`/admin/discounts?q=${encodeURIComponent(o.discount_code)}`}
+                      className="font-mono text-[0.6875rem] tracking-wider text-foreground hover:underline"
+                    >
+                      {o.discount_code}
+                    </Link>
+                  )}
+                </dt>
+                <dd className="tabular-nums">−{formatPrice(o.discount)}</dd>
+              </div>
+            )}
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Shipping</dt>
               <dd className="tabular-nums">

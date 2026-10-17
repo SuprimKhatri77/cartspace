@@ -12,6 +12,7 @@ func setupCheckoutRoutes(router *gin.RouterGroup, cfg config.Config) {
 	auth := middleware.RequireAuth(cfg.Config)
 
 	router.POST("/checkout", auth, checkout.StartCheckout(cfg.Checkout))
+	router.POST("/checkout/discount", auth, checkout.PreviewDiscount(cfg.Checkout))
 	router.GET("/checkout/sessions/:sessionID", auth, checkout.SessionOrder(cfg.Checkout, cfg.Queries))
 	// Stripe calls this; the signature is its authentication.
 	router.POST("/webhooks/stripe", checkout.StripeWebhook(cfg.Checkout, cfg.Payments))

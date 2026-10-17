@@ -13,7 +13,8 @@ View your order: {{.URL}}
 {{.Quantity}} × {{.Name}}{{with .Options}} ({{.}}){{end}}  {{.LineTotal}}
 {{end}}
 Subtotal  {{.Subtotal}}
-Shipping  {{.Shipping}}
+{{if .Discount}}Discount  {{.Discount}}{{with .DiscountCode}} ({{.}}){{end}}
+{{end}}Shipping  {{.Shipping}}
 Total     {{.Total}}
 {{if .Address}}
 Shipping to:

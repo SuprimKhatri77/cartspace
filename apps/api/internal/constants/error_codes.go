@@ -84,4 +84,10 @@ const (
 	DiscountNotFound  = "DISCOUNT_NOT_FOUND"
 	DiscountCodeTaken = "DISCOUNT_CODE_TAKEN"
 	DiscountInUse     = "DISCOUNT_IN_USE"
+	// at checkout
+	DiscountNotStarted  = "DISCOUNT_NOT_STARTED"
+	DiscountExpired     = "DISCOUNT_EXPIRED"
+	DiscountUsedUp      = "DISCOUNT_USED_UP"
+	DiscountAlreadyUsed = "DISCOUNT_ALREADY_USED"
+	DiscountMinSubtotal = "DISCOUNT_MIN_SUBTOTAL"
 )

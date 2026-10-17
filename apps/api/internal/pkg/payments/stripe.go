@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/stripe/stripe-go/v85"
 	"github.com/stripe/stripe-go/v85/webhook"
@@ -81,6 +82,13 @@ func (s *Stripe) CreateSession(ctx context.Context, req SessionRequest) (Session
 		CancelURL:  stripe.String(req.CancelURL),
 		ExpiresAt:  stripe.Int64(req.ExpiresAt.Unix()),
 	}
+	if req.Discount > 0 {
+		coupon, err := s.orderCoupon(ctx, req)
+		if err != nil {
+			return Session{}, err
+		}
+		params.Discounts = []*stripe.CheckoutSessionCreateDiscountParams{{Coupon: stripe.String(coupon)}}
+	}
 	// A retried request for the same order gets the same session.
 	params.SetIdempotencyKey("checkout-" + req.OrderID)
 
@@ -89,6 +97,27 @@ func (s *Stripe) CreateSession(ctx context.Context, req SessionRequest) (Session
 		return Session{}, fmt.Errorf("stripe: create checkout session: %w", err)
 	}
 	return fromStripe(session), nil
+}
+
+// orderCoupon makes the one-off coupon that carries an order's discount:
+// the amount we worked out, usable once, only until the page expires. Stripe
+// applies it to the items, not the shipping, as our total does.
+func (s *Stripe) orderCoupon(ctx context.Context, req SessionRequest) (string, error) {
+	params := &stripe.CouponCreateParams{
+		AmountOff:      stripe.Int64(req.Discount),
+		Currency:       stripe.String(req.Currency),
+		Duration:       stripe.String(string(stripe.CouponDurationOnce)),
+		MaxRedemptions: stripe.Int64(1),
+		Name:           stripe.String(req.DiscountName),
+		RedeemBy:       stripe.Int64(req.ExpiresAt.Add(time.Hour).Unix()),
+		Metadata:       map[string]string{"order_id": req.OrderID},
+	}
+	params.SetIdempotencyKey("coupon-" + req.OrderID)
+	coupon, err := s.client.V1Coupons.Create(ctx, params)
+	if err != nil {
+		return "", fmt.Errorf("stripe: create order coupon: %w", err)
+	}
+	return coupon.ID, nil
 }
 
 func (s *Stripe) GetSession(ctx context.Context, id string) (Session, error) {
