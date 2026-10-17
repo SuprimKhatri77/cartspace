@@ -30,6 +30,7 @@ a full-stack e-commerce store: a go/gin api and a next.js storefront with an adm
 - order emails: confirmed, shipped (with tracking) and refunded, html with a plain-text part
 - wishlist, and reviews from verified buyers (a rating summary with a distribution, one review per product)
 - three light themes (editorial, studio, botanical), chosen in the admin with live previews, plus a demo-only theme picker for showing the store to clients
+- security headers: a per-request nonce content security policy (scripts only from the site, connections only to the api and cloudinary), hsts, no framing, and a locked-down policy on every api response
 - seo: canonical urls, a sitemap and robots.txt, generated share images for products and collections, and json-ld (products with per-variant offers, shipping and returns; breadcrumbs; the store)
 
 **admin** (`/admin`, admin role only)
@@ -273,7 +274,7 @@ env: `GIN_MODE=release`, `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRE
 
 if order emails time out on render, its free instances may be blocking the standard smtp ports: resend also accepts `SMTP_PORT=2587` with `SMTP_TLS=starttls`.
 
-**web on vercel**: root directory `apps/web`, with `NEXT_PUBLIC_API_URL` and `INTERNAL_API_URL` (both the api's public url) and `FRONTEND_URL` (canonical urls, the sitemap and share images).
+**web on vercel**: root directory `apps/web`, with `NEXT_PUBLIC_API_URL` and `INTERNAL_API_URL` (both the api's public url) and `FRONTEND_URL` (canonical urls, the sitemap and share images). `NEXT_PUBLIC_API_URL` is also the one api origin the content security policy lets the browser connect to, so a page calling any other host is refused.
 
 **cookies**: put the api on a subdomain of the storefront, e.g. `shop.example.com` and `api.shop.example.com`, and set `COOKIE_DOMAIN=shop.example.com`. the auth cookies then reach both hosts, which `proxy.ts` needs to guard `/account` and `/admin`.
 

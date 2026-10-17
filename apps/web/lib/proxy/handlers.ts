@@ -9,6 +9,14 @@ function redirect(req: NextRequest, path: string): NextResponse {
   return NextResponse.redirect(new URL(path, req.url));
 }
 
+/**
+ * Continues to the page with headers: the request's own plus the CSP the
+ * proxy added (Next reads the nonce from it).
+ */
+function pass(headers: Headers): NextResponse {
+  return NextResponse.next({ request: { headers } });
+}
+
 function withSetCookies(res: NextResponse, setCookies: string[]): NextResponse {
   setCookies.forEach((cookie) => res.headers.append("set-cookie", cookie));
   return res;
@@ -26,12 +34,13 @@ function toLogin(req: NextRequest): NextResponse {
  */
 function continueWithFreshCookies(
   req: NextRequest,
+  forwarded: Headers,
   result: Extract<RefreshResult, { kind: "ok" }>,
 ): NextResponse {
   const jar = new Map(req.cookies.getAll().map((c) => [c.name, c.value]));
   result.fresh.forEach((c) => jar.set(c.name, c.value));
 
-  const headers = new Headers(req.headers);
+  const headers = new Headers(forwarded);
   headers.set(
     "cookie",
     [...jar].map(([name, value]) => `${name}=${value}`).join("; "),
@@ -47,11 +56,15 @@ function signedInRedirect(req: NextRequest, user: PublicUser): NextResponse {
   return redirect(req, next ?? homeFor(user.role));
 }
 
-/** /auth/*: signed-in users are sent on; everyone else sees the page. */
+/**
+ * /auth/*: signed-in users are sent on; everyone else sees the page.
+ * headers are what the page receives (proxy.ts adds the CSP).
+ */
 export async function handleSignedOutOnly(
   req: NextRequest,
+  headers: Headers = req.headers,
 ): Promise<NextResponse> {
-  if (!req.cookies.has(REFRESH_COOKIE)) return NextResponse.next();
+  if (!req.cookies.has(REFRESH_COOKIE)) return pass(headers);
 
   const user = userFromAccessToken(req.cookies.get(ACCESS_COOKIE)?.value);
   if (user) return signedInRedirect(req, user);
@@ -64,29 +77,30 @@ export async function handleSignedOutOnly(
         result.setCookies,
       );
     case "unauthorized":
-      return withSetCookies(NextResponse.next(), result.setCookies);
+      return withSetCookies(pass(headers), result.setCookies);
     case "error":
-      return NextResponse.next();
+      return pass(headers);
   }
 }
 
-/** Pages that need a session with one of roles. */
+/** Pages that need a session with one of roles; headers as above. */
 export async function handleProtected(
   req: NextRequest,
   roles: readonly UserRole[],
+  headers: Headers = req.headers,
 ): Promise<NextResponse> {
   if (!req.cookies.has(REFRESH_COOKIE)) return toLogin(req);
 
   const user = userFromAccessToken(req.cookies.get(ACCESS_COOKIE)?.value);
   if (user) {
-    return roles.includes(user.role) ? NextResponse.next() : redirect(req, "/");
+    return roles.includes(user.role) ? pass(headers) : redirect(req, "/");
   }
 
   const result = await refresh(req);
   switch (result.kind) {
     case "ok":
       return roles.includes(result.user.role)
-        ? continueWithFreshCookies(req, result)
+        ? continueWithFreshCookies(req, headers, result)
         : withSetCookies(redirect(req, "/"), result.setCookies);
     case "unauthorized":
       return withSetCookies(toLogin(req), result.setCookies);

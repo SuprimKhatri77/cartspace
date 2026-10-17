@@ -37,6 +37,7 @@ func buildRouter(
 		return nil, fmt.Errorf("TRUSTED_PROXIES: %w", err)
 	}
 	r.Use(middleware.RequestID())
+	r.Use(middleware.SecurityHeaders(cfg.GinMode == gin.ReleaseMode))
 	r.Use(middleware.Recovery())
 	r.Use(gin.Logger())
 	r.Use(middleware.CORS(cfg))

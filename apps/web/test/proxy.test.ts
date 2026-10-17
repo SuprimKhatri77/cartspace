@@ -202,3 +202,36 @@ test("a password reset link opens signed in or out", () => {
   expect(isSignedOutOnlyPath("/auth/forgot")).toBe(true);
   expect(isSignedOutOnlyPath("/auth/login")).toBe(true);
 });
+
+test("the page gets the proxy's headers (its CSP) on every pass", async () => {
+  const withCsp = (r: NextRequest) => {
+    const headers = new Headers(r.headers);
+    headers.set("content-security-policy", "script-src 'nonce-x'");
+    return headers;
+  };
+  const csp = (res: Response) =>
+    res.headers.get("x-middleware-request-content-security-policy");
+
+  const signedOut = req("/auth/login");
+  expect(csp(await handleSignedOutOnly(signedOut, withCsp(signedOut)))).toBe(
+    "script-src 'nonce-x'",
+  );
+
+  const valid = req("/account", `refresh_token=r; access_token=${customer}`);
+  expect(csp(await handleProtected(valid, ["customer"], withCsp(valid)))).toBe(
+    "script-src 'nonce-x'",
+  );
+
+  // After a refresh, the fresh cookies and the CSP both reach the page.
+  refreshReply = {
+    status: 200,
+    setCookies: [
+      `access_token=${customer}; Path=/`,
+      "refresh_token=r2; Path=/",
+    ],
+  };
+  const stale = req("/account", "refresh_token=r");
+  const res = await handleProtected(stale, ["customer"], withCsp(stale));
+  expect(csp(res)).toBe("script-src 'nonce-x'");
+  expect(forwardedCookie(res)).toContain("refresh_token=r2");
+});

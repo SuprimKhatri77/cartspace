@@ -1,5 +1,4 @@
-import { z } from "zod";
-import type { UploadSignature } from "@repo/types";
+import { z, type UploadSignature } from "@repo/types";
 
 /** An image as products and variants store it: its URL and public ID. */
 export type StoredImage = { url: string; public_id: string };
