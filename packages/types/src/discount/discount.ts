@@ -74,3 +74,28 @@ export const DiscountCodeListResponseSchema = paginatedResponse(
 export const DiscountCodeResponseSchema = successResponse(
   DiscountCodeSchema,
 ).meta({ id: "DiscountCodeResponse" });
+
+export const DiscountPreviewBodySchema = z
+  .object({ code: z.string().trim().min(1).max(32) })
+  .meta({ id: "DiscountPreviewBody" });
+export type DiscountPreviewBody = z.infer<typeof DiscountPreviewBodySchema>;
+
+export const DiscountPreviewSchema = z
+  .object({
+    code: z.string().describe("Upper-case"),
+    kind: DiscountKindSchema,
+    value: z.int().positive(),
+    subtotal: Cents,
+    discount: Cents,
+    shipping: Cents.describe("Free shipping goes by the discounted items"),
+    total: Cents,
+  })
+  .meta({
+    id: "DiscountPreview",
+    description: "What a code does to the bag as it is now.",
+  });
+export type DiscountPreview = z.infer<typeof DiscountPreviewSchema>;
+
+export const DiscountPreviewResponseSchema = successResponse(
+  DiscountPreviewSchema,
+).meta({ id: "DiscountPreviewResponse" });

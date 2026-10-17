@@ -137,7 +137,12 @@
           "INVALID_DISCOUNT_ID",
           "DISCOUNT_NOT_FOUND",
           "DISCOUNT_CODE_TAKEN",
-          "DISCOUNT_IN_USE"
+          "DISCOUNT_IN_USE",
+          "DISCOUNT_NOT_STARTED",
+          "DISCOUNT_EXPIRED",
+          "DISCOUNT_USED_UP",
+          "DISCOUNT_ALREADY_USED",
+          "DISCOUNT_MIN_SUBTOTAL"
         ],
         "description": "Machine-readable failure code."
       },
@@ -2086,6 +2091,11 @@
           "make_default": {
             "type": "boolean",
             "description": "With save_address: make the new address the default"
+          },
+          "discount_code": {
+            "type": "string",
+            "maxLength": 32,
+            "description": "A discount code, in any case"
           }
         },
         "description": "Ship to a saved address or a new one: exactly one of the two."
@@ -2107,6 +2117,92 @@
           "JP"
         ],
         "description": "A country checkout ships to (ISO 3166-1 alpha-2)"
+      },
+      "DiscountPreviewResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DiscountPreview"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "DiscountPreview": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Upper-case"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DiscountKind"
+          },
+          "value": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "subtotal": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "discount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "shipping": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Free shipping goes by the discounted items"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "code",
+          "kind",
+          "value",
+          "subtotal",
+          "discount",
+          "shipping",
+          "total"
+        ],
+        "description": "What a code does to the bag as it is now."
+      },
+      "DiscountKind": {
+        "type": "string",
+        "enum": [
+          "percent",
+          "fixed"
+        ],
+        "description": "percent: value is % off the items; fixed: value is cents off"
+      },
+      "DiscountPreviewBody": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          }
+        },
+        "required": [
+          "code"
+        ]
       },
       "OrderDetailResponse": {
         "type": "object",
@@ -4934,14 +5030,6 @@
           "state"
         ],
         "description": "A discount code with its uses."
-      },
-      "DiscountKind": {
-        "type": "string",
-        "enum": [
-          "percent",
-          "fixed"
-        ],
-        "description": "percent: value is % off the items; fixed: value is cents off"
       },
       "DiscountState": {
         "type": "string",
@@ -7849,7 +7937,7 @@
             }
           },
           "404": {
-            "description": "No such saved address (ADDRESS_NOT_FOUND)",
+            "description": "No such saved address, or the discount code isn't valid (ADDRESS_NOT_FOUND, DISCOUNT_NOT_FOUND)",
             "content": {
               "application/json": {
                 "schema": {
@@ -7859,7 +7947,7 @@
             }
           },
           "409": {
-            "description": "The cart is empty, or a line is off sale or short (CART_EMPTY, CART_HAS_ISSUES)",
+            "description": "The cart is empty, a line is off sale or short, or the discount code doesn't apply (CART_EMPTY, CART_HAS_ISSUES, DISCOUNT_NOT_STARTED, DISCOUNT_EXPIRED, DISCOUNT_USED_UP, DISCOUNT_ALREADY_USED, DISCOUNT_MIN_SUBTOTAL)",
             "content": {
               "application/json": {
                 "schema": {
@@ -7890,6 +7978,93 @@
           },
           "503": {
             "description": "Payments are not configured (PAYMENTS_UNAVAILABLE)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/checkout/discount": {
+      "post": {
+        "operationId": "previewDiscount",
+        "tags": [
+          "Checkout"
+        ],
+        "summary": "Check a discount code",
+        "description": "What the code takes off the bag as it is now, and the shipping and total after it. It reserves nothing: checkout checks the code again.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscountPreviewBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Discount code applies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscountPreviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The code isn't valid (DISCOUNT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The bag is empty or the code doesn't apply (CART_EMPTY, DISCOUNT_NOT_STARTED, DISCOUNT_EXPIRED, DISCOUNT_USED_UP, DISCOUNT_ALREADY_USED, DISCOUNT_MIN_SUBTOTAL)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
             "content": {
               "application/json": {
                 "schema": {

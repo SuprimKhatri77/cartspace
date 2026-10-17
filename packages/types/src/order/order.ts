@@ -87,6 +87,11 @@ export const CheckoutBodySchema = z
       .boolean()
       .optional()
       .describe("With save_address: make the new address the default"),
+    discount_code: z
+      .string()
+      .max(32)
+      .optional()
+      .describe("A discount code, in any case"),
   })
   .meta({
     id: "CheckoutBody",

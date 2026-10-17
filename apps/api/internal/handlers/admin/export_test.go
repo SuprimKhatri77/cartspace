@@ -7,8 +7,10 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
+	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 )
 
 func TestSafeCell(t *testing.T) {
@@ -60,5 +62,27 @@ func TestOrderFiltersRefused(t *testing.T) {
 		if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), constants.InvalidQueryParam) {
 			t.Errorf("%s: %d %s, want 400", path, w.Code, w.Body.String())
 		}
+	}
+}
+
+func TestExportRecordMatchesHeader(t *testing.T) {
+	row := db.AdminExportOrdersRow{
+		Number: 1042, Status: "paid", Subtotal: 6200, Discount: 620,
+		DiscountCode: pgtype.Text{String: "=WELCOME10", Valid: true}, Shipping: 800, Total: 6380, Currency: "usd",
+	}
+	rec := exportRecord(row)
+	if len(rec) != len(exportHeader) {
+		t.Fatalf("%d cells for %d columns", len(rec), len(exportHeader))
+	}
+	col := func(name string) string {
+		for i, h := range exportHeader {
+			if h == name {
+				return rec[i]
+			}
+		}
+		return "missing"
+	}
+	if col("discount") != "6.20" || col("discount_code") != "'=WELCOME10" || col("total") != "63.80" {
+		t.Errorf("discount %q code %q total %q", col("discount"), col("discount_code"), col("total"))
 	}
 }

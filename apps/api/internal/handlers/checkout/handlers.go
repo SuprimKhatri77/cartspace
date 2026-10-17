@@ -80,6 +80,31 @@ func StartCheckout(svc *checkout.Service) gin.HandlerFunc {
 	}
 }
 
+// PreviewDiscount checks a discount code against the signed-in user's bag
+// and returns what it takes off. It reserves nothing; checkout checks again.
+func PreviewDiscount(svc *checkout.Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, ok := httpx.UserID(c)
+		if !ok {
+			return
+		}
+		req, ok := validator.BindJSON[types.DiscountPreviewRequest](c)
+		if !ok {
+			return
+		}
+		preview, err := svc.PreviewDiscount(c.Request.Context(), userID, req.Code)
+		if err != nil {
+			failRefusal(c, "failed to check the discount code", err)
+			return
+		}
+		c.JSON(http.StatusOK, types.APIResponse{
+			Success: true,
+			Message: "Discount code applies",
+			Data:    preview,
+		})
+	}
+}
+
 // StripeWebhook applies verified Stripe events. A 5xx makes Stripe retry.
 func StripeWebhook(svc *checkout.Service, provider payments.Provider) gin.HandlerFunc {
 	return func(c *gin.Context) {

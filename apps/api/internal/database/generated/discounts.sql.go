@@ -112,6 +112,36 @@ func (q *Queries) CountAdminDiscounts(ctx context.Context, arg CountAdminDiscoun
 	return count, err
 }
 
+const countDiscountUses = `-- name: CountDiscountUses :one
+SELECT
+    COUNT(*)::int AS uses,
+    (COUNT(*) FILTER (WHERE user_id = $1))::int AS by_user
+FROM orders
+WHERE discount_code_id = $2
+  AND status <> 'cancelled'
+  AND NOT (user_id = $1 AND status = 'pending')
+`
+
+type CountDiscountUsesParams struct {
+	UserID         pgtype.UUID `json:"user_id"`
+	DiscountCodeID pgtype.UUID `json:"-"`
+}
+
+type CountDiscountUsesRow struct {
+	Uses   int32 `json:"uses"`
+	ByUser int32 `json:"by_user"`
+}
+
+// A code's uses so far, and the user's own: orders that weren't cancelled.
+// The user's own unpaid checkouts don't count: a new checkout replaces them
+// (inside checkout they are already cancelled by now).
+func (q *Queries) CountDiscountUses(ctx context.Context, arg CountDiscountUsesParams) (CountDiscountUsesRow, error) {
+	row := q.db.QueryRow(ctx, countDiscountUses, arg.UserID, arg.DiscountCodeID)
+	var i CountDiscountUsesRow
+	err := row.Scan(&i.Uses, &i.ByUser)
+	return i, err
+}
+
 const createDiscount = `-- name: CreateDiscount :one
 INSERT INTO discount_codes (
     code, kind, value, min_subtotal, starts_at, ends_at,
@@ -162,6 +192,59 @@ func (q *Queries) DeleteDiscount(ctx context.Context, id pgtype.UUID) (int64, er
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const getDiscountByCode = `-- name: GetDiscountByCode :one
+
+SELECT id, code, kind, value, min_subtotal, starts_at, ends_at, max_redemptions, once_per_customer, is_active, created_at, updated_at FROM discount_codes WHERE code = $1
+`
+
+// Checkout: the code a shopper typed (stored upper-case).
+func (q *Queries) GetDiscountByCode(ctx context.Context, code string) (DiscountCode, error) {
+	row := q.db.QueryRow(ctx, getDiscountByCode, code)
+	var i DiscountCode
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.Kind,
+		&i.Value,
+		&i.MinSubtotal,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.MaxRedemptions,
+		&i.OncePerCustomer,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const lockDiscountByCode = `-- name: LockDiscountByCode :one
+SELECT id, code, kind, value, min_subtotal, starts_at, ends_at, max_redemptions, once_per_customer, is_active, created_at, updated_at FROM discount_codes WHERE code = $1 FOR UPDATE
+`
+
+// Locked for the rest of the checkout's transaction, so two checkouts
+// can't both take a code's last use. Checkout takes it last, after the cart
+// and the variants.
+func (q *Queries) LockDiscountByCode(ctx context.Context, code string) (DiscountCode, error) {
+	row := q.db.QueryRow(ctx, lockDiscountByCode, code)
+	var i DiscountCode
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.Kind,
+		&i.Value,
+		&i.MinSubtotal,
+		&i.StartsAt,
+		&i.EndsAt,
+		&i.MaxRedemptions,
+		&i.OncePerCustomer,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updateDiscount = `-- name: UpdateDiscount :execrows

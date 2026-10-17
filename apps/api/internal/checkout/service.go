@@ -140,16 +140,25 @@ func (s *Service) Start(ctx context.Context, userID pgtype.UUID, req types.Check
 			return err
 		}
 
-		var subtotal int64
-		for _, line := range lines {
-			subtotal += int64(line.Price) * int64(line.Quantity)
+		// The code's row is locked last (after the cart and the variants),
+		// so its uses can't change until this order is in; this user's
+		// replaced checkouts were released above and don't count.
+		subtotal := linesSubtotal(lines)
+		code, discount, err := applyDiscount(ctx, qtx, qtx.LockDiscountByCode, req.DiscountCode, userID, subtotal, s.now())
+		if err != nil {
+			return err
 		}
-		shipping := constants.ShippingFor(subtotal)
+		// Free shipping goes by what the items cost after the discount.
+		shipping := constants.ShippingFor(subtotal - discount)
 		order, err = qtx.CreateOrder(ctx, db.CreateOrderParams{
-			UserID:          userID,
-			Subtotal:        int32(subtotal),
+			UserID:       userID,
+			Subtotal:     int32(subtotal),
+			Discount:     int32(discount),
+			DiscountCode: pgtype.Text{String: code.Code, Valid: discount > 0},
+			// A code that takes nothing off (1% of a few cents) isn't used.
+			DiscountCodeID:  pgtype.UUID{Bytes: code.ID.Bytes, Valid: discount > 0},
 			Shipping:        int32(shipping),
-			Total:           int32(subtotal + shipping),
+			Total:           int32(subtotal - discount + shipping),
 			Currency:        constants.Currency,
 			Email:           user.Email,
 			ShippingAddress: address,
@@ -306,15 +315,17 @@ func (s *Service) sessionRequest(order db.Order, email string, lines []db.GetCar
 		}
 	}
 	return payments.SessionRequest{
-		OrderID:     utils.UUIDToString(order.ID),
-		OrderNumber: order.Number,
-		Email:       email,
-		Currency:    order.Currency,
-		Items:       items,
-		Shipping:    int64(order.Shipping),
-		SuccessURL:  s.frontendURL + "/checkout/success?session_id={CHECKOUT_SESSION_ID}",
-		CancelURL:   s.frontendURL + "/cart?checkout=cancelled",
-		ExpiresAt:   order.ExpiresAt.Time,
+		OrderID:      utils.UUIDToString(order.ID),
+		OrderNumber:  order.Number,
+		Email:        email,
+		Currency:     order.Currency,
+		Items:        items,
+		Shipping:     int64(order.Shipping),
+		Discount:     int64(order.Discount),
+		DiscountName: order.DiscountCode.String,
+		SuccessURL:   s.frontendURL + "/checkout/success?session_id={CHECKOUT_SESSION_ID}",
+		CancelURL:    s.frontendURL + "/cart?checkout=cancelled",
+		ExpiresAt:    order.ExpiresAt.Time,
 	}
 }
 

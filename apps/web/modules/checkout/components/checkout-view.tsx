@@ -35,10 +35,13 @@ import { CartTotals } from "@/modules/cart/components/cart-summary";
 import { cartKeys } from "@/modules/cart/keys";
 import { optionSummary } from "@/modules/cart/lib/cart-math";
 import { useCart } from "@/modules/cart/queries";
+import { discountKeys } from "../keys";
 import { countryName } from "../lib/countries";
-import { useAddresses } from "../queries";
+import { loadDiscountCode, saveDiscountCode } from "../lib/discount-code";
+import { useAddresses, useDiscountPreview } from "../queries";
 import { AddressForm, EMPTY_ADDRESS, type AddressValues } from "./address-form";
 import { DefaultTag } from "./default-tag";
+import { DiscountField } from "./discount-field";
 
 const NEW = "new";
 
@@ -191,6 +194,28 @@ function CheckoutForm({
   const { ref: formRef, focusFirstError } = useFocusFirstError();
   const queryClient = useQueryClient();
 
+  // The code applied in this tab survives a trip to Stripe and back; it is
+  // read once hydrated (the server renders without it).
+  const hydrated = useHydrated();
+  const [chosenCode, setChosenCode] = useState<string | null | undefined>();
+  const discountCode =
+    chosenCode !== undefined
+      ? chosenCode
+      : hydrated
+        ? loadDiscountCode()
+        : null;
+  function setDiscountCode(code: string | null) {
+    setChosenCode(code);
+    saveDiscountCode(code);
+  }
+  const preview = useDiscountPreview(discountCode, cart.subtotal);
+  const discountError =
+    discountCode && preview.isError
+      ? (getApiError(preview.error)?.message ?? "We couldn't check that code.")
+      : null;
+  const applied =
+    discountCode && preview.data && !preview.isError ? preview.data : undefined;
+
   const checkout = useMutation({
     mutationFn: async (body: CheckoutBody) => {
       const { data } = await startCheckout({ body, throwOnError: true });
@@ -209,6 +234,11 @@ function CheckoutForm({
         apiError?.code === "CART_EMPTY"
       ) {
         void queryClient.invalidateQueries({ queryKey: cartKeys.all });
+      }
+      // The code stopped applying (used up, expired) since it was checked:
+      // check it again so the field says why.
+      if (apiError?.code?.startsWith("DISCOUNT_")) {
+        void queryClient.invalidateQueries({ queryKey: discountKeys.all });
       }
       // Field errors come back as "address.city"; the form uses "city".
       const fields = mapFieldErrors(
@@ -235,8 +265,9 @@ function CheckoutForm({
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const discount = applied ? { discount_code: applied.code } : {};
     if (choice !== NEW) {
-      checkout.mutate({ address_id: choice });
+      checkout.mutate({ address_id: choice, ...discount });
       return;
     }
     const parsed = AddressInputSchema.safeParse({
@@ -263,10 +294,13 @@ function CheckoutForm({
       address: parsed.data,
       save_address: save && !bookFull,
       make_default: save && !bookFull && makeDefault,
+      ...discount,
     });
   }
 
-  const shipping = shippingFor(cart.subtotal);
+  const shipping = applied ? applied.shipping : shippingFor(cart.subtotal);
+  const total = cart.subtotal - (applied?.discount ?? 0) + shipping;
+  const checkingCode = Boolean(discountCode) && preview.isFetching;
   const busy = checkout.isPending || redirecting;
 
   return (
@@ -438,14 +472,34 @@ function CheckoutForm({
             </li>
           ))}
         </ul>
-        <CartTotals cart={cart} />
-        <Button type="submit" size="lg" className="w-full" disabled={busy}>
+        <DiscountField
+          code={discountCode}
+          onChange={setDiscountCode}
+          preview={applied}
+          checking={checkingCode}
+          error={discountError}
+          disabled={busy}
+        />
+        <CartTotals
+          cart={cart}
+          discount={
+            applied
+              ? { code: applied.code, amount: applied.discount }
+              : undefined
+          }
+        />
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full"
+          disabled={busy || checkingCode}
+        >
           <LockSimpleIcon />
           {redirecting
             ? "Opening secure payment…"
             : checkout.isPending
               ? "Reserving your items…"
-              : `Pay ${formatPrice(cart.subtotal + shipping)}`}
+              : `Pay ${formatPrice(total)}`}
         </Button>
         <p className="text-center text-xs text-muted-foreground">
           You&apos;ll pay on Stripe&apos;s secure page. Items are held for you

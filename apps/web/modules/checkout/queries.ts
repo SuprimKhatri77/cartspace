@@ -7,9 +7,10 @@ import {
   getOrder,
   listAddresses,
   listOrders,
+  previewDiscount,
 } from "@/lib/api/client";
 import { useAuth } from "@/providers/auth-provider";
-import { addressKeys, orderKeys } from "./keys";
+import { addressKeys, discountKeys, orderKeys } from "./keys";
 
 function useUserId() {
   return useAuth((s) => s.user?.id ?? "");
@@ -90,5 +91,27 @@ export function useCheckoutSession(sessionId: string, startedAt: number) {
         ? POLL_EVERY
         : false,
     retry: 2,
+  });
+}
+
+/**
+ * What a discount code takes off the bag at this subtotal; checked again
+ * whenever the subtotal changes. A refusal is the API's error (no retry).
+ */
+export function useDiscountPreview(code: string | null, subtotal: number) {
+  const userId = useUserId();
+  return useQuery({
+    queryKey: discountKeys.preview(userId, code ?? "", subtotal),
+    queryFn: async ({ signal }) => {
+      const { data } = await previewDiscount({
+        body: { code: code ?? "" },
+        signal,
+        throwOnError: true,
+      });
+      return data.data;
+    },
+    enabled: Boolean(userId && code && subtotal > 0),
+    retry: false,
+    staleTime: 30_000,
   });
 }

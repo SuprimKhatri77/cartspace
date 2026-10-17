@@ -11,3 +11,9 @@ export const orderKeys = {
 export const addressKeys = {
   mine: (userId: string) => ["addresses", userId] as const,
 };
+
+export const discountKeys = {
+  all: ["discount-preview"] as const,
+  preview: (userId: string, code: string, subtotal: number) =>
+    [...discountKeys.all, userId, code, subtotal] as const,
+};

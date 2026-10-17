@@ -329,7 +329,7 @@ function TopProducts({
 }) {
   const max = Math.max(...products.map((p) => p.revenue), 1);
   return (
-    <Panel title="Best sellers" hint={label}>
+    <Panel title="Best sellers" hint={`${label}, before discounts`}>
       {products.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No sales in this period.

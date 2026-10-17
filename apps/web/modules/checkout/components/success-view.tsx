@@ -13,6 +13,7 @@ import { EASE_OUT } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { cartKeys } from "@/modules/cart/keys";
 import { countryName } from "../lib/countries";
+import { saveDiscountCode } from "../lib/discount-code";
 import { orderLabel } from "../lib/orders";
 import { orderKeys } from "../keys";
 import { CONFIRM_TIMEOUT, useCheckoutSession } from "../queries";
@@ -34,6 +35,8 @@ export function SuccessView({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     if (!paid) return;
+    // The code did its job; the next checkout starts without it.
+    saveDiscountCode(null);
     void queryClient.invalidateQueries({ queryKey: cartKeys.all });
     void queryClient.invalidateQueries({
       queryKey: orderKeys.all,
@@ -215,6 +218,21 @@ export function OrderTotals({
         <dt className="text-muted-foreground">Subtotal</dt>
         <dd className="tabular-nums">{formatPrice(order.subtotal)}</dd>
       </div>
+      {order.discount > 0 && (
+        <div className="flex justify-between">
+          <dt className="text-muted-foreground">
+            Discount{" "}
+            {order.discount_code && (
+              <span className="font-mono text-[0.6875rem] tracking-wider">
+                {order.discount_code}
+              </span>
+            )}
+          </dt>
+          <dd className="text-success tabular-nums">
+            −{formatPrice(order.discount)}
+          </dd>
+        </div>
+      )}
       <div className="flex justify-between">
         <dt className="text-muted-foreground">Shipping</dt>
         <dd className="tabular-nums">

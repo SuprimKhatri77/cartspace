@@ -7,3 +7,16 @@ export const FLAT_SHIPPING = 800;
 export function shippingFor(subtotal: number): number {
   return subtotal === 0 || subtotal >= FREE_SHIPPING_FROM ? 0 : FLAT_SHIPPING;
 }
+
+/**
+ * Shipping once a discount comes off a non-empty bag: the free-shipping line
+ * goes by what the items cost after it, and a bag discounted to nothing
+ * still pays the flat rate (the API's constants.ShippingFor).
+ */
+export function shippingAfterDiscount(
+  subtotal: number,
+  discount: number,
+): number {
+  if (subtotal === 0) return 0;
+  return subtotal - discount >= FREE_SHIPPING_FROM ? 0 : FLAT_SHIPPING;
+}

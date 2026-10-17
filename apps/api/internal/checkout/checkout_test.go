@@ -43,6 +43,30 @@ func TestSessionRequest(t *testing.T) {
 	}
 }
 
+func TestSessionRequestDiscount(t *testing.T) {
+	s := &Service{frontendURL: "http://localhost:3000"}
+	order := db.Order{
+		ID: pgtype.UUID{Bytes: [16]byte{1}, Valid: true}, Number: 1043, Currency: "usd",
+		Subtotal: 6200, Discount: 620, DiscountCode: pgtype.Text{String: "WELCOME10", Valid: true},
+		Shipping: 800, Total: 6380,
+	}
+	req := s.sessionRequest(order, "a@b.co", []db.GetCartLinesRow{{ProductName: "Tee", Price: 3100, Quantity: 2}})
+	if req.Discount != 620 || req.DiscountName != "WELCOME10" {
+		t.Errorf("discount = %d %q", req.Discount, req.DiscountName)
+	}
+	// What Stripe will charge: the items, less the coupon, plus shipping.
+	var items int64
+	for _, it := range req.Items {
+		items += it.UnitAmount * it.Quantity
+	}
+	if items-req.Discount+req.Shipping != int64(order.Total) {
+		t.Errorf("stripe total %d != order total %d", items-req.Discount+req.Shipping, order.Total)
+	}
+	if none := s.sessionRequest(db.Order{Currency: "usd"}, "a@b.co", nil); none.Discount != 0 || none.DiscountName != "" {
+		t.Errorf("no discount: %+v", none)
+	}
+}
+
 func TestNormalizeAddress(t *testing.T) {
 	got := normalizeAddress(types.AddressInput{
 		FullName: "  Ada   Lovelace ", Phone: " +1 555  0100", Line1: "12  Main St",

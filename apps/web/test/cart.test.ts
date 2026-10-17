@@ -17,7 +17,11 @@ import {
   unitCount,
   withTotals,
 } from "@/modules/cart/lib/cart-math";
-import { shippingFor } from "@/lib/shipping";
+import {
+  FLAT_SHIPPING,
+  shippingAfterDiscount,
+  shippingFor,
+} from "@/lib/shipping";
 
 const line = (over: Partial<CartLine>): CartLine => ({
   variant_id: "v1",
@@ -208,5 +212,17 @@ describe("optimistic add", () => {
       price: 2000,
       options: [],
     });
+  });
+});
+
+describe("shippingAfterDiscount", () => {
+  test("free shipping goes by the discounted items", () => {
+    expect(shippingAfterDiscount(16000, 0)).toBe(0);
+    expect(shippingAfterDiscount(16000, 1600)).toBe(FLAT_SHIPPING);
+    expect(shippingAfterDiscount(20000, 5000)).toBe(0);
+  });
+  test("a bag discounted to nothing still pays shipping; an empty one doesn't", () => {
+    expect(shippingAfterDiscount(4000, 4000)).toBe(FLAT_SHIPPING);
+    expect(shippingAfterDiscount(0, 0)).toBe(0);
   });
 });
