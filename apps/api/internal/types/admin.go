@@ -47,3 +47,33 @@ type RefundOrder struct {
 type ReviewStatus struct {
 	Status string `json:"status" binding:"required,oneof=published hidden"`
 }
+
+// BulkProducts hides, shows or deletes several products at once.
+type BulkProducts struct {
+	Action string   `json:"action" binding:"required,oneof=hide show delete"`
+	IDs    []string `json:"ids" label:"Products" binding:"required,min=1,max=100,dive,uuid"`
+}
+
+// BulkResult says how many of the products changed (a product already
+// hidden isn't hidden again; a missing one isn't deleted).
+type BulkResult struct {
+	Affected int `json:"affected"`
+}
+
+// BulkShip marks several paid orders shipped, without tracking numbers.
+type BulkShip struct {
+	Numbers []int64 `json:"numbers" label:"Orders" binding:"required,min=1,max=50,dive,gt=0"`
+}
+
+// ShipResult is one order's answer: shipped, or why not.
+type ShipResult struct {
+	Number  int64  `json:"number"`
+	Shipped bool   `json:"shipped"`
+	Code    string `json:"code,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+type BulkShipResult struct {
+	Shipped int          `json:"shipped"`
+	Results []ShipResult `json:"results"`
+}

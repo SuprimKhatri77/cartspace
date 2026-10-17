@@ -167,6 +167,24 @@ export function registerProductPaths() {
   });
 
   operation({
+    method: "post",
+    path: "/api/v1/admin/products/bulk",
+    operationId: "adminBulkProducts",
+    tag,
+    summary: "Hide, show or delete products",
+    description:
+      "Up to 100 at once. A delete is one product delete for each (variants, options and cart items go with it; past orders keep their copies).",
+    auth: "admin",
+    request: body(schemas.BulkProductsBodySchema),
+    success: {
+      status: 200,
+      description: "Products updated",
+      schema: schemas.BulkProductsResponseSchema,
+    },
+    errors: { 400: "Invalid body (VALIDATION_FAILED)" },
+  });
+
+  operation({
     method: "delete",
     path: "/api/v1/admin/products/{productID}",
     operationId: "adminDeleteProduct",

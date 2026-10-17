@@ -14,6 +14,7 @@ import (
 func setupProductRoutes(router *gin.RouterGroup, cfg config.Config) {
 	admin := router.Group("/admin/products", middleware.RequireAuth(cfg.Config), middleware.RequireRole(constants.RoleAdmin))
 	admin.POST("", adminProduct.CreateProduct(cfg.Queries))
+	admin.POST("/bulk", adminProduct.BulkProducts(cfg.Queries, cfg.CldClient))
 	admin.PUT("/:productID", adminProduct.UpdateProduct(cfg.Queries))
 	admin.DELETE("/:productID", adminProduct.DeleteProduct(cfg.Queries, cfg.CldClient))
 	admin.GET("", adminProduct.GetPaginatedProducts(cfg.Queries))

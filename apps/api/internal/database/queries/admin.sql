@@ -149,3 +149,22 @@ WHERE p.name ILIKE @pattern::text
    OR EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = p.id AND v.sku ILIKE @pattern::text)
 ORDER BY p.is_active DESC, p.name, p.id
 LIMIT 5;
+
+-- Bulk actions on the products table.
+
+-- name: SetProductsActive :many
+-- Hides or shows products; only those that change are returned.
+UPDATE products SET is_active = @is_active
+WHERE id = ANY(@ids::uuid[]) AND is_active <> @is_active
+RETURNING id;
+
+-- name: ListProductsImages :many
+-- ListProductImages for several products.
+SELECT unnest(p.images)::text AS url, unnest(p.image_public_ids)::text AS public_id
+FROM products p WHERE p.id = ANY(@ids::uuid[])
+UNION ALL
+SELECT unnest(v.images)::text, unnest(v.image_public_ids)::text
+FROM product_variants v WHERE v.product_id = ANY(@ids::uuid[]);
+
+-- name: DeleteProducts :many
+DELETE FROM products WHERE id = ANY(@ids::uuid[]) RETURNING id;

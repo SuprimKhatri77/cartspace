@@ -22,6 +22,7 @@ func setupAdminRoutes(router *gin.RouterGroup, cfg config.Config) {
 	orders := group.Group("/orders")
 	orders.GET("", admin.ListOrders(cfg.Queries))
 	orders.GET("/export.csv", admin.ExportOrders(cfg.Queries))
+	orders.POST("/ship", admin.ShipOrders(cfg.Checkout))
 	orders.GET("/:number", admin.GetOrder(cfg.Queries))
 	orders.POST("/:number/ship", admin.ShipOrder(cfg.Checkout, cfg.Queries))
 	orders.POST("/:number/deliver", admin.DeliverOrder(cfg.Checkout, cfg.Queries))

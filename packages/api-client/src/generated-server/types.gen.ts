@@ -484,6 +484,22 @@ export type ProductBody = {
     is_featured: boolean;
 };
 
+export type BulkProductsResponse = {
+    success: true;
+    message: string;
+    data: {
+        /**
+         * Products that changed: already hidden or gone ones don't count
+         */
+        affected: number;
+    };
+};
+
+export type BulkProductsBody = {
+    action: 'hide' | 'show' | 'delete';
+    ids: Array<string>;
+};
+
 export type VariantResponse = {
     success: true;
     message: string;
@@ -1532,6 +1548,29 @@ export type AdminOrderItem = {
      * How many weren't in stock when it was paid for
      */
     stock_shortfall: number;
+};
+
+export type BulkShipResponse = {
+    success: true;
+    message: string;
+    data: {
+        shipped: number;
+        results: Array<ShipResult>;
+    };
+};
+
+export type ShipResult = {
+    number: number;
+    shipped: boolean;
+    /**
+     * Why it didn't ship
+     */
+    code?: 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID' | 'INVALID_DISCOUNT_ID' | 'DISCOUNT_NOT_FOUND' | 'DISCOUNT_CODE_TAKEN' | 'DISCOUNT_IN_USE' | 'DISCOUNT_NOT_STARTED' | 'DISCOUNT_EXPIRED' | 'DISCOUNT_USED_UP' | 'DISCOUNT_ALREADY_USED' | 'DISCOUNT_MIN_SUBTOTAL';
+    message?: string;
+};
+
+export type BulkShipBody = {
+    numbers: Array<number>;
 };
 
 export type ShipOrderBody = {
@@ -2639,6 +2678,43 @@ export type AdminUpdateProductResponses = {
 };
 
 export type AdminUpdateProductResponse = AdminUpdateProductResponses[keyof AdminUpdateProductResponses];
+
+export type AdminBulkProductsData = {
+    body: BulkProductsBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/products/bulk';
+};
+
+export type AdminBulkProductsErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminBulkProductsError = AdminBulkProductsErrors[keyof AdminBulkProductsErrors];
+
+export type AdminBulkProductsResponses = {
+    /**
+     * Products updated
+     */
+    200: BulkProductsResponse;
+};
+
+export type AdminBulkProductsResponse = AdminBulkProductsResponses[keyof AdminBulkProductsResponses];
 
 export type AdminDeleteVariantData = {
     body?: never;
@@ -4181,6 +4257,43 @@ export type AdminGetOrderResponses = {
 };
 
 export type AdminGetOrderResponse = AdminGetOrderResponses[keyof AdminGetOrderResponses];
+
+export type AdminShipOrdersData = {
+    body: BulkShipBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/orders/ship';
+};
+
+export type AdminShipOrdersErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminShipOrdersError = AdminShipOrdersErrors[keyof AdminShipOrdersErrors];
+
+export type AdminShipOrdersResponses = {
+    /**
+     * Orders shipped
+     */
+    200: BulkShipResponse;
+};
+
+export type AdminShipOrdersResponse = AdminShipOrdersResponses[keyof AdminShipOrdersResponses];
 
 export type AdminShipOrderData = {
     body: ShipOrderBody;

@@ -15,6 +15,7 @@ import (
 	"github.com/suprimkhatri77/cartspace/backend/internal/constants"
 	db "github.com/suprimkhatri77/cartspace/backend/internal/database/generated"
 	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/httpx"
+	"github.com/suprimkhatri77/cartspace/backend/internal/pkg/rlog"
 	"github.com/suprimkhatri77/cartspace/backend/internal/types"
 	"github.com/suprimkhatri77/cartspace/backend/internal/utils"
 	"github.com/suprimkhatri77/cartspace/backend/internal/validator"
@@ -239,6 +240,43 @@ func ShipOrder(svc *checkout.Service, queries *db.Queries) gin.HandlerFunc {
 		}
 		order, err := svc.Ship(c.Request.Context(), number, req.TrackingNumber)
 		changed(c, queries, order, err, "Order shipped")
+	}
+}
+
+// ShipOrders marks up to 50 paid orders shipped, each in its own
+// transaction with its shipped email, as ShipOrder does without a tracking
+// number. An order that can't ship (not paid, unknown) is reported in its
+// result; the others still ship.
+func ShipOrders(svc *checkout.Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		req, ok := validator.BindJSON[types.BulkShip](c)
+		if !ok {
+			return
+		}
+		ctx := c.Request.Context()
+		out := types.BulkShipResult{Results: []types.ShipResult{}}
+		seen := map[int64]bool{}
+		for _, number := range req.Numbers {
+			if seen[number] {
+				continue
+			}
+			seen[number] = true
+			result := types.ShipResult{Number: number}
+			_, err := svc.Ship(ctx, number, "")
+			var refusal *checkout.Refusal
+			switch {
+			case err == nil:
+				result.Shipped = true
+				out.Shipped++
+			case errors.As(err, &refusal):
+				result.Code, result.Message = refusal.Code, refusal.Message
+			default:
+				rlog.Error(c, "failed to ship order", err, "order", number)
+				result.Code, result.Message = constants.InternalServerError, "Couldn't ship this order; try it on its own"
+			}
+			out.Results = append(out.Results, result)
+		}
+		c.JSON(http.StatusOK, types.APIResponse{Success: true, Message: "Orders shipped", Data: out})
 	}
 }
 

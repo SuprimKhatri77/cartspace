@@ -40,6 +40,7 @@ func TestSetupRegistersAllRoutes(t *testing.T) {
 		"GET /api/v1/categories/:slug",
 
 		"POST /api/v1/admin/products",
+		"POST /api/v1/admin/products/bulk",
 		"PUT /api/v1/admin/products/:productID",
 		"DELETE /api/v1/admin/products/:productID",
 		"GET /api/v1/admin/products",
@@ -49,6 +50,7 @@ func TestSetupRegistersAllRoutes(t *testing.T) {
 		"POST /api/v1/admin/uploads/signature",
 		"GET /api/v1/admin/orders",
 		"GET /api/v1/admin/orders/:number",
+		"POST /api/v1/admin/orders/ship",
 		"POST /api/v1/admin/orders/:number/ship",
 		"POST /api/v1/admin/orders/:number/deliver",
 		"POST /api/v1/admin/orders/:number/cancel",

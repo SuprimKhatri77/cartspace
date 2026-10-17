@@ -273,6 +273,24 @@ export function registerAdminPaths() {
 
   operation({
     method: "post",
+    path: "/api/v1/admin/orders/ship",
+    operationId: "adminShipOrders",
+    tag: "Admin",
+    summary: "Ship several orders",
+    description:
+      "Up to 50 paid orders, each shipped and emailed on its own, without tracking numbers. An order that can't ship is reported in its result; the rest still ship.",
+    auth: "admin",
+    request: body(schemas.BulkShipBodySchema),
+    success: {
+      status: 200,
+      description: "Orders shipped",
+      schema: schemas.BulkShipResponseSchema,
+    },
+    errors: { 400: "Invalid body (VALIDATION_FAILED)" },
+  });
+
+  operation({
+    method: "post",
     path: "/api/v1/admin/orders/{number}/ship",
     operationId: "adminShipOrder",
     tag: "Admin",

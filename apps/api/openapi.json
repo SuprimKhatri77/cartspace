@@ -1530,6 +1530,64 @@
         ],
         "description": "Create or fully replace a product."
       },
+      "BulkProductsResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "affected": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Products that changed: already hidden or gone ones don't count"
+              }
+            },
+            "required": [
+              "affected"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "BulkProductsBody": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "hide",
+              "show",
+              "delete"
+            ]
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "action",
+          "ids"
+        ]
+      },
       "VariantResponse": {
         "type": "object",
         "properties": {
@@ -4760,6 +4818,151 @@
           "stock_shortfall"
         ]
       },
+      "BulkShipResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "shipped": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "results": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ShipResult"
+                }
+              }
+            },
+            "required": [
+              "shipped",
+              "results"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "ShipResult": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "shipped": {
+            "type": "boolean"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "INTERNAL_SERVER_ERROR",
+              "VALIDATION_FAILED",
+              "INVALID_PAGE_PARAMETER",
+              "INVALID_PRICE_FILTER",
+              "INVALID_QUERY_PARAMETER",
+              "ROUTE_NOT_FOUND",
+              "METHOD_NOT_ALLOWED",
+              "INVALID_CREDENTIALS",
+              "MISSING_REFRESH_TOKEN",
+              "INVALID_REFRESH_TOKEN",
+              "USER_ALREADY_EXISTS",
+              "FORBIDDEN",
+              "INVALID_TOKEN_CLAIMS",
+              "USER_NOT_FOUND",
+              "INVALID_USER_ID",
+              "CUSTOMER_NOT_FOUND",
+              "MISSING_ACCESS_TOKEN",
+              "INVALID_ACCESS_TOKEN",
+              "INVALID_RESET_TOKEN",
+              "MAIL_UNAVAILABLE",
+              "PRODUCT_NOT_FOUND",
+              "INVALID_PRODUCT_ID",
+              "VARIANT_NOT_FOUND",
+              "INVALID_VARIANT_ID",
+              "VARIANT_ALREADY_EXISTS",
+              "DEFAULT_VARIANT_EXISTS",
+              "CATEGORY_NOT_FOUND",
+              "INVALID_CATEGORY_ID",
+              "CATEGORY_ALREADY_EXISTS",
+              "SELF_REFERENCING_CATEGORY",
+              "CYCLIC_CATEGORY_REFERENCE",
+              "VARIANT_UNAVAILABLE",
+              "INSUFFICIENT_STOCK",
+              "CART_QUANTITY_LIMIT",
+              "CART_FULL",
+              "CART_ITEM_NOT_FOUND",
+              "CART_EMPTY",
+              "CART_HAS_ISSUES",
+              "PAYMENTS_UNAVAILABLE",
+              "PAYMENT_PROVIDER_ERROR",
+              "INVALID_WEBHOOK_SIGNATURE",
+              "INVALID_SESSION_ID",
+              "ORDER_NOT_FOUND",
+              "INVALID_ORDER_TRANSITION",
+              "ORDER_ALREADY_PAID",
+              "REFUND_REFUSED",
+              "INVALID_ORDER_NUMBER",
+              "ADDRESS_NOT_FOUND",
+              "INVALID_ADDRESS_ID",
+              "INVALID_EMAIL_ID",
+              "EMAIL_NOT_FOUND",
+              "EMAIL_NOT_FAILED",
+              "WISHLIST_FULL",
+              "NOT_VERIFIED_BUYER",
+              "REVIEW_NOT_FOUND",
+              "INVALID_REVIEW_ID",
+              "INVALID_DISCOUNT_ID",
+              "DISCOUNT_NOT_FOUND",
+              "DISCOUNT_CODE_TAKEN",
+              "DISCOUNT_IN_USE",
+              "DISCOUNT_NOT_STARTED",
+              "DISCOUNT_EXPIRED",
+              "DISCOUNT_USED_UP",
+              "DISCOUNT_ALREADY_USED",
+              "DISCOUNT_MIN_SUBTOTAL"
+            ],
+            "description": "Why it didn't ship"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "shipped"
+        ]
+      },
+      "BulkShipBody": {
+        "type": "object",
+        "properties": {
+          "numbers": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "minItems": 1,
+            "maxItems": 50
+          }
+        },
+        "required": [
+          "numbers"
+        ]
+      },
       "ShipOrderBody": {
         "type": "object",
         "properties": {
@@ -7097,6 +7300,83 @@
           },
           "404": {
             "description": "Product not found (PRODUCT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/products/bulk": {
+      "post": {
+        "operationId": "adminBulkProducts",
+        "tags": [
+          "Products"
+        ],
+        "summary": "Hide, show or delete products",
+        "description": "Up to 100 at once. A delete is one product delete for each (variants, options and cart items go with it; past orders keep their copies).",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkProductsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Products updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkProductsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
             "content": {
               "application/json": {
                 "schema": {
@@ -10283,6 +10563,83 @@
           },
           "404": {
             "description": "No order with that number (ORDER_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/orders/ship": {
+      "post": {
+        "operationId": "adminShipOrders",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Ship several orders",
+        "description": "Up to 50 paid orders, each shipped and emailed on its own, without tracking numbers. An order that can't ship is reported in its result; the rest still ship.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkShipBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Orders shipped",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkShipResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
             "content": {
               "application/json": {
                 "schema": {
