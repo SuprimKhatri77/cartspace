@@ -2,7 +2,7 @@ import type { UserRole } from "@repo/types";
 
 // Path prefixes that need a session, and the roles allowed in. The API
 // enforces roles on every endpoint; these rules only keep users out of pages
-// they can't use. Keep proxy.ts's matcher in sync.
+// they can't use. proxy.ts runs on every page and applies them by prefix.
 export const ROLE_RULES: ReadonlyArray<{
   prefix: string;
   roles: readonly UserRole[];

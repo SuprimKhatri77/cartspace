@@ -30,6 +30,7 @@ func setupDocsRoutes(r *gin.Engine, router *gin.RouterGroup, cfg config.Config) 
 	html := strings.Replace(scalarHTML, `data-url="/openapi.json"`, `data-url="`+router.BasePath()+`/openapi.json"`, 1)
 	router.GET("/docs/", func(c *gin.Context) {
 		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.Header("Content-Security-Policy", docsCSP)
 		c.String(http.StatusOK, html)
 	})
 
@@ -37,6 +38,15 @@ func setupDocsRoutes(r *gin.Engine, router *gin.RouterGroup, cfg config.Config) 
 	router.GET("/docs", redirect)
 	r.GET("/docs", redirect)
 }
+
+// docsCSP replaces the API's no-content policy on the docs page: Scalar's
+// pinned script (the hash is the empty config tag), the styles and fonts it
+// injects, requests back to this API and Scalar's own registry. No eval:
+// Scalar only probes for it.
+const docsCSP = "default-src 'none'; " +
+	"script-src https://cdn.jsdelivr.net 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='; " +
+	"style-src 'unsafe-inline'; font-src https://fonts.scalar.com data:; img-src 'self' data:; " +
+	"connect-src 'self' https://api.scalar.com; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
 
 // scalarHTML is the Scalar API docs page that loads /openapi.json. The
 // script is pinned to an exact version with Subresource Integrity, so a

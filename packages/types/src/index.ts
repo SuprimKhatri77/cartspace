@@ -1,3 +1,5 @@
+// First: configures zod before the schemas below are built.
+export { z } from "./zod-config";
 export * from "./api/error-codes";
 export * from "./api/validation-codes";
 export * from "./api/response";
