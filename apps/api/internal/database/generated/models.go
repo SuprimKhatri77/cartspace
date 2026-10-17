@@ -50,6 +50,38 @@ type Category struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type DiscountCode struct {
+	ID              pgtype.UUID        `json:"id"`
+	Code            string             `json:"code"`
+	Kind            string             `json:"kind"`
+	Value           int32              `json:"value"`
+	MinSubtotal     int32              `json:"min_subtotal"`
+	StartsAt        pgtype.Timestamptz `json:"starts_at"`
+	EndsAt          pgtype.Timestamptz `json:"ends_at"`
+	MaxRedemptions  pgtype.Int4        `json:"max_redemptions"`
+	OncePerCustomer bool               `json:"once_per_customer"`
+	IsActive        bool               `json:"is_active"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type DiscountCodeState struct {
+	ID              pgtype.UUID        `json:"id"`
+	Code            string             `json:"code"`
+	Kind            string             `json:"kind"`
+	Value           int32              `json:"value"`
+	MinSubtotal     int32              `json:"min_subtotal"`
+	StartsAt        pgtype.Timestamptz `json:"starts_at"`
+	EndsAt          pgtype.Timestamptz `json:"ends_at"`
+	MaxRedemptions  pgtype.Int4        `json:"max_redemptions"`
+	OncePerCustomer bool               `json:"once_per_customer"`
+	IsActive        bool               `json:"is_active"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	Uses            int32              `json:"uses"`
+	State           string             `json:"state"`
+}
+
 type EmailOutbox struct {
 	ID            pgtype.UUID        `json:"id"`
 	Kind          string             `json:"kind"`
@@ -84,6 +116,9 @@ type Order struct {
 	DeliveredAt     pgtype.Timestamptz `json:"delivered_at"`
 	RefundedAt      pgtype.Timestamptz `json:"refunded_at"`
 	TrackingNumber  pgtype.Text        `json:"tracking_number"`
+	Discount        int32              `json:"discount"`
+	DiscountCode    pgtype.Text        `json:"discount_code"`
+	DiscountCodeID  pgtype.UUID        `json:"-"`
 }
 
 type OrderItem struct {

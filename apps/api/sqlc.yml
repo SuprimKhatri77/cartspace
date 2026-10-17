@@ -17,6 +17,9 @@ sql:
           # bookkeeping for restocks, not part of what was bought
           - column: "order_items.stock_shortfall"
             go_struct_tag: 'json:"-"'
+          # the code's id is for counting uses; orders show discount_code
+          - column: "orders.discount_code_id"
+            go_struct_tag: 'json:"-"'
           # active_offer_price returns NULL without an active offer; sqlc
           # can't infer a function's nullability.
           - column: "storefront_products.offer_price"

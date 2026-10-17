@@ -135,8 +135,13 @@ export const OrderSchema = z
     user_id: Uuid,
     status: OrderStatusSchema,
     subtotal: Cents,
+    discount: Cents.describe("Taken off the items by a discount code"),
+    discount_code: z
+      .string()
+      .nullable()
+      .describe("The code as it was used, kept if the code is deleted"),
     shipping: Cents,
-    total: Cents,
+    total: Cents.describe("subtotal - discount + shipping"),
     currency: z.string(),
     email: z.string(),
     shipping_address: AddressSnapshotSchema,

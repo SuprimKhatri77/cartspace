@@ -1,5 +1,6 @@
 import type {
   CustomerSort,
+  DiscountState,
   EmailStatus,
   OrderSort,
   SortDir,
@@ -264,6 +265,47 @@ export function adminEmailsQuery(f: AdminEmailFilters) {
 export function adminEmailsSearch(f: AdminEmailFilters): string {
   return searchOf([
     ["status", f.status],
+    ["page", f.page],
+  ]);
+}
+
+const DISCOUNT_STATES: DiscountState[] = [
+  "active",
+  "scheduled",
+  "ended",
+  "off",
+];
+
+/** The discount codes table's state, mirrored in its URL. */
+export type AdminDiscountFilters = {
+  page: number;
+  q: string;
+  state: DiscountState | "";
+};
+
+export function parseAdminDiscountFilters(
+  params: Params,
+): AdminDiscountFilters {
+  const state = first(params.state) as DiscountState;
+  return {
+    page: pageOf(params),
+    q: first(params.q).slice(0, 32),
+    state: DISCOUNT_STATES.includes(state) ? state : "",
+  };
+}
+
+export function adminDiscountsQuery(f: AdminDiscountFilters) {
+  return {
+    page: f.page,
+    ...(f.q && { q: f.q }),
+    ...(f.state && { state: f.state }),
+  };
+}
+
+export function adminDiscountsSearch(f: AdminDiscountFilters): string {
+  return searchOf([
+    ["q", f.q],
+    ["state", f.state],
     ["page", f.page],
   ]);
 }

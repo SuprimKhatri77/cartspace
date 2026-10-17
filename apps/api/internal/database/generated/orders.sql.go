@@ -114,7 +114,7 @@ func (q *Queries) AdminExportOrders(ctx context.Context, arg AdminExportOrdersPa
 }
 
 const adminGetOrder = `-- name: AdminGetOrder :one
-SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number FROM orders WHERE number = $1
+SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, discount_code, discount_code_id FROM orders WHERE number = $1
 `
 
 func (q *Queries) AdminGetOrder(ctx context.Context, number int64) (Order, error) {
@@ -141,12 +141,15 @@ func (q *Queries) AdminGetOrder(ctx context.Context, number int64) (Order, error
 		&i.DeliveredAt,
 		&i.RefundedAt,
 		&i.TrackingNumber,
+		&i.Discount,
+		&i.DiscountCode,
+		&i.DiscountCodeID,
 	)
 	return i, err
 }
 
 const adminGetOrderForUpdate = `-- name: AdminGetOrderForUpdate :one
-SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number FROM orders WHERE number = $1 FOR UPDATE
+SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, discount_code, discount_code_id FROM orders WHERE number = $1 FOR UPDATE
 `
 
 // Fulfilment changes lock the order first, like checkout's settling does.
@@ -174,6 +177,9 @@ func (q *Queries) AdminGetOrderForUpdate(ctx context.Context, number int64) (Ord
 		&i.DeliveredAt,
 		&i.RefundedAt,
 		&i.TrackingNumber,
+		&i.Discount,
+		&i.DiscountCode,
+		&i.DiscountCodeID,
 	)
 	return i, err
 }
@@ -335,7 +341,7 @@ func (q *Queries) CountOrders(ctx context.Context, userID pgtype.UUID) (int64, e
 const createOrder = `-- name: CreateOrder :one
 INSERT INTO orders (user_id, subtotal, shipping, total, currency, email, shipping_address, expires_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number
+RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, discount_code, discount_code_id
 `
 
 type CreateOrderParams struct {
@@ -382,6 +388,9 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		&i.DeliveredAt,
 		&i.RefundedAt,
 		&i.TrackingNumber,
+		&i.Discount,
+		&i.DiscountCode,
+		&i.DiscountCodeID,
 	)
 	return i, err
 }
@@ -452,7 +461,7 @@ func (q *Queries) CreatePayment(ctx context.Context, arg CreatePaymentParams) er
 
 const deliverOrder = `-- name: DeliverOrder :one
 UPDATE orders SET status = 'delivered', delivered_at = now()
-WHERE id = $1 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number
+WHERE id = $1 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, discount_code, discount_code_id
 `
 
 func (q *Queries) DeliverOrder(ctx context.Context, id pgtype.UUID) (Order, error) {
@@ -479,12 +488,15 @@ func (q *Queries) DeliverOrder(ctx context.Context, id pgtype.UUID) (Order, erro
 		&i.DeliveredAt,
 		&i.RefundedAt,
 		&i.TrackingNumber,
+		&i.Discount,
+		&i.DiscountCode,
+		&i.DiscountCodeID,
 	)
 	return i, err
 }
 
 const getOrderByNumber = `-- name: GetOrderByNumber :one
-SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number FROM orders WHERE number = $1 AND user_id = $2
+SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, discount_code, discount_code_id FROM orders WHERE number = $1 AND user_id = $2
 `
 
 type GetOrderByNumberParams struct {
@@ -516,12 +528,15 @@ func (q *Queries) GetOrderByNumber(ctx context.Context, arg GetOrderByNumberPara
 		&i.DeliveredAt,
 		&i.RefundedAt,
 		&i.TrackingNumber,
+		&i.Discount,
+		&i.DiscountCode,
+		&i.DiscountCodeID,
 	)
 	return i, err
 }
 
 const getOrderBySession = `-- name: GetOrderBySession :one
-SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number FROM orders WHERE stripe_session_id = $1 AND user_id = $2
+SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, discount_code, discount_code_id FROM orders WHERE stripe_session_id = $1 AND user_id = $2
 `
 
 type GetOrderBySessionParams struct {
@@ -553,12 +568,15 @@ func (q *Queries) GetOrderBySession(ctx context.Context, arg GetOrderBySessionPa
 		&i.DeliveredAt,
 		&i.RefundedAt,
 		&i.TrackingNumber,
+		&i.Discount,
+		&i.DiscountCode,
+		&i.DiscountCodeID,
 	)
 	return i, err
 }
 
 const getOrderForUpdate = `-- name: GetOrderForUpdate :one
-SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number FROM orders WHERE id = $1 FOR UPDATE
+SELECT id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, discount_code, discount_code_id FROM orders WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) GetOrderForUpdate(ctx context.Context, id pgtype.UUID) (Order, error) {
@@ -585,6 +603,9 @@ func (q *Queries) GetOrderForUpdate(ctx context.Context, id pgtype.UUID) (Order,
 		&i.DeliveredAt,
 		&i.RefundedAt,
 		&i.TrackingNumber,
+		&i.Discount,
+		&i.DiscountCode,
+		&i.DiscountCodeID,
 	)
 	return i, err
 }
@@ -863,7 +884,7 @@ func (q *Queries) RecordStripeEvent(ctx context.Context, arg RecordStripeEventPa
 
 const refundOrder = `-- name: RefundOrder :one
 UPDATE orders SET status = 'refunded', refunded_at = now()
-WHERE id = $1 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number
+WHERE id = $1 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, discount_code, discount_code_id
 `
 
 func (q *Queries) RefundOrder(ctx context.Context, id pgtype.UUID) (Order, error) {
@@ -890,6 +911,9 @@ func (q *Queries) RefundOrder(ctx context.Context, id pgtype.UUID) (Order, error
 		&i.DeliveredAt,
 		&i.RefundedAt,
 		&i.TrackingNumber,
+		&i.Discount,
+		&i.DiscountCode,
+		&i.DiscountCodeID,
 	)
 	return i, err
 }
@@ -1006,7 +1030,7 @@ func (q *Queries) SetOrderSession(ctx context.Context, arg SetOrderSessionParams
 
 const shipOrder = `-- name: ShipOrder :one
 UPDATE orders SET status = 'shipped', shipped_at = now(), tracking_number = $1
-WHERE id = $2 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number
+WHERE id = $2 RETURNING id, number, user_id, status, subtotal, shipping, total, currency, email, shipping_address, stripe_session_id, expires_at, paid_at, cancelled_at, created_at, updated_at, shipped_at, delivered_at, refunded_at, tracking_number, discount, discount_code, discount_code_id
 `
 
 type ShipOrderParams struct {
@@ -1038,6 +1062,9 @@ func (q *Queries) ShipOrder(ctx context.Context, arg ShipOrderParams) (Order, er
 		&i.DeliveredAt,
 		&i.RefundedAt,
 		&i.TrackingNumber,
+		&i.Discount,
+		&i.DiscountCode,
+		&i.DiscountCodeID,
 	)
 	return i, err
 }

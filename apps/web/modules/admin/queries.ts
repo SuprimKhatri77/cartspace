@@ -10,6 +10,7 @@ import {
   adminGetProduct,
   adminGetStats,
   adminListCustomers,
+  adminListDiscounts,
   adminListEmails,
   adminListInventory,
   adminListOrders,
@@ -22,11 +23,13 @@ import { adminKeys } from "./keys";
 import { adminProductsQuery, type AdminProductFilters } from "./lib/filters";
 import {
   adminCustomersQuery,
+  adminDiscountsQuery,
   adminEmailsQuery,
   adminInventoryQuery,
   adminOrdersQuery,
   adminReviewsQuery,
   type AdminCustomerFilters,
+  type AdminDiscountFilters,
   type AdminEmailFilters,
   type AdminInventoryFilters,
   type AdminOrderFilters,
@@ -248,6 +251,22 @@ export function useAdminSearch(q: string) {
     },
     enabled: q.length > 0,
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** One page of discount codes; the last page stays up while the next loads. */
+export function useAdminDiscounts(filters: AdminDiscountFilters) {
+  return useQuery({
+    queryKey: adminKeys.discountList(filters),
+    queryFn: async ({ signal }) => {
+      const { data } = await adminListDiscounts({
+        query: adminDiscountsQuery(filters),
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
     placeholderData: keepPreviousData,
   });
 }

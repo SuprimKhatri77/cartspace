@@ -11,6 +11,7 @@ import {
   SignOutIcon,
   SquaresFourIcon,
   StackIcon,
+  TicketIcon,
   TreeStructureIcon,
   UsersIcon,
   type Icon,
@@ -45,6 +46,7 @@ export const groups: { label: string; links: NavLink[] }[] = [
         badge: (c) => ({ count: c.to_ship, label: "to ship" }),
       },
       { label: "Customers", href: "/admin/customers", icon: UsersIcon },
+      { label: "Discounts", href: "/admin/discounts", icon: TicketIcon },
     ],
   },
   {

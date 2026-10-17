@@ -78,4 +78,10 @@ const (
 	NotVerifiedBuyer = "NOT_VERIFIED_BUYER"
 	ReviewNotFound   = "REVIEW_NOT_FOUND"
 	InvalidReviewID  = "INVALID_REVIEW_ID"
+
+	// discount codes
+	InvalidDiscountID = "INVALID_DISCOUNT_ID"
+	DiscountNotFound  = "DISCOUNT_NOT_FOUND"
+	DiscountCodeTaken = "DISCOUNT_CODE_TAKEN"
+	DiscountInUse     = "DISCOUNT_IN_USE"
 )

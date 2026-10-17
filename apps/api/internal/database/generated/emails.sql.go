@@ -247,7 +247,7 @@ func (q *Queries) FailEmail(ctx context.Context, arg FailEmailParams) error {
 }
 
 const getEmailOrder = `-- name: GetEmailOrder :one
-SELECT orders.id, orders.number, orders.user_id, orders.status, orders.subtotal, orders.shipping, orders.total, orders.currency, orders.email, orders.shipping_address, orders.stripe_session_id, orders.expires_at, orders.paid_at, orders.cancelled_at, orders.created_at, orders.updated_at, orders.shipped_at, orders.delivered_at, orders.refunded_at, orders.tracking_number, users.name AS customer_name
+SELECT orders.id, orders.number, orders.user_id, orders.status, orders.subtotal, orders.shipping, orders.total, orders.currency, orders.email, orders.shipping_address, orders.stripe_session_id, orders.expires_at, orders.paid_at, orders.cancelled_at, orders.created_at, orders.updated_at, orders.shipped_at, orders.delivered_at, orders.refunded_at, orders.tracking_number, orders.discount, orders.discount_code, orders.discount_code_id, users.name AS customer_name
 FROM orders JOIN users ON users.id = orders.user_id
 WHERE orders.id = $1
 `
@@ -282,6 +282,9 @@ func (q *Queries) GetEmailOrder(ctx context.Context, id pgtype.UUID) (GetEmailOr
 		&i.Order.DeliveredAt,
 		&i.Order.RefundedAt,
 		&i.Order.TrackingNumber,
+		&i.Order.Discount,
+		&i.Order.DiscountCode,
+		&i.Order.DiscountCodeID,
 		&i.CustomerName,
 	)
 	return i, err
