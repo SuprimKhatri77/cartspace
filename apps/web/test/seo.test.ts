@@ -88,7 +88,10 @@ type Offer = {
   availability: string;
   priceValidUntil?: string;
   shippingDetails: { shippingRate: { value: number } };
-  hasMerchantReturnPolicy: { merchantReturnDays: number };
+  hasMerchantReturnPolicy: {
+    merchantReturnDays: number;
+    merchantReturnLink: string;
+  };
 };
 type Ld = Record<string, unknown> & {
   offers?: Offer;
@@ -110,6 +113,9 @@ describe("productLd", () => {
     expect(ld.offers?.price).toBe("89.00");
     expect(ld.offers?.availability).toBe("https://schema.org/InStock");
     expect(ld.offers?.hasMerchantReturnPolicy.merchantReturnDays).toBe(30);
+    expect(ld.offers?.hasMerchantReturnPolicy.merchantReturnLink).toBe(
+      `${ORIGIN}/shipping-returns`,
+    );
     expect(ld.aggregateRating).toBeUndefined();
   });
 

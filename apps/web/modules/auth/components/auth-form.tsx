@@ -245,6 +245,19 @@ export function AuthForm(props: AuthFormProps) {
               ? "Create account"
               : "Sign in"}
         </Button>
+        {isRegister && (
+          <p className="-mt-2 text-center text-xs text-muted-foreground">
+            By creating an account you agree to our{" "}
+            <Link href="/terms" className="underline underline-offset-4">
+              terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="underline underline-offset-4">
+              privacy policy
+            </Link>
+            .
+          </p>
+        )}
       </FieldGroup>
 
       <p className="mt-8 border-t border-border pt-6 text-sm text-muted-foreground">

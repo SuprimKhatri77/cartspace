@@ -96,14 +96,17 @@ function shippingDetails(price: number) {
   };
 }
 
-const RETURN_POLICY = {
-  "@type": "MerchantReturnPolicy",
-  applicableCountry: SHIPPING_COUNTRIES,
-  returnPolicyCategory: `${SCHEMA}/MerchantReturnFiniteReturnWindow`,
-  merchantReturnDays: 30,
-  returnMethod: `${SCHEMA}/ReturnByMail`,
-  returnFees: `${SCHEMA}/FreeReturn`,
-};
+function returnPolicy(origin: string) {
+  return {
+    "@type": "MerchantReturnPolicy",
+    applicableCountry: SHIPPING_COUNTRIES,
+    returnPolicyCategory: `${SCHEMA}/MerchantReturnFiniteReturnWindow`,
+    merchantReturnDays: site.returnDays,
+    returnMethod: `${SCHEMA}/ReturnByMail`,
+    returnFees: `${SCHEMA}/FreeReturn`,
+    merchantReturnLink: `${origin}/shipping-returns`,
+  };
+}
 
 function offerLd({
   url,
@@ -126,7 +129,7 @@ function offerLd({
     // A sale price with an end date: say when it stops being valid.
     ...(offerEndsAt && { priceValidUntil: offerEndsAt.slice(0, 10) }),
     shippingDetails: shippingDetails(price),
-    hasMerchantReturnPolicy: RETURN_POLICY,
+    hasMerchantReturnPolicy: returnPolicy(new URL(url).origin),
   };
 }
 

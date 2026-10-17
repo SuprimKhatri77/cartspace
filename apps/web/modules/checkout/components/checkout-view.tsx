@@ -28,6 +28,7 @@ import { getApiError, mapFieldErrors } from "@/lib/api/errors";
 import { friendlyFieldErrors } from "@/lib/forms";
 import { formatPrice } from "@/lib/money";
 import { shippingFor } from "@/lib/shipping";
+import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { CartTotals } from "@/modules/cart/components/cart-summary";
@@ -448,7 +449,11 @@ function CheckoutForm({
         </Button>
         <p className="text-center text-xs text-muted-foreground">
           You&apos;ll pay on Stripe&apos;s secure page. Items are held for you
-          for 30 minutes.
+          for {site.checkoutHoldMinutes} minutes. By paying you agree to our{" "}
+          <Link href="/terms" className="underline underline-offset-4">
+            terms
+          </Link>
+          .
         </p>
       </aside>
     </form>

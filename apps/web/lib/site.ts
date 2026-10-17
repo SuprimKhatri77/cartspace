@@ -50,6 +50,11 @@ export const site = {
       body: "Natural materials from makers we know by name.",
     },
   ],
+  // Policy facts the legal pages, the checkout and the structured data
+  // share. contactEmail is a reserved .example address: this is a demo.
+  contactEmail: "support@cartspace.example",
+  returnDays: 30,
+  checkoutHoldMinutes: 30,
   shippingCopy:
     "Free standard shipping on orders over $150; otherwise a flat $8. Orders ship in two to four working days. Returns are free within 30 days of delivery.",
   authImage: `${IMG}/c_fill,g_auto,ar_3:4/samples/outdoor-woman.jpg`,

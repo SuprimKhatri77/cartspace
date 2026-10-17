@@ -4,6 +4,7 @@ import type { CategoryNode, ProductWithPrice } from "@repo/types";
 import { siteUrl } from "@/lib/site-url";
 import { getCategories, getListing } from "@/modules/catalog/api";
 import { DEFAULT_FILTERS } from "@/modules/catalog/lib/filters";
+import { LEGAL_PAGES, LEGAL_UPDATED } from "@/modules/legal/lib/pages";
 
 /** Every visible product, page by page (24 a page; pages 2+ in parallel). */
 async function allProducts(): Promise<ProductWithPrice[]> {
@@ -62,6 +63,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: `${origin}/`, lastModified: newest, priority: 1 },
     { url: `${origin}/shop`, lastModified: newest, priority: 0.8 },
+    ...LEGAL_PAGES.map((page) => ({
+      url: `${origin}${page.href}`,
+      lastModified: LEGAL_UPDATED,
+      priority: 0.3,
+    })),
     ...stockedCategories(categories, products).map((c) => ({
       url: `${origin}/categories/${c.slug}`,
       lastModified: c.updated_at,
