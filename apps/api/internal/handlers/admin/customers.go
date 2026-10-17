@@ -26,6 +26,21 @@ const (
 // customerSorts are the sortable fields and their natural direction.
 var customerSorts = map[string]string{"joined": "desc", "orders": "desc", "spend": "desc"}
 
+// customerFilters reads q (a piece of the name or email), sort and dir. On
+// failure it writes a 400.
+func customerFilters(c *gin.Context) (pattern pgtype.Text, sort httpx.Sort, ok bool) {
+	q := strings.TrimSpace(c.Query("q"))
+	if utf8.RuneCountInString(q) > maxCustomersSearch {
+		httpx.Fail(c, http.StatusBadRequest, constants.InvalidQueryParam, "q must be at most 100 characters")
+		return
+	}
+	if q != "" {
+		pattern = pgtype.Text{String: utils.ContainsPattern(q), Valid: true}
+	}
+	sort, ok = httpx.ParseSort(c, customerSorts, "joined")
+	return pattern, sort, ok
+}
+
 // ListCustomers is every customer account, newest first unless sorted
 // otherwise, searched by a piece of the name or email, with their order
 // count, spend and last order.
@@ -36,16 +51,7 @@ func ListCustomers(queries *db.Queries) gin.HandlerFunc {
 		if !ok {
 			return
 		}
-		q := strings.TrimSpace(c.Query("q"))
-		if utf8.RuneCountInString(q) > maxCustomersSearch {
-			httpx.Fail(c, http.StatusBadRequest, constants.InvalidQueryParam, "q must be at most 100 characters")
-			return
-		}
-		var pattern pgtype.Text
-		if q != "" {
-			pattern = pgtype.Text{String: utils.ContainsPattern(q), Valid: true}
-		}
-		sort, ok := httpx.ParseSort(c, customerSorts, "joined")
+		pattern, sort, ok := customerFilters(c)
 		if !ok {
 			return
 		}

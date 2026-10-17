@@ -4305,6 +4305,15 @@
           "last_order_at"
         ]
       },
+      "CustomerSort": {
+        "type": "string",
+        "enum": [
+          "joined",
+          "orders",
+          "spend"
+        ],
+        "description": "joined by default"
+      },
       "AdminCustomerListResponse": {
         "type": "object",
         "properties": {
@@ -4333,15 +4342,6 @@
           "data",
           "meta"
         ]
-      },
-      "CustomerSort": {
-        "type": "string",
-        "enum": [
-          "joined",
-          "orders",
-          "spend"
-        ],
-        "description": "joined by default"
       },
       "AdminCustomerResponse": {
         "type": "object",
@@ -10132,6 +10132,101 @@
           },
           "400": {
             "description": "q missing or too long (INVALID_QUERY_PARAMETER)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/customers/export.csv": {
+      "get": {
+        "operationId": "adminExportCustomers",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Customers as CSV",
+        "description": "The customers list's search and order, every match up to 10,000 rows: name, email, joined, orders, spend (major units) and last order. Text a spreadsheet would run as a formula starts with an apostrophe.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/CustomerSort"
+            },
+            "required": false,
+            "description": "joined by default",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/SortDir"
+            },
+            "required": false,
+            "name": "dir",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A CSV file (attachment)",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid search or sort (INVALID_QUERY_PARAMETER)",
             "content": {
               "application/json": {
                 "schema": {

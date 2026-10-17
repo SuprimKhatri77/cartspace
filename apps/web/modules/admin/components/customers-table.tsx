@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
+import {
+  DownloadSimpleIcon,
+  MagnifyingGlassIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 import type { CustomerSort, SortDir } from "@repo/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,14 +20,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { adminExportCustomers } from "@/lib/api/client";
 import { getApiError } from "@/lib/api/errors";
 import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { formatOrderDate } from "@/modules/checkout/lib/orders";
 import {
+  adminCustomersExportQuery,
   adminCustomersSearch,
   type AdminCustomerFilters,
 } from "../lib/order-filters";
+import { useCsvExport } from "../hooks/use-csv-export";
 import { useAdminCustomers } from "../queries";
 import { PageNav } from "./page-nav";
 import { SortableHead } from "./sortable-head";
@@ -61,20 +68,43 @@ export function CustomersTable({ initial }: { initial: AdminCustomerFilters }) {
   };
   const rows = customers.data?.data ?? [];
   const meta = customers.data?.meta;
+  const exporting = useCsvExport({
+    what: "customers",
+    fetchCsv: async () => {
+      const { data } = await adminExportCustomers({
+        query: adminCustomersExportQuery(filters),
+        throwOnError: true,
+      });
+      return data as string;
+    },
+    total: meta?.total,
+    narrowHint: "Search to narrow the list and export the rest.",
+  });
 
   return (
     <div className="space-y-5">
-      <div className="relative">
-        <MagnifyingGlassIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Name or email"
-          aria-label="Search customers"
-          className="h-10 pl-9"
-          maxLength={100}
-        />
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative flex-1">
+          <MagnifyingGlassIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Name or email"
+            aria-label="Search customers"
+            className="h-10 pl-9"
+            maxLength={100}
+          />
+        </div>
+        <Button
+          variant="outline"
+          className="h-10"
+          disabled={exporting.isPending || meta?.total === 0}
+          onClick={() => exporting.mutate()}
+        >
+          <DownloadSimpleIcon />
+          {exporting.isPending ? "Exporting…" : "Export CSV"}
+        </Button>
       </div>
 
       <div className="flex min-h-6 items-center justify-between gap-3 text-xs text-muted-foreground">

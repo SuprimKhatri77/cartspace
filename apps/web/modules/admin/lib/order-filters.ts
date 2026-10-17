@@ -149,12 +149,16 @@ export function parseAdminCustomerFilters(
   };
 }
 
-export function adminCustomersQuery(f: AdminCustomerFilters) {
+/** The CSV export's query: the list's search and order, every page. */
+export function adminCustomersExportQuery(f: AdminCustomerFilters) {
   return {
-    page: f.page,
     ...(f.q && { q: f.q }),
     ...(f.sort && { sort: f.sort, dir: f.dir }),
   };
+}
+
+export function adminCustomersQuery(f: AdminCustomerFilters) {
+  return { page: f.page, ...adminCustomersExportQuery(f) };
 }
 
 export function adminCustomersSearch(f: AdminCustomerFilters): string {

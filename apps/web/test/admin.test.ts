@@ -16,6 +16,7 @@ import {
 } from "@/modules/admin/lib/filters";
 import {
   adminOrdersQuery,
+  adminCustomersExportQuery,
   adminCustomersQuery,
   adminCustomersSearch,
   adminOrdersSearch,
@@ -287,6 +288,11 @@ describe("admin order and review filters", () => {
     const f = parseAdminCustomerFilters({ q: " ada ", page: "3" });
     expect(f).toEqual({ page: 3, q: "ada", sort: "", dir: "desc" });
     expect(adminCustomersQuery(f)).toEqual({ page: 3, q: "ada" });
+    // The export takes the search and order, never the page.
+    expect(adminCustomersExportQuery(f)).toEqual({ q: "ada" });
+    expect(
+      adminCustomersExportQuery({ ...f, sort: "spend", dir: "asc" }),
+    ).toEqual({ q: "ada", sort: "spend", dir: "asc" });
     expect(adminCustomersSearch(f)).toBe("?q=ada&page=3");
     expect(adminCustomersSearch(parseAdminCustomerFilters({}))).toBe("");
   });

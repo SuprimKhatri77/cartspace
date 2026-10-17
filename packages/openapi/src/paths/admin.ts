@@ -186,6 +186,31 @@ export function registerAdminPaths() {
 
   operation({
     method: "get",
+    path: "/api/v1/admin/customers/export.csv",
+    operationId: "adminExportCustomers",
+    tag: "Admin",
+    summary: "Customers as CSV",
+    description:
+      "The customers list's search and order, every match up to 10,000 rows: name, email, joined, orders, spend (major units) and last order. Text a spreadsheet would run as a formula starts with an apostrophe.",
+    auth: "admin",
+    request: {
+      query: z.object({
+        q: z.string().max(100).optional(),
+        sort: schemas.CustomerSortSchema.optional(),
+        dir: schemas.SortDirSchema.optional(),
+      }),
+    },
+    success: {
+      status: 200,
+      description: "A CSV file (attachment)",
+      schema: z.string(),
+      contentType: "text/csv",
+    },
+    errors: { 400: "Invalid search or sort (INVALID_QUERY_PARAMETER)" },
+  });
+
+  operation({
+    method: "get",
     path: "/api/v1/admin/customers",
     operationId: "adminListCustomers",
     tag: "Admin",
