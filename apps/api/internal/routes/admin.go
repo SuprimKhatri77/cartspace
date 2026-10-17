@@ -35,5 +35,11 @@ func setupAdminRoutes(router *gin.RouterGroup, cfg config.Config) {
 	group.GET("/reviews", admin.ListReviews(cfg.Queries))
 	group.PUT("/reviews/:id/status", admin.SetReviewStatus(cfg.Queries))
 
+	discounts := group.Group("/discounts")
+	discounts.GET("", admin.ListDiscounts(cfg.Queries))
+	discounts.POST("", admin.CreateDiscount(cfg.Queries))
+	discounts.PUT("/:id", admin.UpdateDiscount(cfg.Queries))
+	discounts.DELETE("/:id", admin.DeleteDiscount(cfg.Queries))
+
 	group.PUT("/settings", admin.SetStoreTheme(cfg.Queries))
 }

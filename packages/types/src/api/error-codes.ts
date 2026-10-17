@@ -63,15 +63,21 @@ export const ErrorCodeSchema = z
     "INVALID_ORDER_NUMBER",
     "ADDRESS_NOT_FOUND",
     "INVALID_ADDRESS_ID",
-    // wishlist
+    // email outbox
     "INVALID_EMAIL_ID",
     "EMAIL_NOT_FOUND",
     "EMAIL_NOT_FAILED",
+    // wishlist
     "WISHLIST_FULL",
     // reviews
     "NOT_VERIFIED_BUYER",
     "REVIEW_NOT_FOUND",
     "INVALID_REVIEW_ID",
+    // discount codes
+    "INVALID_DISCOUNT_ID",
+    "DISCOUNT_NOT_FOUND",
+    "DISCOUNT_CODE_TAKEN",
+    "DISCOUNT_IN_USE",
   ])
   .meta({ id: "ErrorCode", description: "Machine-readable failure code." });
 

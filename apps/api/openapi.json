@@ -133,7 +133,11 @@
           "WISHLIST_FULL",
           "NOT_VERIFIED_BUYER",
           "REVIEW_NOT_FOUND",
-          "INVALID_REVIEW_ID"
+          "INVALID_REVIEW_ID",
+          "INVALID_DISCOUNT_ID",
+          "DISCOUNT_NOT_FOUND",
+          "DISCOUNT_CODE_TAKEN",
+          "DISCOUNT_IN_USE"
         ],
         "description": "Machine-readable failure code."
       },
@@ -2148,13 +2152,26 @@
             "type": "integer",
             "minimum": 0
           },
+          "discount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Taken off the items by a discount code"
+          },
+          "discount_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The code as it was used, kept if the code is deleted"
+          },
           "shipping": {
             "type": "integer",
             "minimum": 0
           },
           "total": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "subtotal - discount + shipping"
           },
           "currency": {
             "type": "string"
@@ -2247,6 +2264,8 @@
           "user_id",
           "status",
           "subtotal",
+          "discount",
+          "discount_code",
           "shipping",
           "total",
           "currency",
@@ -4356,13 +4375,26 @@
             "type": "integer",
             "minimum": 0
           },
+          "discount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Taken off the items by a discount code"
+          },
+          "discount_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The code as it was used, kept if the code is deleted"
+          },
           "shipping": {
             "type": "integer",
             "minimum": 0
           },
           "total": {
             "type": "integer",
-            "minimum": 0
+            "minimum": 0,
+            "description": "subtotal - discount + shipping"
           },
           "currency": {
             "type": "string"
@@ -4528,6 +4560,8 @@
           "user_id",
           "status",
           "subtotal",
+          "discount",
+          "discount_code",
           "shipping",
           "total",
           "currency",
@@ -4785,6 +4819,220 @@
         "required": [
           "theme"
         ]
+      },
+      "DiscountCodeListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscountCode"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data",
+          "meta"
+        ]
+      },
+      "DiscountCode": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "description": "Upper-case"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DiscountKind"
+          },
+          "value": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "min_subtotal": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "The items' subtotal an order needs"
+          },
+          "starts_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "ends_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "max_redemptions": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0,
+            "description": "null: no limit"
+          },
+          "once_per_customer": {
+            "type": "boolean"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "uses": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Orders that used the code and weren't cancelled"
+          },
+          "state": {
+            "$ref": "#/components/schemas/DiscountState"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "kind",
+          "value",
+          "min_subtotal",
+          "starts_at",
+          "ends_at",
+          "max_redemptions",
+          "once_per_customer",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "uses",
+          "state"
+        ],
+        "description": "A discount code with its uses."
+      },
+      "DiscountKind": {
+        "type": "string",
+        "enum": [
+          "percent",
+          "fixed"
+        ],
+        "description": "percent: value is % off the items; fixed: value is cents off"
+      },
+      "DiscountState": {
+        "type": "string",
+        "enum": [
+          "active",
+          "scheduled",
+          "ended",
+          "off"
+        ],
+        "description": "active: open to shoppers; scheduled: not started; ended: past its end or used up; off: switched off"
+      },
+      "DiscountCodeResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DiscountCode"
+          }
+        },
+        "required": [
+          "success",
+          "message",
+          "data"
+        ]
+      },
+      "DiscountCodeBody": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{2,31}$/i"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DiscountKind"
+          },
+          "value": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 100000000,
+            "description": "1-100 for percent"
+          },
+          "min_subtotal": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000000
+          },
+          "starts_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "ends_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "max_redemptions": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "exclusiveMinimum": 0,
+            "maximum": 1000000
+          },
+          "once_per_customer": {
+            "type": "boolean"
+          },
+          "is_active": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "kind",
+          "value",
+          "min_subtotal",
+          "is_active"
+        ],
+        "description": "Creates or replaces a code. A used code keeps its code; the rest can change."
       }
     },
     "parameters": {}
@@ -10574,6 +10822,392 @@
           },
           "403": {
             "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/discounts": {
+      "get": {
+        "operationId": "adminListDiscounts",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Discount codes",
+        "description": "Newest first, 20 per page, each with its uses (orders that weren't cancelled). q is a piece of the code.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/DiscountState"
+            },
+            "required": false,
+            "description": "active: open to shoppers; scheduled: not started; ended: past its end or used up; off: switched off",
+            "name": "state",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discount codes fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscountCodeListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid page or filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "adminCreateDiscount",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Create a discount code",
+        "description": "The code is stored upper-case.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscountCodeBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Discount code created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscountCodeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The code is taken (DISCOUNT_CODE_TAKEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/discounts/{id}": {
+      "put": {
+        "operationId": "adminUpdateDiscount",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Update a discount code",
+        "description": "Replaces its settings. Once an order has used it, the code itself can't change.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscountCodeBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Discount code saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscountCodeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id or body (INVALID_DISCOUNT_ID, VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such code (DISCOUNT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The code is taken, or a used code was renamed (DISCOUNT_CODE_TAKEN, DISCOUNT_IN_USE)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error (INTERNAL_SERVER_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "adminDeleteDiscount",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Delete a discount code",
+        "description": "Only a code no order has used; switch a used one off.",
+        "security": [
+          {
+            "accessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discount code deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id (INVALID_DISCOUNT_ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not an admin (FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such code (DISCOUNT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Orders have used it (DISCOUNT_IN_USE)",
             "content": {
               "application/json": {
                 "schema": {

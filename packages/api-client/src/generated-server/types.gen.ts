@@ -25,7 +25,7 @@ export type ApiError = {
 /**
  * Machine-readable failure code.
  */
-export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID';
+export type ErrorCode = 'INTERNAL_SERVER_ERROR' | 'VALIDATION_FAILED' | 'INVALID_PAGE_PARAMETER' | 'INVALID_PRICE_FILTER' | 'INVALID_QUERY_PARAMETER' | 'ROUTE_NOT_FOUND' | 'METHOD_NOT_ALLOWED' | 'INVALID_CREDENTIALS' | 'MISSING_REFRESH_TOKEN' | 'INVALID_REFRESH_TOKEN' | 'USER_ALREADY_EXISTS' | 'FORBIDDEN' | 'INVALID_TOKEN_CLAIMS' | 'USER_NOT_FOUND' | 'INVALID_USER_ID' | 'CUSTOMER_NOT_FOUND' | 'MISSING_ACCESS_TOKEN' | 'INVALID_ACCESS_TOKEN' | 'INVALID_RESET_TOKEN' | 'MAIL_UNAVAILABLE' | 'PRODUCT_NOT_FOUND' | 'INVALID_PRODUCT_ID' | 'VARIANT_NOT_FOUND' | 'INVALID_VARIANT_ID' | 'VARIANT_ALREADY_EXISTS' | 'DEFAULT_VARIANT_EXISTS' | 'CATEGORY_NOT_FOUND' | 'INVALID_CATEGORY_ID' | 'CATEGORY_ALREADY_EXISTS' | 'SELF_REFERENCING_CATEGORY' | 'CYCLIC_CATEGORY_REFERENCE' | 'VARIANT_UNAVAILABLE' | 'INSUFFICIENT_STOCK' | 'CART_QUANTITY_LIMIT' | 'CART_FULL' | 'CART_ITEM_NOT_FOUND' | 'CART_EMPTY' | 'CART_HAS_ISSUES' | 'PAYMENTS_UNAVAILABLE' | 'PAYMENT_PROVIDER_ERROR' | 'INVALID_WEBHOOK_SIGNATURE' | 'INVALID_SESSION_ID' | 'ORDER_NOT_FOUND' | 'INVALID_ORDER_TRANSITION' | 'ORDER_ALREADY_PAID' | 'REFUND_REFUSED' | 'INVALID_ORDER_NUMBER' | 'ADDRESS_NOT_FOUND' | 'INVALID_ADDRESS_ID' | 'INVALID_EMAIL_ID' | 'EMAIL_NOT_FOUND' | 'EMAIL_NOT_FAILED' | 'WISHLIST_FULL' | 'NOT_VERIFIED_BUYER' | 'REVIEW_NOT_FOUND' | 'INVALID_REVIEW_ID' | 'INVALID_DISCOUNT_ID' | 'DISCOUNT_NOT_FOUND' | 'DISCOUNT_CODE_TAKEN' | 'DISCOUNT_IN_USE';
 
 /**
  * One invalid field; `field` is a react-hook-form style path such as `images.1`.
@@ -717,7 +717,18 @@ export type OrderDetail = {
     user_id: string;
     status: OrderStatus;
     subtotal: number;
+    /**
+     * Taken off the items by a discount code
+     */
+    discount: number;
+    /**
+     * The code as it was used, kept if the code is deleted
+     */
+    discount_code: string | null;
     shipping: number;
+    /**
+     * subtotal - discount + shipping
+     */
     total: number;
     currency: string;
     email: string;
@@ -1406,7 +1417,18 @@ export type AdminOrderDetail = {
     user_id: string;
     status: OrderStatus;
     subtotal: number;
+    /**
+     * Taken off the items by a discount code
+     */
+    discount: number;
+    /**
+     * The code as it was used, kept if the code is deleted
+     */
+    discount_code: string | null;
     shipping: number;
+    /**
+     * subtotal - discount + shipping
+     */
     total: number;
     currency: string;
     email: string;
@@ -1522,6 +1544,79 @@ export type ReviewStatusBody = {
 
 export type StoreThemeBody = {
     theme: StoreTheme;
+};
+
+export type DiscountCodeListResponse = {
+    success: true;
+    message: string;
+    data: Array<DiscountCode>;
+    meta: PaginationMeta;
+};
+
+/**
+ * A discount code with its uses.
+ */
+export type DiscountCode = {
+    id: string;
+    /**
+     * Upper-case
+     */
+    code: string;
+    kind: DiscountKind;
+    value: number;
+    /**
+     * The items' subtotal an order needs
+     */
+    min_subtotal: number;
+    starts_at: string | null;
+    ends_at: string | null;
+    /**
+     * null: no limit
+     */
+    max_redemptions: number | null;
+    once_per_customer: boolean;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    /**
+     * Orders that used the code and weren't cancelled
+     */
+    uses: number;
+    state: DiscountState;
+};
+
+/**
+ * percent: value is % off the items; fixed: value is cents off
+ */
+export type DiscountKind = 'percent' | 'fixed';
+
+/**
+ * active: open to shoppers; scheduled: not started; ended: past its end or used up; off: switched off
+ */
+export type DiscountState = 'active' | 'scheduled' | 'ended' | 'off';
+
+export type DiscountCodeResponse = {
+    success: true;
+    message: string;
+    data: DiscountCode;
+};
+
+/**
+ * Creates or replaces a code. A used code keeps its code; the rest can change.
+ */
+export type DiscountCodeBody = {
+    code: string;
+    kind: DiscountKind;
+    /**
+     * 1-100 for percent
+     */
+    value: number;
+    min_subtotal: number;
+    starts_at?: string | null;
+    ends_at?: string | null;
+    max_redemptions?: number | null;
+    once_per_customer?: boolean;
+    is_active: boolean;
 };
 
 export type GetHealthData = {
@@ -4333,3 +4428,182 @@ export type AdminSetStoreThemeResponses = {
 };
 
 export type AdminSetStoreThemeResponse = AdminSetStoreThemeResponses[keyof AdminSetStoreThemeResponses];
+
+export type AdminListDiscountsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        page?: number;
+        /**
+         * active: open to shoppers; scheduled: not started; ended: past its end or used up; off: switched off
+         */
+        state?: DiscountState;
+        q?: string;
+    };
+    url: '/api/v1/admin/discounts';
+};
+
+export type AdminListDiscountsErrors = {
+    /**
+     * Invalid page or filter (INVALID_PAGE_PARAMETER, INVALID_QUERY_PARAMETER)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminListDiscountsError = AdminListDiscountsErrors[keyof AdminListDiscountsErrors];
+
+export type AdminListDiscountsResponses = {
+    /**
+     * Discount codes fetched
+     */
+    200: DiscountCodeListResponse;
+};
+
+export type AdminListDiscountsResponse = AdminListDiscountsResponses[keyof AdminListDiscountsResponses];
+
+export type AdminCreateDiscountData = {
+    body: DiscountCodeBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/discounts';
+};
+
+export type AdminCreateDiscountErrors = {
+    /**
+     * Invalid body (VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * The code is taken (DISCOUNT_CODE_TAKEN)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminCreateDiscountError = AdminCreateDiscountErrors[keyof AdminCreateDiscountErrors];
+
+export type AdminCreateDiscountResponses = {
+    /**
+     * Discount code created
+     */
+    201: DiscountCodeResponse;
+};
+
+export type AdminCreateDiscountResponse = AdminCreateDiscountResponses[keyof AdminCreateDiscountResponses];
+
+export type AdminDeleteDiscountData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/discounts/{id}';
+};
+
+export type AdminDeleteDiscountErrors = {
+    /**
+     * Invalid id (INVALID_DISCOUNT_ID)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such code (DISCOUNT_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * Orders have used it (DISCOUNT_IN_USE)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminDeleteDiscountError = AdminDeleteDiscountErrors[keyof AdminDeleteDiscountErrors];
+
+export type AdminDeleteDiscountResponses = {
+    /**
+     * Discount code deleted
+     */
+    200: MessageResponse;
+};
+
+export type AdminDeleteDiscountResponse = AdminDeleteDiscountResponses[keyof AdminDeleteDiscountResponses];
+
+export type AdminUpdateDiscountData = {
+    body: DiscountCodeBody;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/discounts/{id}';
+};
+
+export type AdminUpdateDiscountErrors = {
+    /**
+     * Invalid id or body (INVALID_DISCOUNT_ID, VALIDATION_FAILED)
+     */
+    400: ApiError;
+    /**
+     * Missing or invalid access token (MISSING_ACCESS_TOKEN, INVALID_ACCESS_TOKEN, INVALID_TOKEN_CLAIMS)
+     */
+    401: ApiError;
+    /**
+     * Not an admin (FORBIDDEN)
+     */
+    403: ApiError;
+    /**
+     * No such code (DISCOUNT_NOT_FOUND)
+     */
+    404: ApiError;
+    /**
+     * The code is taken, or a used code was renamed (DISCOUNT_CODE_TAKEN, DISCOUNT_IN_USE)
+     */
+    409: ApiError;
+    /**
+     * Unexpected server error (INTERNAL_SERVER_ERROR)
+     */
+    500: ApiError;
+};
+
+export type AdminUpdateDiscountError = AdminUpdateDiscountErrors[keyof AdminUpdateDiscountErrors];
+
+export type AdminUpdateDiscountResponses = {
+    /**
+     * Discount code saved
+     */
+    200: DiscountCodeResponse;
+};
+
+export type AdminUpdateDiscountResponse = AdminUpdateDiscountResponses[keyof AdminUpdateDiscountResponses];

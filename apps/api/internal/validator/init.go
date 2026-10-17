@@ -22,6 +22,11 @@ var (
 	// A UUID in its canonical 8-4-4-4-12 form, in either case (RFC 9562:
 	// the hex digits are case-insensitive on input).
 	uuidRe = regexp.MustCompile(`^(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+	// A discount code: 3 to 32 letters, digits, hyphens and underscores,
+	// starting with a letter or digit (SUMMER-25, WELCOME10). Any case; the
+	// store keeps it upper-case.
+	discountCodeRe = regexp.MustCompile(`^(?i)[a-z0-9][a-z0-9_-]{2,31}$`)
 )
 
 func Init() {
@@ -40,6 +45,10 @@ func Init() {
 		// parameters (uuid.Parse) accept it.
 		_ = v.RegisterValidation("uuid", func(fl validator.FieldLevel) bool {
 			return uuidRe.MatchString(fl.Field().String())
+		})
+
+		_ = v.RegisterValidation("discountcode", func(fl validator.FieldLevel) bool {
+			return discountCodeRe.MatchString(fl.Field().String())
 		})
 
 		_ = v.RegisterValidation("date_format", func(fl validator.FieldLevel) bool {

@@ -1,4 +1,4 @@
-import type { OrderStatus } from "@repo/types";
+import type { DiscountState, OrderStatus } from "@repo/types";
 import { cn } from "@/lib/utils";
 
 const tone: Record<OrderStatus, string> = {
@@ -40,6 +40,27 @@ export function ActiveBadge({ active }: { active: boolean }) {
         )}
       />
       {active ? "Active" : "Hidden"}
+    </span>
+  );
+}
+
+const discountTone: Record<DiscountState, string> = {
+  active: "border-success/40 text-success",
+  scheduled: "border-clay/40 text-clay",
+  ended: "border-border text-muted-foreground",
+  off: "border-border text-muted-foreground line-through",
+};
+
+/** Where a discount code stands: active, scheduled, ended or off. */
+export function DiscountStateBadge({ state }: { state: DiscountState }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex h-6 items-center border px-2 font-mono text-[0.625rem] tracking-[0.14em] uppercase",
+        discountTone[state],
+      )}
+    >
+      {state}
     </span>
   );
 }
