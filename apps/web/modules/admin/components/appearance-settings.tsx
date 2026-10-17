@@ -158,7 +158,8 @@ function ThemePreview({ id }: { id: ThemeId }) {
       </span>
       <span className="grid grid-cols-[1fr_auto] items-end gap-4">
         <span className="display block text-[1.75rem]">
-          Objects for <em>slow living.</em>
+          {site.hero.title.slice(0, -1).join(" ")}{" "}
+          <em>{site.hero.title.at(-1)}</em>
         </span>
         <span className="relative block aspect-[4/5] w-16 overflow-hidden rounded-media bg-surface">
           <Image

@@ -6,7 +6,7 @@ const IMG = "https://res.cloudinary.com/demo/image/upload";
 
 export const site = {
   name: "cartspace",
-  tagline: "Objects for slow living",
+  tagline: "Make room for nice things",
   description:
     "Considered clothing, accessories and homewares, made to last and chosen with care.",
   announcement: [
@@ -16,7 +16,7 @@ export const site = {
   ],
   hero: {
     eyebrow: "Autumn / Winter collection",
-    title: ["Objects for", "slow living."],
+    title: ["Make room for", "nice things."],
     body: "Considered goods in natural materials, made to last and chosen with care. Fewer, better things.",
     image: `${IMG}/c_fill,g_auto,ar_4:5/samples/two-ladies.jpg`,
     imageAlt: "Two friends laughing in ribbed turtlenecks",
