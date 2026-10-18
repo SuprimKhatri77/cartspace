@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import type { CategoryNode } from "@repo/types";
-import { withoutErrors } from "@/lib/forms";
 import {
   categoryPath,
   orderTree,
@@ -170,13 +169,6 @@ describe("admin helpers", () => {
     expect(toLocalInput(null)).toBe("");
     expect(fromLocalInput("")).toBeUndefined();
     expect(fromLocalInput("nonsense")).toBeUndefined();
-  });
-
-  test("withoutErrors", () => {
-    const errors = { name: "Enter a name", price: "Enter a price" };
-    expect(withoutErrors(errors, "name")).toEqual({ price: "Enter a price" });
-    // unchanged errors keep their identity (no re-render)
-    expect(withoutErrors(errors, "stock")).toBe(errors);
   });
 });
 

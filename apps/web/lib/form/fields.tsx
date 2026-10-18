@@ -306,7 +306,8 @@ export function SelectField({
     <FieldShell {...{ label, hint, optional, id, fieldClassName, hideLabel }}>
       {(control) => (
         <Select
-          value={field.state.value}
+          // Empty until picked: null shows the placeholder.
+          value={field.state.value || null}
           // Base UI reports null when a selection is cleared; a field
           // always holds one of its items.
           onValueChange={(value) => value !== null && field.handleChange(value)}
