@@ -1,7 +1,9 @@
 package auth
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -20,10 +22,22 @@ type Tokens struct {
 	RefreshToken string
 }
 
-// HashRefreshToken is what the sessions table stores; raw refresh tokens never hit the DB.
-func HashRefreshToken(token string) string {
+// HashToken is what the database keeps instead of a token (a session's
+// refresh token, a reset link's), so a leaked table holds none that work.
+func HashToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
+}
+
+// NewOpaqueToken is 32 random bytes, URL-safe, for a link sent by email,
+// and the hash to store instead.
+func NewOpaqueToken() (token, hash string, err error) {
+	raw := make([]byte, 32)
+	if _, err := rand.Read(raw); err != nil {
+		return "", "", err
+	}
+	token = base64.RawURLEncoding.EncodeToString(raw)
+	return token, HashToken(token), nil
 }
 
 // NewTokens signs a fresh access/refresh pair. Every call uses a new random

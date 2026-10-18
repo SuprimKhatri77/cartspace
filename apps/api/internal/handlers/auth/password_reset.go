@@ -2,10 +2,6 @@ package auth
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -80,7 +76,7 @@ func sendResetLink(ctx context.Context, queries *db.Queries, mailer emails.Sende
 		return
 	}
 
-	token, hash, err := newResetToken()
+	token, hash, err := session.NewOpaqueToken()
 	if err != nil {
 		log.Error("password reset: make token", "err", err)
 		return
@@ -153,7 +149,7 @@ func ResetPassword(pool *pgxpool.Pool, queries *db.Queries) gin.HandlerFunc {
 		defer func() { _ = tx.Rollback(ctx) }()
 		qtx := queries.WithTx(tx)
 
-		userID, err := qtx.ConsumePasswordReset(ctx, hashResetToken(req.Token))
+		userID, err := qtx.ConsumePasswordReset(ctx, session.HashToken(req.Token))
 		if errors.Is(err, pgx.ErrNoRows) {
 			rlog.Warn(c, "password reset with an unknown, used or expired link")
 			httpx.Fail(c, http.StatusBadRequest, constants.InvalidResetToken,
@@ -187,20 +183,4 @@ func ResetPassword(pool *pgxpool.Pool, queries *db.Queries) gin.HandlerFunc {
 			Message: "Your password has been changed. Sign in with the new one.",
 		})
 	}
-}
-
-// newResetToken is 32 random bytes for the link, and the hash the table
-// keeps instead.
-func newResetToken() (token, hash string, err error) {
-	raw := make([]byte, 32)
-	if _, err := rand.Read(raw); err != nil {
-		return "", "", err
-	}
-	token = base64.RawURLEncoding.EncodeToString(raw)
-	return token, hashResetToken(token), nil
-}
-
-func hashResetToken(token string) string {
-	sum := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(sum[:])
 }

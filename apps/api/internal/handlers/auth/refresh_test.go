@@ -37,10 +37,10 @@ func TestRefresh(t *testing.T) {
 			t.Fatalf("got %d %+v", r.code, r.body)
 		}
 		p := m.rotateCalls[0]
-		if p.ExpectedTokenHash != session.HashRefreshToken(tok) {
+		if p.ExpectedTokenHash != session.HashToken(tok) {
 			t.Fatal("CAS must expect the presented token's hash")
 		}
-		if p.NewTokenHash != session.HashRefreshToken(r.cookies[session.RefreshCookie].Value) {
+		if p.NewTokenHash != session.HashToken(r.cookies[session.RefreshCookie].Value) {
 			t.Fatal("stored hash must match the new refresh cookie")
 		}
 	})

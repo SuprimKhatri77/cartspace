@@ -78,7 +78,7 @@ func Refresh(queries repository.AuthRepository, cfg *config.Config) gin.HandlerF
 			return
 		}
 
-		presented := session.HashRefreshToken(token)
+		presented := session.HashToken(token)
 		now := time.Now()
 
 		switch session.Decide(sess, presented, now, cfg.RefreshReuseWindow) {
@@ -109,7 +109,7 @@ func rotate(c *gin.Context, queries repository.AuthRepository, cfg *config.Confi
 
 	_, err = queries.RotateSessionToken(ctx, db.RotateSessionTokenParams{
 		ID:                sess.ID,
-		NewTokenHash:      session.HashRefreshToken(tokens.RefreshToken),
+		NewTokenHash:      session.HashToken(tokens.RefreshToken),
 		ExpectedTokenHash: presented,
 		ExpiresAt:         pgtype.Timestamptz{Time: expiresAt, Valid: true},
 	})
