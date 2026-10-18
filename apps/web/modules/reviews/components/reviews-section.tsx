@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { StarIcon } from "@phosphor-icons/react";
+import { revalidateLogic, useStore } from "@tanstack/react-form";
 import { toast } from "sonner";
 import { ReviewBodySchema, type ReviewSummary } from "@repo/types";
 import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
@@ -16,19 +17,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { FieldGroup } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
-import { useFocusFirstError } from "@/hooks/use-focus-first-error";
-import { getApiError, mapFieldErrors } from "@/lib/api/errors";
+import { getApiError } from "@/lib/api/errors";
 import { loginPath } from "@/lib/auth/redirect";
-import { friendlyFieldErrors } from "@/lib/forms";
+import { applyApiErrors } from "@/lib/form/api-errors";
+import { FieldShell, type ControlProps } from "@/lib/form/fields";
+import { useAppForm } from "@/lib/form/form";
+import { schemaErrors } from "@/lib/form/validate";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { formatOrderDate } from "@/modules/checkout/lib/orders";
@@ -300,168 +296,131 @@ function ReviewForm({
   close: () => void;
 }) {
   const { write, remove } = useReviewMutations(slug);
-  const [rating, setRating] = useState(initial?.rating ?? 0);
-  const [title, setTitle] = useState(initial?.title ?? "");
-  const [body, setBody] = useState(initial?.body ?? "");
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const { ref: formRef, focusFirstError } = useFocusFirstError();
 
-  const dirty =
-    rating !== (initial?.rating ?? 0) ||
-    title !== (initial?.title ?? "") ||
-    body !== (initial?.body ?? "");
+  const form = useAppForm({
+    defaultValues: {
+      rating: initial?.rating ?? 0,
+      title: initial?.title ?? "",
+      body: initial?.body ?? "",
+    },
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: ({ value }) =>
+        schemaErrors(ReviewBodySchema, value, {
+          labels: {
+            rating: "a rating",
+            title: "a title",
+            body: "a few words about it",
+          },
+        }),
+    },
+    onSubmit: async ({ value, formApi }) => {
+      try {
+        await write.mutateAsync(ReviewBodySchema.parse(value));
+      } catch (error) {
+        applyApiErrors(formApi, error);
+        toast.error(getApiError(error)?.message ?? "Couldn't save your review");
+        return;
+      }
+      toast.success(initial ? "Review updated" : "Thanks for your review");
+      close();
+    },
+  });
+
+  const dirty = useStore(form.store, (s) => !s.isDefaultValue);
   useEffect(() => {
     onDirtyChange(dirty);
   }, [dirty, onDirtyChange]);
 
-  function fail(next: Record<string, string>) {
-    setErrors(next);
-    focusFirstError();
-  }
-
-  function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const parsed = ReviewBodySchema.safeParse({ rating, title, body });
-    if (!parsed.success) {
-      fail(
-        friendlyFieldErrors(parsed.error, {
-          rating: "a rating",
-          title: "a title",
-          body: "a few words about it",
-        }),
-      );
-      return;
-    }
-    setErrors({});
-    write.mutate(parsed.data, {
-      onSuccess: () => {
-        toast.success(initial ? "Review updated" : "Thanks for your review");
-        close();
-      },
-      onError: (error) => {
-        fail(mapFieldErrors(getApiError(error)?.errors));
-        toast.error(getApiError(error)?.message ?? "Couldn't save your review");
-      },
-    });
-  }
-
   return (
-    <form ref={formRef} onSubmit={submit} noValidate className="space-y-6">
-      <DialogHeader className="gap-1">
-        <DialogTitle className="font-serif text-3xl font-normal">
-          {initial ? "Edit your review" : "Write a review"}
-        </DialogTitle>
-        <DialogDescription>{productName}</DialogDescription>
-      </DialogHeader>
+    <form.AppForm>
+      <form.Form className="space-y-6">
+        <DialogHeader className="gap-1">
+          <DialogTitle className="font-serif text-3xl font-normal">
+            {initial ? "Edit your review" : "Write a review"}
+          </DialogTitle>
+          <DialogDescription>{productName}</DialogDescription>
+        </DialogHeader>
 
-      <FieldGroup className="gap-5">
-        <Field data-invalid={Boolean(errors.rating)}>
-          <FieldLabel className="eyebrow !text-foreground">Rating</FieldLabel>
-          <StarInput
-            value={rating}
-            onChange={setRating}
-            invalid={Boolean(errors.rating)}
-          />
-          <FieldError key={errors.rating} className="animate-rise">
-            {errors.rating}
-          </FieldError>
-        </Field>
-        <Field data-invalid={Boolean(errors.title)}>
-          <FieldLabel
-            htmlFor="review-title"
-            className="eyebrow !text-foreground"
-          >
-            Title
-          </FieldLabel>
-          <Input
-            id="review-title"
-            value={title}
-            maxLength={100}
-            onChange={(e) => setTitle(e.target.value)}
-            aria-invalid={Boolean(errors.title)}
-            aria-describedby={errors.title ? "review-title-error" : undefined}
-            placeholder="In a few words"
-          />
-          <FieldError
-            key={errors.title}
-            id="review-title-error"
-            className="animate-rise"
-          >
-            {errors.title}
-          </FieldError>
-        </Field>
-        <Field data-invalid={Boolean(errors.body)}>
-          <FieldLabel
-            htmlFor="review-body"
-            className="eyebrow !text-foreground"
-          >
-            Review
-          </FieldLabel>
-          <Textarea
-            id="review-body"
-            value={body}
-            maxLength={2000}
-            onChange={(e) => setBody(e.target.value)}
-            aria-invalid={Boolean(errors.body)}
-            aria-describedby={errors.body ? "review-body-error" : undefined}
-            placeholder="How does it fit, feel and wear?"
-          />
-          <FieldError
-            key={errors.body}
-            id="review-body-error"
-            className="animate-rise"
-          >
-            {errors.body}
-          </FieldError>
-        </Field>
-      </FieldGroup>
+        <FieldGroup className="gap-5">
+          <form.AppField name="rating">
+            {(field) => (
+              <FieldShell id="review-rating" label="Rating" group>
+                {(control) => (
+                  <StarInput
+                    control={control}
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                  />
+                )}
+              </FieldShell>
+            )}
+          </form.AppField>
+          <form.AppField name="title">
+            {(field) => (
+              <field.TextField
+                id="review-title"
+                label="Title"
+                maxLength={100}
+                placeholder="In a few words"
+              />
+            )}
+          </form.AppField>
+          <form.AppField name="body">
+            {(field) => (
+              <field.TextareaField
+                id="review-body"
+                label="Review"
+                maxLength={2000}
+                placeholder="How does it fit, feel and wear?"
+              />
+            )}
+          </form.AppField>
+        </FieldGroup>
 
-      <DialogFooter className="flex-row items-center justify-between gap-3 sm:justify-between">
-        {initial ? (
-          <button
-            type="button"
-            onClick={() => setConfirmDelete(true)}
-            className="link-underline text-xs text-muted-foreground hover:text-destructive"
-          >
-            Delete review
-          </button>
-        ) : (
-          <span />
-        )}
-        <Button type="submit" disabled={write.isPending}>
-          {write.isPending
-            ? "Saving…"
-            : initial
-              ? "Save changes"
-              : "Post review"}
-        </Button>
-      </DialogFooter>
+        <DialogFooter className="flex-row items-center justify-between gap-3 sm:justify-between">
+          {initial ? (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="link-underline text-xs text-muted-foreground hover:text-destructive"
+            >
+              Delete review
+            </button>
+          ) : (
+            <span />
+          )}
+          <form.SubmitButton pendingLabel="Saving…">
+            {initial ? "Save changes" : "Post review"}
+          </form.SubmitButton>
+        </DialogFooter>
 
-      <ConfirmDialog
-        open={confirmDelete}
-        onOpenChange={setConfirmDelete}
-        title="Delete your review?"
-        description="It comes off the product page for good. You can write a new one later."
-        confirmLabel="Delete review"
-        pending={remove.isPending}
-        onConfirm={() =>
-          remove.mutate(undefined, {
-            onSuccess: () => {
-              setConfirmDelete(false);
-              toast("Review deleted");
-              close();
-            },
-            onError: (error) => {
-              setConfirmDelete(false);
-              toast.error(
-                getApiError(error)?.message ?? "Couldn't delete your review",
-              );
-            },
-          })
-        }
-      />
-    </form>
+        <ConfirmDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title="Delete your review?"
+          description="It comes off the product page for good. You can write a new one later."
+          confirmLabel="Delete review"
+          pending={remove.isPending}
+          onConfirm={() =>
+            remove.mutate(undefined, {
+              onSuccess: () => {
+                setConfirmDelete(false);
+                toast("Review deleted");
+                close();
+              },
+              onError: (error) => {
+                setConfirmDelete(false);
+                toast.error(
+                  getApiError(error)?.message ?? "Couldn't delete your review",
+                );
+              },
+            })
+          }
+        />
+      </form.Form>
+    </form.AppForm>
   );
 }
 
@@ -472,24 +431,30 @@ const LABELS = ["Poor", "Fair", "Good", "Very good", "Excellent"];
  * previews a rating.
  */
 function StarInput({
+  control,
   value,
   onChange,
-  invalid,
 }: {
+  control: ControlProps;
   value: number;
   onChange: (value: number) => void;
-  invalid?: boolean;
 }) {
   const [hover, setHover] = useState(0);
   const shown = hover || value;
   return (
     <div className="flex items-center gap-3">
       <div
+        id={control.id}
         role="radiogroup"
-        aria-label="Rating"
-        aria-invalid={invalid}
+        aria-labelledby={control["aria-labelledby"]}
+        aria-invalid={control["aria-invalid"]}
+        aria-describedby={control["aria-describedby"]}
         className="flex"
         onMouseLeave={() => setHover(0)}
+        onBlur={(e) => {
+          // Leaving the group, not moving between its stars.
+          if (!e.currentTarget.contains(e.relatedTarget)) control.onBlur();
+        }}
       >
         {[1, 2, 3, 4, 5].map((star) => (
           <button

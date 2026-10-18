@@ -3,9 +3,27 @@
 import { useEffect, useRef } from "react";
 import { useStore } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
-import { focusFirstInvalid } from "@/hooks/use-focus-first-error";
 import { clearServerErrors } from "./api-errors";
 import { useFormContext } from "./context";
+
+const FOCUSABLE =
+  'input, select, textarea, button, [tabindex]:not([tabindex="-1"])';
+
+/**
+ * Focuses the first invalid field inside root and scrolls it into view, so
+ * the shopper lands on what needs fixing (the errors can be far above the
+ * submit button on a phone). Fields mark themselves with aria-invalid; a
+ * group (the star rating) passes focus to its first focusable child.
+ */
+function focusFirstInvalid(root: HTMLElement | null) {
+  const invalid = root?.querySelector<HTMLElement>('[aria-invalid="true"]');
+  if (!invalid) return;
+  const target = invalid.matches(FOCUSABLE)
+    ? invalid
+    : invalid.querySelector<HTMLElement>(FOCUSABLE);
+  target?.focus({ preventScroll: true });
+  invalid.scrollIntoView({ block: "center", behavior: "smooth" });
+}
 
 /**
  * The <form> element: submits through the form (sending again clears the
