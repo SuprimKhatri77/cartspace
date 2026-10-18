@@ -73,6 +73,9 @@ function friendlyMessage(issue: z.core.$ZodIssue, label: string): string {
     case "invalid_value":
     case "invalid_type":
       return `Choose ${label}`;
+    case "invalid_format":
+      // An id is picked from a list, never typed: blank means not picked.
+      return issue.format === "uuid" ? `Choose ${label}` : issue.message;
     default:
       return issue.message;
   }
