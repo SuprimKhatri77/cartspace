@@ -80,33 +80,36 @@ export function discountBodyFrom(
   };
 }
 
-/** The discount dialog's fields, as typed. */
+/**
+ * The discount dialog's fields, as typed, named like the body's so the
+ * API's field errors land on them.
+ */
 export type DiscountForm = {
   code: string;
   kind: DiscountKind;
   /** A whole percent, or a dollar amount ("5" or "5.50"). */
   value: string;
   /** A dollar amount; empty for none. */
-  minSpend: string;
+  min_subtotal: string;
   /** datetime-local values; empty for open-ended. */
-  startsAt: string;
-  endsAt: string;
+  starts_at: string;
+  ends_at: string;
   /** Uses allowed in all; empty for no limit. */
-  limit: string;
-  once: boolean;
-  active: boolean;
+  max_redemptions: string;
+  once_per_customer: boolean;
+  is_active: boolean;
 };
 
 export const EMPTY_DISCOUNT_FORM: DiscountForm = {
   code: "",
   kind: "percent",
   value: "",
-  minSpend: "",
-  startsAt: "",
-  endsAt: "",
-  limit: "",
-  once: false,
-  active: true,
+  min_subtotal: "",
+  starts_at: "",
+  ends_at: "",
+  max_redemptions: "",
+  once_per_customer: false,
+  is_active: true,
 };
 
 export function discountFormFrom(code: DiscountCode): DiscountForm {
@@ -114,12 +117,13 @@ export function discountFormFrom(code: DiscountCode): DiscountForm {
     code: code.code,
     kind: code.kind,
     value: code.kind === "percent" ? String(code.value) : fromCents(code.value),
-    minSpend: code.min_subtotal > 0 ? fromCents(code.min_subtotal) : "",
-    startsAt: toLocalInput(code.starts_at),
-    endsAt: toLocalInput(code.ends_at),
-    limit: code.max_redemptions === null ? "" : String(code.max_redemptions),
-    once: code.once_per_customer,
-    active: code.is_active,
+    min_subtotal: code.min_subtotal > 0 ? fromCents(code.min_subtotal) : "",
+    starts_at: toLocalInput(code.starts_at),
+    ends_at: toLocalInput(code.ends_at),
+    max_redemptions:
+      code.max_redemptions === null ? "" : String(code.max_redemptions),
+    once_per_customer: code.once_per_customer,
+    is_active: code.is_active,
   };
 }
 
@@ -150,24 +154,25 @@ export function discountBody(
   }
 
   let minSubtotal = 0;
-  if (form.minSpend.trim()) {
-    const cents = toCents(form.minSpend);
+  if (form.min_subtotal.trim()) {
+    const cents = toCents(form.min_subtotal);
     if (cents === null)
       errors.min_subtotal = "Enter an amount, or leave it empty";
     else minSubtotal = cents;
   }
 
   let limit: number | null = null;
-  if (form.limit.trim()) {
-    const n = Number(form.limit);
-    if (/^\d+$/.test(form.limit.trim()) && n >= 1 && n <= 1_000_000) limit = n;
+  if (form.max_redemptions.trim()) {
+    const n = Number(form.max_redemptions);
+    if (/^\d+$/.test(form.max_redemptions.trim()) && n >= 1 && n <= 1_000_000)
+      limit = n;
     else errors.max_redemptions = "Enter a whole number, or leave it empty";
   }
 
   const date = (value: string, was: string | null | undefined) =>
     was && value === toLocalInput(was) ? was : (fromLocalInput(value) ?? null);
-  const startsAt = date(form.startsAt, saved?.starts_at);
-  const endsAt = date(form.endsAt, saved?.ends_at);
+  const startsAt = date(form.starts_at, saved?.starts_at);
+  const endsAt = date(form.ends_at, saved?.ends_at);
   if (startsAt && endsAt && endsAt <= startsAt) {
     errors.ends_at = "The end must be after the start";
   }
@@ -182,8 +187,8 @@ export function discountBody(
       starts_at: startsAt,
       ends_at: endsAt,
       max_redemptions: limit,
-      once_per_customer: form.once,
-      is_active: form.active,
+      once_per_customer: form.once_per_customer,
+      is_active: form.is_active,
     },
   };
 }

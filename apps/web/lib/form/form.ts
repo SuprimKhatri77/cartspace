@@ -1,6 +1,13 @@
 import { createFormHook } from "@tanstack/react-form";
 import { fieldContext, formContext } from "./context";
-import { PasswordField, SelectField, TextareaField, TextField } from "./fields";
+import {
+  MoneyField,
+  PasswordField,
+  SelectField,
+  SwitchField,
+  TextareaField,
+  TextField,
+} from "./fields";
 import { Form, SubmitButton } from "./form-components";
 
 /**
@@ -18,6 +25,13 @@ import { Form, SubmitButton } from "./form-components";
 export const { useAppForm, withForm } = createFormHook({
   fieldContext,
   formContext,
-  fieldComponents: { TextField, PasswordField, TextareaField, SelectField },
+  fieldComponents: {
+    TextField,
+    PasswordField,
+    TextareaField,
+    SelectField,
+    MoneyField,
+    SwitchField,
+  },
   formComponents: { Form, SubmitButton },
 });

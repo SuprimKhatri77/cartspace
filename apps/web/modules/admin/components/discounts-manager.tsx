@@ -11,6 +11,7 @@ import {
   TrashIcon,
   XIcon,
 } from "@phosphor-icons/react";
+import { revalidateLogic, useStore } from "@tanstack/react-form";
 import type { DiscountCode, DiscountKind, DiscountState } from "@repo/types";
 import { ConfirmDialog } from "@/components/feedback/confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -46,8 +46,11 @@ import {
   adminDeleteDiscount,
   adminUpdateDiscount,
 } from "@/lib/api/client";
-import { getApiError, mapFieldErrors } from "@/lib/api/errors";
-import { withoutErrors } from "@/lib/forms";
+import { getApiError } from "@/lib/api/errors";
+import { applyApiErrors } from "@/lib/form/api-errors";
+import { digits } from "@/lib/form/fields";
+import { useAppForm } from "@/lib/form/form";
+import { useReportSubmitting } from "@/lib/form/form-components";
 import { cn } from "@/lib/utils";
 import { useAdminMutation } from "../hooks/use-admin-mutation";
 import { formatDateTime } from "../lib/datetime";
@@ -59,7 +62,6 @@ import {
   discountUses,
   EMPTY_DISCOUNT_FORM,
   endedReason,
-  type DiscountForm,
 } from "../lib/discounts";
 import {
   adminDiscountsSearch,
@@ -67,9 +69,7 @@ import {
 } from "../lib/order-filters";
 import { adminKeys } from "../keys";
 import { useAdminDiscounts } from "../queries";
-import { MoneyField } from "./money-field";
 import { PageNav } from "./page-nav";
-import { ToggleField } from "./product-form";
 import { DiscountStateBadge } from "./status-badge";
 
 const PATH = "/admin/discounts";
@@ -423,19 +423,6 @@ function DiscountFormView({
 }) {
   const existing = editing.mode === "edit" ? editing.code : null;
   const used = (existing?.uses ?? 0) > 0;
-  const [form, setForm] = useState<DiscountForm>(
-    existing ? discountFormFrom(existing) : EMPTY_DISCOUNT_FORM,
-  );
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  function set<K extends keyof DiscountForm>(
-    key: K,
-    value: DiscountForm[K],
-    ...fields: string[]
-  ) {
-    setForm((f) => ({ ...f, [key]: value }));
-    setErrors((e) => withoutErrors(e, ...fields));
-  }
 
   const save = useAdminMutation({
     mutationFn: async (
@@ -458,273 +445,229 @@ function DiscountFormView({
         ? `${body.code.toUpperCase()} saved`
         : `${body.code.toUpperCase()} created`,
     invalidate: [adminKeys.discounts()],
-    onSuccess: () => {
-      onBusyChange(false);
-      onDone();
-    },
+    onSuccess: onDone,
   });
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const result = discountBody(form, existing ?? undefined);
-    if ("errors" in result) {
-      setErrors(result.errors);
-      return;
-    }
-    onBusyChange(true);
-    save.mutate(result.body, {
-      onError: (error) => {
-        onBusyChange(false);
-        const apiError = getApiError(error);
-        if (apiError?.code === "DISCOUNT_CODE_TAKEN") {
-          setErrors({ code: "Another discount already uses this code" });
-        } else if (apiError?.code === "DISCOUNT_IN_USE") {
-          setErrors({ code: apiError.message });
-        } else {
-          setErrors(mapFieldErrors(apiError?.errors));
-        }
+  const form = useAppForm({
+    defaultValues: existing ? discountFormFrom(existing) : EMPTY_DISCOUNT_FORM,
+    validationLogic: revalidateLogic(),
+    validators: {
+      // discountBody holds the API's rules, worded for this form.
+      onDynamic: ({ value }) => {
+        const result = discountBody(value, existing ?? undefined);
+        return "errors" in result ? { fields: result.errors } : undefined;
       },
-    });
-  }
+    },
+    onSubmit: async ({ value, formApi }) => {
+      const result = discountBody(value, existing ?? undefined);
+      if ("errors" in result) return;
+      try {
+        await save.mutateAsync(result.body);
+      } catch (error) {
+        applyApiErrors(formApi, error, {
+          codes: {
+            DISCOUNT_CODE_TAKEN: {
+              field: "code",
+              message: "Another discount already uses this code",
+            },
+            DISCOUNT_IN_USE: { field: "code" },
+          },
+        });
+      }
+    },
+  });
+  useReportSubmitting(form, onBusyChange);
+  const kind = useStore(form.store, (s) => s.values.kind);
+  const startsAt = useStore(form.store, (s) => s.values.starts_at);
+  const submitting = useStore(form.store, (s) => s.isSubmitting);
 
   return (
-    <form onSubmit={submit} noValidate>
-      <DialogHeader className="gap-1 border-b border-border px-6 py-5">
-        <DialogTitle className="font-serif text-2xl font-normal">
-          {existing ? `Edit ${existing.code}` : "New discount code"}
-        </DialogTitle>
-        <DialogDescription className="text-xs">
-          {existing
-            ? used
-              ? `Used by ${existing.uses} ${existing.uses === 1 ? "order" : "orders"}; changes apply to the next checkouts.`
-              : "Not used yet."
-            : "Shoppers type the code at checkout. It comes off the items, not the shipping."}
-        </DialogDescription>
-      </DialogHeader>
+    <form.AppForm>
+      <form.Form>
+        <DialogHeader className="gap-1 border-b border-border px-6 py-5">
+          <DialogTitle className="font-serif text-2xl font-normal">
+            {existing ? `Edit ${existing.code}` : "New discount code"}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            {existing
+              ? used
+                ? `Used by ${existing.uses} ${existing.uses === 1 ? "order" : "orders"}; changes apply to the next checkouts.`
+                : "Not used yet."
+              : "Shoppers type the code at checkout. It comes off the items, not the shipping."}
+          </DialogDescription>
+        </DialogHeader>
 
-      <div className="space-y-5 px-6 py-6">
-        <Field data-invalid={Boolean(errors.code)}>
-          <FieldLabel
-            htmlFor="discount-code"
-            className="eyebrow !text-foreground"
-          >
-            Code
-          </FieldLabel>
-          <Input
-            id="discount-code"
-            value={form.code}
-            onChange={(e) =>
-              set(
-                "code",
-                e.target.value.replace(/\s/g, "").toUpperCase(),
-                "code",
-              )
-            }
-            maxLength={32}
-            autoComplete="off"
-            spellCheck={false}
-            disabled={used}
-            placeholder="WELCOME10"
-            className="font-mono tracking-wider uppercase"
-            aria-invalid={Boolean(errors.code)}
-            aria-describedby={used ? "discount-code-used" : undefined}
-          />
-          {used && (
-            <p
-              id="discount-code-used"
-              className="text-xs text-muted-foreground"
-            >
-              Orders show this code, so it can&apos;t be renamed.
-            </p>
-          )}
-          <FieldError>{errors.code}</FieldError>
-        </Field>
-
-        <div className="space-y-2">
-          <p className="eyebrow !text-foreground">Discount</p>
-          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
-            <div
-              role="radiogroup"
-              aria-label="Kind"
-              className="inline-flex h-10 rounded-control border border-border p-0.5"
-            >
-              {(
-                [
-                  ["percent", "% off"],
-                  ["fixed", "$ off"],
-                ] as [DiscountKind, string][]
-              ).map(([kind, label]) => (
-                <button
-                  key={kind}
-                  type="button"
-                  role="radio"
-                  aria-checked={form.kind === kind}
-                  onClick={() => {
-                    setForm((f) =>
-                      f.kind === kind ? f : { ...f, kind, value: "" },
-                    );
-                    setErrors((e) => withoutErrors(e, "value"));
-                  }}
-                  className="rounded-[calc(var(--radius-control)*0.75)] px-3 text-[0.8125rem] text-muted-foreground transition-colors aria-checked:bg-foreground aria-checked:text-background"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            {form.kind === "percent" ? (
-              <Field data-invalid={Boolean(errors.value)}>
-                <FieldLabel htmlFor="discount-value" className="sr-only">
-                  Percent off
-                </FieldLabel>
-                <div className="relative">
-                  <Input
-                    id="discount-value"
-                    inputMode="numeric"
-                    value={form.value}
-                    onChange={(e) =>
-                      set(
-                        "value",
-                        e.target.value.replace(/\D/g, "").slice(0, 3),
-                        "value",
-                      )
-                    }
-                    placeholder="10"
-                    className="pr-8 tabular-nums"
-                    aria-invalid={Boolean(errors.value)}
-                  />
-                  <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground">
-                    %
-                  </span>
-                </div>
-                <FieldError>{errors.value}</FieldError>
-              </Field>
-            ) : (
-              <div className="[&_label]:sr-only">
-                <MoneyField
-                  id="discount-value"
-                  label="Amount off"
-                  value={form.value}
-                  onChange={(v) => set("value", v, "value")}
-                  error={errors.value}
-                />
-              </div>
+        <div className="space-y-5 px-6 py-6">
+          <form.AppField name="code">
+            {(field) => (
+              <field.TextField
+                id="discount-code"
+                label="Code"
+                normalize={(v) => v.replace(/\s/g, "").toUpperCase()}
+                maxLength={32}
+                autoComplete="off"
+                spellCheck={false}
+                disabled={used}
+                placeholder="WELCOME10"
+                className="font-mono tracking-wider uppercase"
+                hint={
+                  used
+                    ? "Orders show this code, so it can’t be renamed."
+                    : undefined
+                }
+              />
             )}
+          </form.AppField>
+
+          <div className="space-y-2">
+            <p className="eyebrow !text-foreground">Discount</p>
+            <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
+              <form.AppField
+                name="kind"
+                listeners={{
+                  // A percent and an amount don't share a value.
+                  onChange: () => form.setFieldValue("value", ""),
+                }}
+              >
+                {(field) => (
+                  <div
+                    role="radiogroup"
+                    aria-label="Kind"
+                    className="inline-flex h-10 rounded-control border border-border p-0.5"
+                  >
+                    {(
+                      [
+                        ["percent", "% off"],
+                        ["fixed", "$ off"],
+                      ] as [DiscountKind, string][]
+                    ).map(([option, label]) => (
+                      <button
+                        key={option}
+                        type="button"
+                        role="radio"
+                        aria-checked={field.state.value === option}
+                        onClick={() =>
+                          field.state.value !== option &&
+                          field.handleChange(option)
+                        }
+                        className="rounded-[calc(var(--radius-control)*0.75)] px-3 text-[0.8125rem] text-muted-foreground transition-colors aria-checked:bg-foreground aria-checked:text-background"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </form.AppField>
+              <form.AppField name="value">
+                {(field) =>
+                  kind === "percent" ? (
+                    <field.TextField
+                      id="discount-value"
+                      label="Percent off"
+                      hideLabel
+                      inputMode="numeric"
+                      normalize={digits(3)}
+                      suffix="%"
+                      placeholder="10"
+                      className="tabular-nums"
+                    />
+                  ) : (
+                    <field.MoneyField
+                      id="discount-value"
+                      label="Amount off"
+                      hideLabel
+                    />
+                  )
+                }
+              </form.AppField>
+            </div>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <form.AppField name="min_subtotal">
+              {(field) => (
+                <field.MoneyField
+                  id="discount-min"
+                  label="Minimum spend"
+                  optional
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="max_redemptions">
+              {(field) => (
+                <field.TextField
+                  id="discount-limit"
+                  label="Use limit"
+                  optional
+                  inputMode="numeric"
+                  normalize={digits(7)}
+                  placeholder="No limit"
+                  className="tabular-nums"
+                />
+              )}
+            </form.AppField>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <form.AppField name="starts_at">
+              {(field) => (
+                <field.TextField
+                  id="discount-starts"
+                  label="Starts"
+                  optional
+                  type="datetime-local"
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="ends_at">
+              {(field) => (
+                <field.TextField
+                  id="discount-ends"
+                  label="Ends"
+                  optional
+                  type="datetime-local"
+                  min={startsAt || undefined}
+                />
+              )}
+            </form.AppField>
+          </div>
+
+          <div className="space-y-4 border-t border-border pt-5">
+            <form.AppField name="once_per_customer">
+              {(field) => (
+                <field.SwitchField
+                  id="discount-once"
+                  label="Once per customer"
+                  description="Each shopper can use the code on one order."
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="is_active">
+              {(field) => (
+                <field.SwitchField
+                  id="discount-active"
+                  label="Active"
+                  description="Off: checkout refuses the code, whatever its dates."
+                />
+              )}
+            </form.AppField>
           </div>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <MoneyField
-            id="discount-min"
-            label="Minimum spend"
-            optional
-            value={form.minSpend}
-            onChange={(v) => set("minSpend", v, "min_subtotal")}
-            error={errors.min_subtotal}
-          />
-          <Field data-invalid={Boolean(errors.max_redemptions)}>
-            <FieldLabel
-              htmlFor="discount-limit"
-              className="eyebrow !text-foreground"
-            >
-              Use limit
-              <span className="ml-1 tracking-normal normal-case text-muted-foreground">
-                (optional)
-              </span>
-            </FieldLabel>
-            <Input
-              id="discount-limit"
-              inputMode="numeric"
-              value={form.limit}
-              onChange={(e) =>
-                set(
-                  "limit",
-                  e.target.value.replace(/\D/g, "").slice(0, 7),
-                  "max_redemptions",
-                )
-              }
-              placeholder="No limit"
-              className="tabular-nums"
-              aria-invalid={Boolean(errors.max_redemptions)}
-            />
-            <FieldError>{errors.max_redemptions}</FieldError>
-          </Field>
-        </div>
-
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field data-invalid={Boolean(errors.starts_at)}>
-            <FieldLabel
-              htmlFor="discount-starts"
-              className="eyebrow !text-foreground"
-            >
-              Starts
-              <span className="ml-1 tracking-normal normal-case text-muted-foreground">
-                (optional)
-              </span>
-            </FieldLabel>
-            <Input
-              id="discount-starts"
-              type="datetime-local"
-              value={form.startsAt}
-              onChange={(e) =>
-                set("startsAt", e.target.value, "starts_at", "ends_at")
-              }
-              aria-invalid={Boolean(errors.starts_at)}
-            />
-            <FieldError>{errors.starts_at}</FieldError>
-          </Field>
-          <Field data-invalid={Boolean(errors.ends_at)}>
-            <FieldLabel
-              htmlFor="discount-ends"
-              className="eyebrow !text-foreground"
-            >
-              Ends
-              <span className="ml-1 tracking-normal normal-case text-muted-foreground">
-                (optional)
-              </span>
-            </FieldLabel>
-            <Input
-              id="discount-ends"
-              type="datetime-local"
-              value={form.endsAt}
-              min={form.startsAt || undefined}
-              onChange={(e) => set("endsAt", e.target.value, "ends_at")}
-              aria-invalid={Boolean(errors.ends_at)}
-            />
-            <FieldError>{errors.ends_at}</FieldError>
-          </Field>
-        </div>
-
-        <div className="space-y-4 border-t border-border pt-5">
-          <ToggleField
-            id="discount-once"
-            label="Once per customer"
-            description="Each shopper can use the code on one order."
-            checked={form.once}
-            onChange={(v) => set("once", v)}
-          />
-          <ToggleField
-            id="discount-active"
-            label="Active"
-            description="Off: checkout refuses the code, whatever its dates."
-            checked={form.active}
-            onChange={(v) => set("active", v)}
-          />
-        </div>
-      </div>
-
-      <DialogFooter className="border-t border-border px-6 py-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onDone}
-          disabled={save.isPending}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={save.isPending}>
-          {save.isPending ? "Saving…" : existing ? "Save" : "Create code"}
-        </Button>
-      </DialogFooter>
-    </form>
+        <DialogFooter className="border-t border-border px-6 py-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onDone}
+            disabled={submitting}
+          >
+            Cancel
+          </Button>
+          <form.SubmitButton pendingLabel="Saving…">
+            {existing ? "Save" : "Create code"}
+          </form.SubmitButton>
+        </DialogFooter>
+      </form.Form>
+    </form.AppForm>
   );
 }
