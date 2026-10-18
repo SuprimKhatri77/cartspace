@@ -10,6 +10,14 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { clearServerError } from "./api-errors";
 import { useFieldContext } from "./context";
 import { firstError } from "./validate";
@@ -26,6 +34,8 @@ export type ControlProps = {
   onBlur: () => void;
   "aria-invalid": boolean;
   "aria-describedby": string | undefined;
+  /** Set for a group (a radiogroup of stars), which a <label> can't name. */
+  "aria-labelledby"?: string;
 };
 
 type ShellProps = {
@@ -35,21 +45,29 @@ type ShellProps = {
   optional?: boolean;
   /** Defaults to the field name ("features[1]" → "features-1"). */
   id?: string;
+  /** For the field's wrapper (a grid span), not the control. */
+  fieldClassName?: string;
 };
 
 /**
  * A field's label, hint and error around its control, for the field
  * components and custom inputs: the control points at its error (else its
  * hint) for screen readers, and a server error goes once the value
- * changes.
+ * changes. A `group` control (several buttons) is named by the label's id
+ * instead of a <label for>.
  */
 export function FieldShell({
   label,
   hint,
   optional,
   id: idProp,
+  fieldClassName,
+  group,
   children,
-}: ShellProps & { children: (control: ControlProps) => React.ReactNode }) {
+}: ShellProps & {
+  group?: boolean;
+  children: (control: ControlProps) => React.ReactNode;
+}) {
   const field = useFieldContext<unknown>();
   useClearServerErrorOnChange(field);
   const id = idProp ?? fieldId(field.name);
@@ -57,8 +75,11 @@ export function FieldShell({
   const showHint = Boolean(hint) && !error;
 
   return (
-    <Field data-invalid={Boolean(error)}>
-      <FieldLabel htmlFor={id} className="eyebrow !text-foreground">
+    <Field data-invalid={Boolean(error)} className={fieldClassName}>
+      <FieldLabel
+        {...(group ? { id: `${id}-label` } : { htmlFor: id })}
+        className="eyebrow !text-foreground"
+      >
         {label}
         {optional && (
           <span className="ml-1 tracking-normal normal-case text-muted-foreground">
@@ -76,6 +97,7 @@ export function FieldShell({
           : showHint
             ? `${id}-hint`
             : undefined,
+        ...(group && { "aria-labelledby": `${id}-label` }),
       })}
       {showHint && (
         <FieldDescription id={`${id}-hint`} className="text-xs">
@@ -111,12 +133,13 @@ export function TextField({
   hint,
   optional,
   id,
+  fieldClassName,
   normalize,
   ...input
 }: ShellProps & InputProps & { normalize?: (value: string) => string }) {
   const field = useFieldContext<string>();
   return (
-    <FieldShell label={label} hint={hint} optional={optional} id={id}>
+    <FieldShell {...{ label, hint, optional, id, fieldClassName }}>
       {(control) => (
         <Input
           {...input}
@@ -139,11 +162,12 @@ export function PasswordField({
   hint,
   optional,
   id,
+  fieldClassName,
   ...input
 }: ShellProps & Omit<InputProps, "type">) {
   const field = useFieldContext<string>();
   return (
-    <FieldShell label={label} hint={hint} optional={optional} id={id}>
+    <FieldShell {...{ label, hint, optional, id, fieldClassName }}>
       {(control) => (
         <PasswordInput
           {...input}
@@ -151,6 +175,73 @@ export function PasswordField({
           value={field.state.value}
           onChange={(e) => field.handleChange(e.target.value)}
         />
+      )}
+    </FieldShell>
+  );
+}
+
+/** A multi-line text input. */
+export function TextareaField({
+  label,
+  hint,
+  optional,
+  id,
+  fieldClassName,
+  ...textarea
+}: ShellProps &
+  Omit<
+    React.ComponentProps<typeof Textarea>,
+    "id" | "name" | "value" | "onChange" | "onBlur"
+  >) {
+  const field = useFieldContext<string>();
+  return (
+    <FieldShell {...{ label, hint, optional, id, fieldClassName }}>
+      {(control) => (
+        <Textarea
+          {...textarea}
+          {...control}
+          value={field.state.value}
+          onChange={(e) => field.handleChange(e.target.value)}
+        />
+      )}
+    </FieldShell>
+  );
+}
+
+export type SelectItemOption = { value: string; label: React.ReactNode };
+
+/** One choice from a short list. */
+export function SelectField({
+  label,
+  hint,
+  optional,
+  id,
+  fieldClassName,
+  items,
+  placeholder,
+}: ShellProps & { items: SelectItemOption[]; placeholder?: string }) {
+  const field = useFieldContext<string>();
+  return (
+    <FieldShell {...{ label, hint, optional, id, fieldClassName }}>
+      {(control) => (
+        <Select
+          value={field.state.value}
+          // Base UI reports null when a selection is cleared; a field
+          // always holds one of its items.
+          onValueChange={(value) => value !== null && field.handleChange(value)}
+          items={items}
+        >
+          <SelectTrigger {...control} className="h-10 w-full">
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {items.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       )}
     </FieldShell>
   );
