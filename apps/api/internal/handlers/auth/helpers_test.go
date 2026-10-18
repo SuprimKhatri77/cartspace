@@ -138,7 +138,7 @@ func activeSession(currentToken string) db.Session {
 	return db.Session{
 		ID:               uid(testFamilyID),
 		UserID:           uid(testUserID),
-		CurrentTokenHash: session.HashRefreshToken(currentToken),
+		CurrentTokenHash: session.HashToken(currentToken),
 		CreatedAt:        pgtype.Timestamptz{Time: time.Now().Add(-time.Hour), Valid: true},
 		ExpiresAt:        pgtype.Timestamptz{Time: time.Now().Add(time.Hour), Valid: true},
 	}
@@ -147,7 +147,7 @@ func activeSession(currentToken string) db.Session {
 // rotatedSession: presented token was rotated rotatedAgo; current is something else.
 func rotatedSession(presented string, rotatedAgo time.Duration) db.Session {
 	s := activeSession("someone-else")
-	s.PreviousTokenHash = pgtype.Text{String: session.HashRefreshToken(presented), Valid: true}
+	s.PreviousTokenHash = pgtype.Text{String: session.HashToken(presented), Valid: true}
 	s.PreviousRotatedAt = pgtype.Timestamptz{Time: time.Now().Add(-rotatedAgo), Valid: true}
 	return s
 }

@@ -78,7 +78,7 @@ func IssueSession(c *gin.Context, queries repository.AuthRepository, cfg *config
 	_, err = queries.CreateSession(c.Request.Context(), db.CreateSessionParams{
 		ID:               familyID,
 		UserID:           user.ID,
-		CurrentTokenHash: HashRefreshToken(tokens.RefreshToken),
+		CurrentTokenHash: HashToken(tokens.RefreshToken),
 		UserAgent:        utils.ToNullableText(truncate(c.Request.UserAgent(), maxUserAgentLen)),
 		IpAddress:        utils.ToNullableText(c.ClientIP()),
 		ExpiresAt:        pgtype.Timestamptz{Time: expiresAt, Valid: true},

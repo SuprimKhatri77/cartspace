@@ -137,9 +137,26 @@ func TestParseRejects(t *testing.T) {
 	}
 }
 
-func TestHashRefreshToken(t *testing.T) {
-	a1, a2, b := HashRefreshToken("a"), HashRefreshToken("a"), HashRefreshToken("b")
+func TestHashToken(t *testing.T) {
+	a1, a2, b := HashToken("a"), HashToken("a"), HashToken("b")
 	if a1 != a2 || a1 == b || len(a1) != 64 {
 		t.Fatal("hash must be a deterministic sha256 hex digest")
+	}
+}
+
+func TestNewOpaqueToken(t *testing.T) {
+	a, hashA, err := NewOpaqueToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _, _ := NewOpaqueToken()
+	if a == b {
+		t.Fatal("tokens must be random")
+	}
+	if len(a) != 43 || strings.ContainsAny(a, "+/=") {
+		t.Errorf("token %q: want 43 URL-safe characters", a)
+	}
+	if hashA != HashToken(a) || hashA == a {
+		t.Errorf("hash %q: want the HashToken of the token", hashA)
 	}
 }

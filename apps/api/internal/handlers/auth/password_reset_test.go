@@ -54,20 +54,3 @@ func TestForgotPasswordValidatesEmail(t *testing.T) {
 		t.Errorf("got %d %s", w.Code, w.Body.String())
 	}
 }
-
-func TestResetTokens(t *testing.T) {
-	a, hashA, err := newResetToken()
-	if err != nil {
-		t.Fatal(err)
-	}
-	b, _, _ := newResetToken()
-	if a == b {
-		t.Fatal("tokens must be random")
-	}
-	if len(a) != 43 || strings.ContainsAny(a, "+/=") {
-		t.Errorf("token %q: want 43 URL-safe characters", a)
-	}
-	if hashA != hashResetToken(a) || hashA == a || len(hashA) != 64 {
-		t.Errorf("hash %q: want the sha256 hex of the token", hashA)
-	}
-}
