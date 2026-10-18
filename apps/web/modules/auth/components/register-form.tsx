@@ -6,11 +6,5 @@ import { useRegister } from "../hooks/mutations/use-register";
 export function RegisterForm() {
   const register = useRegister();
 
-  return (
-    <AuthForm
-      mode="register"
-      isPending={register.isPending}
-      onSubmit={register.mutateAsync}
-    />
-  );
+  return <AuthForm mode="register" onSubmit={register.mutateAsync} />;
 }

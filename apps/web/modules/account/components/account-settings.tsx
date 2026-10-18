@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { revalidateLogic, useStore } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -9,20 +10,17 @@ import {
   type PublicUser,
   UpdateProfileBodySchema,
 } from "@repo/types";
-import { PasswordInput } from "@/components/forms/password-input";
-import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldDescription,
-  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { useFocusFirstError } from "@/hooks/use-focus-first-error";
 import { changePassword, updateProfile } from "@/lib/api/client";
-import { getApiError, mapFieldErrors } from "@/lib/api/errors";
-import { friendlyFieldErrors } from "@/lib/forms";
+import { applyApiErrors } from "@/lib/form/api-errors";
+import { useAppForm } from "@/lib/form/form";
+import { schemaErrors } from "@/lib/form/validate";
 import { useAuth } from "@/providers/auth-provider";
 
 /** Account settings: the name, and the password. */
@@ -69,10 +67,9 @@ function Section({
 function ProfileForm({ user }: { user: PublicUser }) {
   const router = useRouter();
   const setUser = useAuth((s) => s.setUser);
-  const [name, setName] = useState(user.name);
+  // The last saved name. Not the form's defaultValues: useForm re-reads
+  // those from its options on every render.
   const [saved, setSaved] = useState(user.name);
-  const [error, setError] = useState<string | undefined>();
-  const { ref, focusFirstError } = useFocusFirstError();
 
   const save = useMutation({
     mutationFn: async (body: { name: string }) => {
@@ -81,80 +78,61 @@ function ProfileForm({ user }: { user: PublicUser }) {
     },
     onSuccess: ({ data, message }) => {
       setUser(data);
-      setName(data.name);
       setSaved(data.name);
+      form.setFieldValue("name", data.name);
       toast.success(message);
       // Server-rendered parts (the overview greeting) read the new token.
       router.refresh();
     },
-    onError: (err) => {
-      const apiError = getApiError(err);
-      const fields = mapFieldErrors(apiError?.errors);
-      if (fields.name) {
-        setError(fields.name);
-        focusFirstError();
-        return;
-      }
-      toast.error(apiError?.message ?? "Couldn't save your name.");
-    },
   });
 
-  function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const parsed = UpdateProfileBodySchema.safeParse({ name });
-    if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message);
-      focusFirstError();
-      return;
-    }
-    save.mutate(parsed.data);
-  }
+  const form = useAppForm({
+    defaultValues: { name: user.name },
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: ({ value }) => schemaErrors(UpdateProfileBodySchema, value),
+    },
+    onSubmit: async ({ value, formApi }) => {
+      try {
+        await save.mutateAsync(UpdateProfileBodySchema.parse(value));
+      } catch (err) {
+        const { applied, message } = applyApiErrors(formApi, err);
+        if (!applied) toast.error(message ?? "Couldn't save your name.");
+      }
+    },
+  });
+  const unchanged = useStore(form.store, (s) => s.values.name.trim()) === saved;
 
   return (
     <Section
       title="Profile"
       description="Your name appears on orders and in the emails we send."
     >
-      <form ref={ref} onSubmit={submit} noValidate className="max-w-sm">
-        <FieldGroup>
-          <Field data-invalid={Boolean(error)}>
-            <FieldLabel htmlFor="name" className="eyebrow !text-foreground">
-              Name
-            </FieldLabel>
-            <Input
-              id="name"
-              name="name"
-              autoComplete="name"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                setError(undefined);
-              }}
-              aria-invalid={Boolean(error)}
-              aria-describedby={error ? "name-error" : undefined}
-            />
-            <FieldError key={error} id="name-error" className="animate-rise">
-              {error}
-            </FieldError>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="email" className="eyebrow !text-foreground">
-              Email
-            </FieldLabel>
-            <Input id="email" value={user.email} readOnly disabled />
-            <FieldDescription className="text-xs">
-              Your email signs you in, so it can&apos;t be changed here.
-            </FieldDescription>
-          </Field>
-          <Button
-            type="submit"
-            className="self-start"
-            disabled={save.isPending || name.trim() === saved}
-          >
-            {save.isPending ? "Saving…" : "Save name"}
-          </Button>
-        </FieldGroup>
-      </form>
+      <form.AppForm>
+        <form.Form className="max-w-sm">
+          <FieldGroup>
+            <form.AppField name="name">
+              {(field) => <field.TextField label="Name" autoComplete="name" />}
+            </form.AppField>
+            <Field>
+              <FieldLabel htmlFor="email" className="eyebrow !text-foreground">
+                Email
+              </FieldLabel>
+              <Input id="email" value={user.email} readOnly disabled />
+              <FieldDescription className="text-xs">
+                Your email signs you in, so it can&apos;t be changed here.
+              </FieldDescription>
+            </Field>
+            <form.SubmitButton
+              className="self-start"
+              pendingLabel="Saving…"
+              disabled={unchanged}
+            >
+              Save name
+            </form.SubmitButton>
+          </FieldGroup>
+        </form.Form>
+      </form.AppForm>
     </Section>
   );
 }
@@ -162,119 +140,72 @@ function ProfileForm({ user }: { user: PublicUser }) {
 const EMPTY = { current_password: "", new_password: "" };
 
 function PasswordForm() {
-  const [values, setValues] = useState(EMPTY);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const { ref, focusFirstError } = useFocusFirstError();
-
-  function fail(next: Record<string, string>) {
-    setErrors(next);
-    focusFirstError();
-  }
-
   const change = useMutation({
     mutationFn: async (body: typeof EMPTY) => {
       const { data } = await changePassword({ body, throwOnError: true });
       return data.message;
     },
     onSuccess: (message) => {
-      setValues(EMPTY);
+      form.reset();
       toast.success(message);
-    },
-    onError: (err) => {
-      const apiError = getApiError(err);
-      const fields = mapFieldErrors(apiError?.errors);
-      if (Object.keys(fields).length > 0) {
-        fail(fields);
-        return;
-      }
-      toast.error(apiError?.message ?? "Couldn't change your password.");
     },
   });
 
-  function update(field: keyof typeof EMPTY, value: string) {
-    setValues((v) => ({ ...v, [field]: value }));
-    setErrors((current) => {
-      if (!current[field]) return current;
-      const rest = { ...current };
-      delete rest[field];
-      return rest;
-    });
-  }
-
-  function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const parsed = ChangePasswordBodySchema.safeParse(values);
-    if (!parsed.success) {
-      fail(
-        friendlyFieldErrors(parsed.error, {
-          current_password: "your current password",
-          new_password: "a new password",
+  const form = useAppForm({
+    defaultValues: EMPTY,
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: ({ value }) =>
+        schemaErrors(ChangePasswordBodySchema, value, {
+          labels: {
+            current_password: "your current password",
+            new_password: "a new password",
+          },
         }),
-      );
-      return;
-    }
-    setErrors({});
-    change.mutate(parsed.data);
-  }
-
-  function field(
-    name: keyof typeof EMPTY,
-    label: string,
-    autoComplete: string,
-    hint?: string,
-  ) {
-    const error = errors[name];
-    return (
-      <Field data-invalid={Boolean(error)}>
-        <FieldLabel htmlFor={name} className="eyebrow !text-foreground">
-          {label}
-        </FieldLabel>
-        <PasswordInput
-          id={name}
-          name={name}
-          autoComplete={autoComplete}
-          value={values[name]}
-          onChange={(e) => update(name, e.target.value)}
-          aria-invalid={Boolean(error)}
-          aria-describedby={
-            error ? `${name}-error` : hint ? `${name}-hint` : undefined
-          }
-        />
-        {hint && !error && (
-          <FieldDescription id={`${name}-hint`} className="text-xs">
-            {hint}
-          </FieldDescription>
-        )}
-        <FieldError key={error} id={`${name}-error`} className="animate-rise">
-          {error}
-        </FieldError>
-      </Field>
-    );
-  }
+    },
+    onSubmit: async ({ value, formApi }) => {
+      try {
+        await change.mutateAsync(ChangePasswordBodySchema.parse(value));
+      } catch (err) {
+        const { applied, message } = applyApiErrors(formApi, err);
+        if (!applied) {
+          toast.error(message ?? "Couldn't change your password.");
+        }
+      }
+    },
+  });
 
   return (
     <Section
       title="Password"
       description="Changing it signs you out on your other devices; you stay signed in here."
     >
-      <form ref={ref} onSubmit={submit} noValidate className="max-w-sm">
-        <FieldGroup>
-          {field("current_password", "Current password", "current-password")}
-          {field(
-            "new_password",
-            "New password",
-            "new-password",
-            "8 to 72 characters.",
-          )}
-          <Button
-            type="submit"
-            className="self-start"
-            disabled={change.isPending}
-          >
-            {change.isPending ? "Saving…" : "Change password"}
-          </Button>
-        </FieldGroup>
-      </form>
+      <form.AppForm>
+        <form.Form className="max-w-sm">
+          <FieldGroup>
+            <form.AppField name="current_password">
+              {(field) => (
+                <field.PasswordField
+                  label="Current password"
+                  autoComplete="current-password"
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="new_password">
+              {(field) => (
+                <field.PasswordField
+                  label="New password"
+                  autoComplete="new-password"
+                  hint="8 to 72 characters."
+                />
+              )}
+            </form.AppField>
+            <form.SubmitButton className="self-start" pendingLabel="Saving…">
+              Change password
+            </form.SubmitButton>
+          </FieldGroup>
+        </form.Form>
+      </form.AppForm>
     </Section>
   );
 }
