@@ -8,6 +8,7 @@ import {
   TrashIcon,
   TreeStructureIcon,
 } from "@phosphor-icons/react";
+import { revalidateLogic } from "@tanstack/react-form";
 import { CategoryBodySchema, type CategoryNode } from "@repo/types";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -25,23 +26,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   adminCreateCategory,
   adminDeleteCategory,
   adminUpdateCategory,
 } from "@/lib/api/client";
-import { getApiError, mapFieldErrors } from "@/lib/api/errors";
-import { friendlyFieldErrors } from "@/lib/forms";
+import { applyApiErrors } from "@/lib/form/api-errors";
+import { useAppForm } from "@/lib/form/form";
+import { useReportSubmitting } from "@/lib/form/form-components";
+import { schemaErrors } from "@/lib/form/validate";
 import { useAdminMutation } from "../hooks/use-admin-mutation";
 import { categoryPath, orderTree, subtreeIds } from "../lib/categories";
 import { useCategoryTree } from "../queries";
@@ -283,15 +277,6 @@ function CategoryForm({
   onDone: () => void;
 }) {
   const category = editing.mode === "edit" ? editing.category : null;
-  const [name, setName] = useState(category?.name ?? "");
-  const [parent, setParent] = useState(
-    (category
-      ? category.parent_id
-      : editing.mode === "create"
-        ? editing.parentId
-        : null) ?? ROOT,
-  );
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // A category can't move under itself or anything below it.
   const parents = useMemo(() => {
@@ -325,35 +310,42 @@ function CategoryForm({
     quietOnFieldErrors: true,
     failure: "Couldn't save the category.",
     success: category ? "Category saved" : "Category added",
-    onSuccess: () => {
-      onBusyChange(false);
-      onDone();
-    },
+    onSuccess: onDone,
   });
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const parsed = CategoryBodySchema.safeParse({
-      name,
-      ...(parent !== ROOT && { parent_id: parent }),
-    });
-    if (!parsed.success) {
-      setErrors(friendlyFieldErrors(parsed.error, { name: "a name" }));
-      return;
-    }
-    onBusyChange(true);
-    save.mutate(parsed.data, {
-      onError: (error) => {
-        onBusyChange(false);
-        const apiError = getApiError(error);
-        if (apiError?.code === "CATEGORY_ALREADY_EXISTS") {
-          setErrors({ name: "Another category already has this name" });
-        } else {
-          setErrors(mapFieldErrors(apiError?.errors));
-        }
-      },
-    });
-  }
+  const form = useAppForm({
+    defaultValues: {
+      name: category?.name ?? "",
+      parent_id:
+        (category
+          ? category.parent_id
+          : editing.mode === "create"
+            ? editing.parentId
+            : null) ?? ROOT,
+    },
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: ({ value }) =>
+        schemaErrors(CategoryBodySchema, categoryBody(value), {
+          labels: { name: "a name" },
+        }),
+    },
+    onSubmit: async ({ value, formApi }) => {
+      try {
+        await save.mutateAsync(CategoryBodySchema.parse(categoryBody(value)));
+      } catch (error) {
+        applyApiErrors(formApi, error, {
+          codes: {
+            CATEGORY_ALREADY_EXISTS: {
+              field: "name",
+              message: "Another category already has this name",
+            },
+          },
+        });
+      }
+    },
+  });
+  useReportSubmitting(form, onBusyChange);
 
   const parentName =
     editing.mode === "create" && editing.parentId
@@ -361,91 +353,84 @@ function CategoryForm({
       : null;
 
   return (
-    <form onSubmit={submit} noValidate>
-      <DialogHeader className="gap-1 border-b border-border px-6 py-5">
-        <DialogTitle className="font-serif text-2xl font-normal">
-          {category
-            ? `Edit ${category.name}`
-            : parentName
-              ? "New subcategory"
-              : "New category"}
-        </DialogTitle>
-        <DialogDescription className="text-xs">
-          {category
-            ? "Renaming changes its address in the store."
-            : parentName
-              ? `Inside ${parentName}.`
-              : "Names are unique across the store."}
-        </DialogDescription>
-      </DialogHeader>
-      <div className="space-y-5 px-6 py-6">
-        <Field data-invalid={Boolean(errors.name)}>
-          <FieldLabel
-            htmlFor="category-name"
-            className="eyebrow !text-foreground"
-          >
-            Name
-          </FieldLabel>
-          <Input
-            id="category-name"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              setErrors({});
-            }}
-            maxLength={20}
-            autoComplete="off"
-            aria-invalid={Boolean(errors.name)}
-          />
-          <FieldError key={errors.name} className="animate-rise">
-            {errors.name}
-          </FieldError>
-        </Field>
-        <Field data-invalid={Boolean(errors.parent_id)}>
-          <FieldLabel
-            htmlFor="category-parent"
-            className="eyebrow !text-foreground"
-          >
-            Parent
-          </FieldLabel>
-          <Select
-            value={parent}
-            onValueChange={(value) => value && setParent(value)}
-            items={parents}
-          >
-            <SelectTrigger id="category-parent" className="h-10 w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {parents.map((p) => (
-                <SelectItem key={p.value} value={p.value}>
-                  <span
-                    style={{
-                      paddingLeft: `${p.value === ROOT ? 0 : p.depth}rem`,
-                    }}
-                  >
-                    {p.value === ROOT ? p.label : p.label.split(" / ").at(-1)}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FieldError>{errors.parent_id}</FieldError>
-        </Field>
-      </div>
-      <DialogFooter className="border-t border-border px-6 py-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onDone}
-          disabled={save.isPending}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={save.isPending}>
-          {save.isPending ? "Saving…" : category ? "Save" : "Add category"}
-        </Button>
-      </DialogFooter>
-    </form>
+    <form.AppForm>
+      <form.Form>
+        <DialogHeader className="gap-1 border-b border-border px-6 py-5">
+          <DialogTitle className="font-serif text-2xl font-normal">
+            {category
+              ? `Edit ${category.name}`
+              : parentName
+                ? "New subcategory"
+                : "New category"}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            {category
+              ? "Renaming changes its address in the store."
+              : parentName
+                ? `Inside ${parentName}.`
+                : "Names are unique across the store."}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-5 px-6 py-6">
+          <form.AppField name="name">
+            {(field) => (
+              <field.TextField
+                id="category-name"
+                label="Name"
+                maxLength={20}
+                autoComplete="off"
+              />
+            )}
+          </form.AppField>
+          <form.AppField name="parent_id">
+            {(field) => (
+              <field.SelectField
+                id="category-parent"
+                label="Parent"
+                items={parents}
+                renderItem={(item) => {
+                  const p = parents.find((x) => x.value === item.value);
+                  const top = item.value === ROOT;
+                  return (
+                    <span
+                      style={{ paddingLeft: `${top ? 0 : (p?.depth ?? 0)}rem` }}
+                    >
+                      {top
+                        ? item.label
+                        : String(item.label).split(" / ").at(-1)}
+                    </span>
+                  );
+                }}
+              />
+            )}
+          </form.AppField>
+        </div>
+        <DialogFooter className="border-t border-border px-6 py-4">
+          <form.Subscribe selector={(s) => s.isSubmitting}>
+            {(submitting) => (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onDone}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+            )}
+          </form.Subscribe>
+          <form.SubmitButton pendingLabel="Saving…">
+            {category ? "Save" : "Add category"}
+          </form.SubmitButton>
+        </DialogFooter>
+      </form.Form>
+    </form.AppForm>
   );
+}
+
+/** The body for the picked parent: none at the top level. */
+function categoryBody(value: { name: string; parent_id: string }) {
+  return {
+    name: value.name,
+    ...(value.parent_id !== ROOT && { parent_id: value.parent_id }),
+  };
 }

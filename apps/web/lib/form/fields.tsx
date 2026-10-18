@@ -17,7 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { clearServerError } from "./api-errors";
 import { useFieldContext } from "./context";
 import { firstError } from "./validate";
@@ -47,6 +49,8 @@ type ShellProps = {
   id?: string;
   /** For the field's wrapper (a grid span), not the control. */
   fieldClassName?: string;
+  /** Keeps the label for screen readers only (a field beside its heading). */
+  hideLabel?: boolean;
 };
 
 /**
@@ -62,6 +66,7 @@ export function FieldShell({
   optional,
   id: idProp,
   fieldClassName,
+  hideLabel,
   group,
   children,
 }: ShellProps & {
@@ -78,7 +83,7 @@ export function FieldShell({
     <Field data-invalid={Boolean(error)} className={fieldClassName}>
       <FieldLabel
         {...(group ? { id: `${id}-label` } : { htmlFor: id })}
-        className="eyebrow !text-foreground"
+        className={hideLabel ? "sr-only" : "eyebrow !text-foreground"}
       >
         {label}
         {optional && (
@@ -127,33 +132,100 @@ type InputProps = Omit<
   "id" | "name" | "value" | "onChange" | "onBlur"
 >;
 
-/** A text input; `normalize` rewrites what's typed (upper-casing a code). */
+/**
+ * A text input; `normalize` rewrites what's typed (upper-casing a code), and
+ * `prefix`/`suffix` sit inside its edges ("$", "%").
+ */
 export function TextField({
   label,
   hint,
   optional,
   id,
   fieldClassName,
+  hideLabel,
   normalize,
+  prefix,
+  suffix,
+  className,
   ...input
-}: ShellProps & InputProps & { normalize?: (value: string) => string }) {
+}: ShellProps &
+  InputProps & {
+    normalize?: (value: string) => string;
+    prefix?: string;
+    suffix?: string;
+  }) {
   const field = useFieldContext<string>();
+  const control = (props: ControlProps) => (
+    <Input
+      {...input}
+      {...props}
+      className={cn(prefix && "pl-7", suffix && "pr-8", className)}
+      value={field.state.value}
+      onChange={(e) =>
+        field.handleChange(
+          normalize ? normalize(e.target.value) : e.target.value,
+        )
+      }
+    />
+  );
   return (
-    <FieldShell {...{ label, hint, optional, id, fieldClassName }}>
-      {(control) => (
-        <Input
-          {...input}
-          {...control}
-          value={field.state.value}
-          onChange={(e) =>
-            field.handleChange(
-              normalize ? normalize(e.target.value) : e.target.value,
-            )
-          }
-        />
-      )}
+    <FieldShell {...{ label, hint, optional, id, fieldClassName, hideLabel }}>
+      {(props) =>
+        prefix || suffix ? (
+          <div className="relative">
+            {prefix && <Affix side="left">{prefix}</Affix>}
+            {control(props)}
+            {suffix && <Affix side="right">{suffix}</Affix>}
+          </div>
+        ) : (
+          control(props)
+        )
+      }
     </FieldShell>
   );
+}
+
+function Affix({
+  side,
+  children,
+}: {
+  side: "left" | "right";
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "pointer-events-none absolute top-1/2 -translate-y-1/2 text-sm text-muted-foreground",
+        side === "left" ? "left-3" : "right-3",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** A dollar amount typed as "12.50" (convert with toCents). */
+export function MoneyField(
+  props: Omit<
+    React.ComponentProps<typeof TextField>,
+    "normalize" | "prefix" | "inputMode"
+  >,
+) {
+  return (
+    <TextField
+      {...props}
+      prefix="$"
+      inputMode="decimal"
+      normalize={(value) => value.replace(/[^\d.]/g, "").slice(0, 10)}
+      className={cn("tabular-nums", props.className)}
+    />
+  );
+}
+
+/** Keeps the digits of what's typed, up to max of them. */
+export function digits(max: number) {
+  return (value: string) => value.replace(/\D/g, "").slice(0, max);
 }
 
 /** A password input with its show/hide toggle. */
@@ -163,11 +235,12 @@ export function PasswordField({
   optional,
   id,
   fieldClassName,
+  hideLabel,
   ...input
 }: ShellProps & Omit<InputProps, "type">) {
   const field = useFieldContext<string>();
   return (
-    <FieldShell {...{ label, hint, optional, id, fieldClassName }}>
+    <FieldShell {...{ label, hint, optional, id, fieldClassName, hideLabel }}>
       {(control) => (
         <PasswordInput
           {...input}
@@ -187,6 +260,7 @@ export function TextareaField({
   optional,
   id,
   fieldClassName,
+  hideLabel,
   ...textarea
 }: ShellProps &
   Omit<
@@ -195,7 +269,7 @@ export function TextareaField({
   >) {
   const field = useFieldContext<string>();
   return (
-    <FieldShell {...{ label, hint, optional, id, fieldClassName }}>
+    <FieldShell {...{ label, hint, optional, id, fieldClassName, hideLabel }}>
       {(control) => (
         <Textarea
           {...textarea}
@@ -217,12 +291,19 @@ export function SelectField({
   optional,
   id,
   fieldClassName,
+  hideLabel,
   items,
   placeholder,
-}: ShellProps & { items: SelectItemOption[]; placeholder?: string }) {
+  renderItem,
+}: ShellProps & {
+  items: SelectItemOption[];
+  placeholder?: string;
+  /** How an item shows in the open list; the trigger shows its label. */
+  renderItem?: (item: SelectItemOption) => React.ReactNode;
+}) {
   const field = useFieldContext<string>();
   return (
-    <FieldShell {...{ label, hint, optional, id, fieldClassName }}>
+    <FieldShell {...{ label, hint, optional, id, fieldClassName, hideLabel }}>
       {(control) => (
         <Select
           value={field.state.value}
@@ -237,12 +318,46 @@ export function SelectField({
           <SelectContent>
             {items.map((item) => (
               <SelectItem key={item.value} value={item.value}>
-                {item.label}
+                {renderItem ? renderItem(item) : item.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       )}
     </FieldShell>
+  );
+}
+
+/** An on/off setting: its label and what it does, with a switch. */
+export function SwitchField({
+  label,
+  description,
+  id: idProp,
+}: {
+  label: React.ReactNode;
+  description: React.ReactNode;
+  id?: string;
+}) {
+  const field = useFieldContext<boolean>();
+  const id = idProp ?? fieldId(field.name);
+  return (
+    <Field
+      orientation="horizontal"
+      className="items-start justify-between gap-4"
+    >
+      <div className="space-y-1">
+        <FieldLabel htmlFor={id} className="text-[0.8125rem]">
+          {label}
+        </FieldLabel>
+        <FieldDescription className="text-xs">{description}</FieldDescription>
+      </div>
+      <Switch
+        id={id}
+        checked={field.state.value}
+        onCheckedChange={(checked) => field.handleChange(checked)}
+        onBlur={field.handleBlur}
+        className="mt-0.5"
+      />
+    </Field>
   );
 }

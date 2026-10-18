@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useStore } from "@tanstack/react-form";
+import { useStore, type AnyFormApi } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import { clearServerErrors } from "./api-errors";
 import { useFormContext } from "./context";
@@ -78,4 +78,17 @@ export function SubmitButton({
       {submitting ? pendingLabel : children}
     </Button>
   );
+}
+
+/**
+ * Tells a dialog whether its form is sending, so the dialog can refuse to
+ * close mid-save; reports false when the form goes (it closed on success).
+ */
+export function useReportSubmitting(
+  form: AnyFormApi,
+  report: (submitting: boolean) => void,
+) {
+  const submitting = useStore(form.store, (s) => s.isSubmitting);
+  useEffect(() => report(submitting), [submitting, report]);
+  useEffect(() => () => report(false), [report]);
 }

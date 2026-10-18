@@ -85,9 +85,9 @@ describe("discountBody", () => {
       ...form,
       kind: "fixed",
       value: "5.50",
-      minSpend: "40",
-      limit: "100",
-      once: true,
+      min_subtotal: "40",
+      max_redemptions: "100",
+      once_per_customer: true,
     });
     expect(result).toMatchObject({
       body: {
@@ -113,13 +113,15 @@ describe("discountBody", () => {
     expect(errors({ ...form, kind: "fixed", value: "5.555" })).toEqual([
       "value",
     ]);
-    expect(errors({ ...form, minSpend: "abc" })).toEqual(["min_subtotal"]);
-    expect(errors({ ...form, limit: "0" })).toEqual(["max_redemptions"]);
+    expect(errors({ ...form, min_subtotal: "abc" })).toEqual(["min_subtotal"]);
+    expect(errors({ ...form, max_redemptions: "0" })).toEqual([
+      "max_redemptions",
+    ]);
     expect(
       errors({
         ...form,
-        startsAt: "2026-11-02T10:00",
-        endsAt: "2026-11-02T10:00",
+        starts_at: "2026-11-02T10:00",
+        ends_at: "2026-11-02T10:00",
       }),
     ).toEqual(["ends_at"]);
   });
@@ -153,7 +155,7 @@ test("an edit keeps untouched saved times exactly", () => {
     body: { starts_at: "2026-11-01T09:00:30.123Z", ends_at: null },
   });
   expect(
-    discountBody({ ...form, startsAt: "2026-11-02T10:00" }, saved),
+    discountBody({ ...form, starts_at: "2026-11-02T10:00" }, saved),
   ).toMatchObject({
     body: { starts_at: new Date("2026-11-02T10:00").toISOString() },
   });
